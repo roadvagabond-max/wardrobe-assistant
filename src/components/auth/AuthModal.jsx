@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, LogIn, LogOut, ShieldCheck, Sparkles, User, Key, Check } from 'lucide-react';
+import { X, LogIn, LogOut, ShieldCheck, Sparkles, User, Key, Check, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { isFirebaseConfigured } from '../../services/firebase';
 
@@ -17,8 +17,22 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
       await loginWithGoogle();
       onClose();
     } catch (err) {
-      console.error(err);
-      setError('A Google bejelentkezéshez kérlek add meg a Firebase konfigurációt a Beállításokban, vagy használd a beépített Demo módot!');
+      console.error('Firebase Auth hiba:', err);
+      let errorMsg = err.message || 'Hiba történt a bejelentkezés során.';
+      
+      if (err.code === 'auth/unauthorized-domain') {
+        errorMsg = 'A domain (roadvagabond-max.github.io) még nincs hozzáadva a Firebase engedélyezett domainjeihez (Firebase Console > Authentication > Settings > Authorized domains).';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        errorMsg = 'A Google bejelentkezés még nincs bekapcsolva a Firebase Console-ban (Authentication > Sign-in method > Google > Enable).';
+      } else if (err.code === 'auth/popup-blocked') {
+        errorMsg = 'A böngésző letiltotta a felugró ablakot. Kérlek engedélyezd a felugró ablakokat!';
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        errorMsg = 'A bejelentkezési ablak be lett zárva a folyamat befejezése előtt.';
+      } else if (err.code === 'auth/invalid-api-key') {
+        errorMsg = 'Érvénytelen Firebase API kulcs. Ellenőrizd a Beállításokban megadott kulcsokat!';
+      }
+      
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -83,8 +97,9 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
             </p>
 
             {error && (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
-                {error}
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-start gap-2.5 leading-relaxed">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                <span>{error}</span>
               </div>
             )}
 
@@ -94,7 +109,7 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
               className="btn-gold w-full py-3 text-sm shadow-md"
             >
               <LogIn className="w-4 h-4" />
-              <span>Belépés Google Fiókkal</span>
+              <span>{loading ? 'Bejelentkezés folyamatban...' : 'Belépés Google Fiókkal'}</span>
             </button>
 
             <div className="pt-2 border-t border-white/5 space-y-2">
