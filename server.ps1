@@ -1,7 +1,7 @@
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://localhost:3000/")
 $listener.Start()
-Write-Host "Server running at http://localhost:3000/standalone.html"
+Write-Host "Server running at http://localhost:3000/"
 
 try {
     while ($listener.IsListening) {
@@ -59,7 +59,7 @@ try {
 
         # 2. Statikus fájlok kiszolgálása
         if ([string]::IsNullOrWhiteSpace($localPath)) {
-            $localPath = "standalone.html"
+            $localPath = "index.html"
         }
 
         $filePath = Join-Path (Get-Location) $localPath
