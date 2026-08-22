@@ -1,9 +1,42 @@
-import React, { useState, useRef } from 'react';
-import { X, Camera, Upload, Link as LinkIcon, Sparkles, Check, Loader2, AlertCircle, Compass, Calendar } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Camera, Upload, Link as LinkIcon, Sparkles, Check, Loader2, AlertCircle, Compass, Calendar, Tag, Plus } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
 import { uploadGarmentImage } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
 import confetti from 'canvas-confetti';
+
+const DEFAULT_FORM_DATA = {
+  name: '',
+  category: 'tops',
+  subCategory: 'shirt',
+  color: 'Sötétkék',
+  colorHex: '#1e293b',
+  material: '100% Pamut',
+  qualityScore: 9.0,
+  season: ['tavasz', 'nyar', 'osz', 'tel'],
+  formality: 'Smart Casual',
+  pattern: 'Egyszínű',
+  brand: '',
+  stylingTip: '',
+  whenToWear: '',
+  stylingAdvice: '',
+  tags: ['alapdarab', 'smart casual']
+};
+
+const POPULAR_STYLE_TAGS = [
+  'Elegáns',
+  'Business',
+  'Smart Casual',
+  'Casual',
+  'Sprezzatura',
+  'Old Money',
+  'Streetwear',
+  'Minimalista',
+  'Klasszikus',
+  'Alapdarab',
+  'Kényelmes',
+  'Prémium'
+];
 
 export default function AddClothingModal({ isOpen, onClose }) {
   const { addItem, currentUser } = useAuth();
@@ -15,30 +48,53 @@ export default function AddClothingModal({ isOpen, onClose }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
+  const [customTagInput, setCustomTagInput] = useState('');
 
-  // Form Fields (Auto-filled by AI)
-  const [formData, setFormData] = useState({
-    name: '',
-    category: 'tops',
-    subCategory: 'shirt',
-    color: 'Sötétkék',
-    colorHex: '#1e293b',
-    material: '100% Pamut',
-    qualityScore: 9.0,
-    season: ['tavasz', 'nyar', 'osz', 'tel'],
-    formality: 'Smart Casual',
-    pattern: 'Egyszínű',
-    brand: '',
-    stylingTip: '',
-    whenToWear: '',
-    stylingAdvice: '',
-    tags: ['stílusos', 'alapdarab']
-  });
+  // Form Fields
+  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const stylingTipRef = useRef(null);
+  const whenToWearRef = useRef(null);
+
+  // 1. Reset form on close or when opening fresh
+  const resetForm = () => {
+    setImagePreview(null);
+    setSelectedFile(null);
+    setWebshopUrl('');
+    setIsAnalyzing(false);
+    setIsSaving(false);
+    setAnalysisError(null);
+    setActiveMode('camera');
+    setCustomTagInput('');
+    setFormData(DEFAULT_FORM_DATA);
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
+  // Auto-resize textareas when text changes
+  useEffect(() => {
+    if (stylingTipRef.current) {
+      stylingTipRef.current.style.height = 'auto';
+      stylingTipRef.current.style.height = `${Math.max(70, stylingTipRef.current.scrollHeight)}px`;
+    }
+    if (whenToWearRef.current) {
+      whenToWearRef.current.style.height = 'auto';
+      whenToWearRef.current.style.height = `${Math.max(70, whenToWearRef.current.scrollHeight)}px`;
+    }
+  }, [formData.stylingTip, formData.whenToWear]);
 
   if (!isOpen) return null;
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -59,11 +115,9 @@ export default function AddClothingModal({ isOpen, onClose }) {
     if (!webshopUrl) return;
 
     setIsAnalyzing(true);
-    // Webshop sample preview
     const sampleImage = 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?auto=format&fit=crop&w=800&q=80';
     setImagePreview(sampleImage);
 
-    // AI analysis
     await triggerAIAnalysis(sampleImage);
   };
 
@@ -88,7 +142,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
           stylingTip: aiResult.stylingTip || prev.stylingTip,
           whenToWear: aiResult.whenToWear || prev.whenToWear,
           stylingAdvice: aiResult.stylingAdvice || prev.stylingAdvice,
-          tags: aiResult.tags || prev.tags
+          tags: aiResult.tags && aiResult.tags.length > 0 ? aiResult.tags : prev.tags
         }));
       }
     } catch (err) {
@@ -109,6 +163,35 @@ export default function AddClothingModal({ isOpen, onClose }) {
     });
   };
 
+  // 3. Style tag toggle
+  const handleTagToggle = (tagToToggle) => {
+    const norm = tagToToggle.trim().toLowerCase();
+    setFormData(prev => {
+      const currentTags = prev.tags || [];
+      const exists = currentTags.some(t => t.toLowerCase() === norm);
+      return {
+        ...prev,
+        tags: exists 
+          ? currentTags.filter(t => t.toLowerCase() !== norm)
+          : [...currentTags, tagToToggle.trim()]
+      };
+    });
+  };
+
+  const handleAddCustomTag = (e) => {
+    if (e) e.preventDefault();
+    if (!customTagInput.trim()) return;
+
+    const newTag = customTagInput.trim();
+    if (!formData.tags.some(t => t.toLowerCase() === newTag.toLowerCase())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, newTag]
+      }));
+    }
+    setCustomTagInput('');
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!imagePreview) return;
@@ -117,7 +200,6 @@ export default function AddClothingModal({ isOpen, onClose }) {
     try {
       let finalImageUrl = imagePreview;
 
-      // Ha van valós fájl és bejelentkezett felhasználó, feltöltjük a Firebase Storage-be
       if (selectedFile) {
         finalImageUrl = await uploadGarmentImage(selectedFile, currentUser?.uid || 'demo-user');
       }
@@ -127,7 +209,6 @@ export default function AddClothingModal({ isOpen, onClose }) {
         imageUrl: finalImageUrl
       });
 
-      // Sikeres konfetti animáció
       try {
         confetti({
           particleCount: 50,
@@ -137,7 +218,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
         });
       } catch (_) {}
 
-      onClose();
+      handleClose();
     } catch (err) {
       console.error('Mentési hiba:', err);
       alert('Hiba történt a mentés során. Kérlek próbáld újra.');
@@ -145,6 +226,12 @@ export default function AddClothingModal({ isOpen, onClose }) {
       setIsSaving(false);
     }
   };
+
+  // Merge popular tags with currently assigned tags
+  const allAvailableTags = Array.from(new Set([
+    ...POPULAR_STYLE_TAGS,
+    ...(formData.tags || [])
+  ]));
 
   return (
     <div className="modal-backdrop">
@@ -162,7 +249,8 @@ export default function AddClothingModal({ isOpen, onClose }) {
             </div>
           </div>
           <button 
-            onClick={onClose}
+            type="button"
+            onClick={handleClose}
             className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white hover:bg-white/10"
           >
             <X className="w-5 h-5" />
@@ -326,9 +414,9 @@ export default function AddClothingModal({ isOpen, onClose }) {
               </div>
             )}
 
-            {/* AI Styling Recommendation Box (Mivel és Mikor hordd) */}
+            {/* 2. AI Styling Recommendation Box - Auto-sized textareas without scrollbars */}
             {(formData.stylingTip || formData.whenToWear) && (
-              <div className="p-4 rounded-xl bg-black/50 border border-[var(--border-gold)] space-y-3 shadow-inner">
+              <div className="p-4 rounded-xl bg-black/50 border border-[var(--border-gold)] space-y-3.5 shadow-inner">
                 {formData.stylingTip && (
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-[var(--accent-gold-light)] flex items-center gap-1.5">
@@ -336,10 +424,14 @@ export default function AddClothingModal({ isOpen, onClose }) {
                       <span>Mivel érdemes hordani (AI Ajánlás):</span>
                     </label>
                     <textarea
-                      rows={2}
+                      ref={stylingTipRef}
                       value={formData.stylingTip}
-                      onChange={(e) => setFormData({ ...formData, stylingTip: e.target.value })}
-                      className="custom-input text-xs leading-relaxed"
+                      onChange={(e) => {
+                        setFormData({ ...formData, stylingTip: e.target.value });
+                        e.target.style.height = 'auto';
+                        e.target.style.height = `${e.target.scrollHeight}px`;
+                      }}
+                      className="custom-input text-xs leading-relaxed min-h-[70px] resize-none overflow-hidden"
                     />
                   </div>
                 )}
@@ -351,10 +443,14 @@ export default function AddClothingModal({ isOpen, onClose }) {
                       <span>Mikor és milyen alkalomra ajánlott:</span>
                     </label>
                     <textarea
-                      rows={2}
+                      ref={whenToWearRef}
                       value={formData.whenToWear}
-                      onChange={(e) => setFormData({ ...formData, whenToWear: e.target.value })}
-                      className="custom-input text-xs leading-relaxed"
+                      onChange={(e) => {
+                        setFormData({ ...formData, whenToWear: e.target.value });
+                        e.target.style.height = 'auto';
+                        e.target.style.height = `${e.target.scrollHeight}px`;
+                      }}
+                      className="custom-input text-xs leading-relaxed min-h-[70px] resize-none overflow-hidden"
                     />
                   </div>
                 )}
@@ -362,7 +458,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
             )}
 
             {/* Editable Fields */}
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Megnevezés</label>
                 <input
@@ -437,15 +533,15 @@ export default function AddClothingModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Seasons */}
+              {/* Seasons Selector */}
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Szezonalitás</label>
                 <div className="flex gap-2">
                   {[
-                    { id: 'tavasz', label: 'Tavasz' },
-                    { id: 'nyar', label: 'Nyár' },
-                    { id: 'osz', label: 'Ősz' },
-                    { id: 'tel', label: 'Tél' }
+                    { id: 'tavasz', label: '🌸 Tavasz' },
+                    { id: 'nyar', label: '☀️ Nyár' },
+                    { id: 'osz', label: '🍂 Ősz' },
+                    { id: 'tel', label: '❄️ Tél' }
                   ].map(s => (
                     <button
                       key={s.id}
@@ -463,13 +559,71 @@ export default function AddClothingModal({ isOpen, onClose }) {
                 </div>
               </div>
 
+              {/* 3. Interactive Style Tags Selector */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-[var(--text-secondary)] flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                    <span>Stílus és alkalom címkék (Kattints a ki/bekapcsoláshoz):</span>
+                  </label>
+                  <span className="text-[10px] text-[var(--text-muted)]">{formData.tags?.length || 0} kiválasztva</span>
+                </div>
+
+                {/* Tag Pills */}
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  {allAvailableTags.map((tag) => {
+                    const isSelected = (formData.tags || []).some(t => t.toLowerCase() === tag.toLowerCase());
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => handleTagToggle(tag)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                          isSelected
+                            ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-sm'
+                            : 'bg-white/5 text-[var(--text-muted)] hover:text-white hover:bg-white/10 border border-white/5'
+                        }`}
+                      >
+                        <span>#{tag}</span>
+                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Add Custom Tag input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Egyedi címke hozzáadása (pl. 'vintage', 'old money')..."
+                    value={customTagInput}
+                    onChange={(e) => setCustomTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddCustomTag();
+                      }
+                    }}
+                    className="custom-input text-xs py-1.5"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomTag}
+                    className="btn-secondary text-xs px-3 py-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Hozzáad</span>
+                  </button>
+                </div>
+              </div>
+
             </div>
 
             {/* Save Buttons */}
             <div className="flex items-center gap-3 pt-3 border-t border-white/10">
               <button
                 type="button"
-                onClick={() => setImagePreview(null)}
+                onClick={handleClose}
                 className="btn-secondary flex-1 text-xs"
               >
                 Mégse
