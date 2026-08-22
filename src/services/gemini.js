@@ -65,6 +65,7 @@ async function callGeminiApi({ apiKey, contents, responseMimeType = "application
 
 /**
  * 1. Deep Multimodal AI Garment Vision Analysis
+ * Részletes felismerés, minősítés, valamint szöveges ajánlás: Mivel és Mikor érdemes hordani!
  */
 export async function analyzeClothingImage(imageBase64OrUrl) {
   const apiKey = getGeminiApiKey();
@@ -75,23 +76,31 @@ export async function analyzeClothingImage(imageBase64OrUrl) {
       const mimeType = parts[0].replace('data:', '') || 'image/jpeg';
       const base64Data = parts[1];
 
-      const prompt = `Te egy professzionális, sokoldalú divattanácsadó és ruhatár-szakértő vagy.
-Elemezd a fotón látható ruhadarabot objektíven és pontosan!
-Határozd meg a darab pontos típusát, valódi színét, színkódját, anyagát, minőségét (1-10), szezonalitását, formalitási szintjét, és adj egy releváns szakértői stílustippet.
+      const prompt = `Te egy világklasszis professzionális személyi stylist, divattanácsadó és ruhatár-tervező vagy.
+Elemezd a fotón látható ruhadarabot részletesen, szakértő szemmel!
+
+Határozd meg:
+1. A darab pontos elnevezését, főkategóriáját, alkategóriáját, valódi színét, színkódját (#hex), anyagösszetételét, becsült minőségét (1.0-10.0 pont), formalitási szintjét és szezonalitását.
+2. RÉSZLETES SZÖVEGES AJÁNLÁST:
+   - "stylingTip": Mivel érdemes kombinálni/hordani? (Konkrét színek, felsők, nadrágok, kabátok, cipők és kiegészítők, amikkel harmonizál).
+   - "whenToWear": Mikor és milyen alkalmakkor érdemes viselni? (Alkalmak, napszakok, időjárási viszonyok, dress code).
+   - "stylingAdvice": Szakértői szöveges összefoglaló a darab stílusáról és karakteréről.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
-  "name": "Pontos és igényes magyar megnevezés (pl. 'Sötétkék Pamut Chino Nadrág', 'Klasszikus Gyapjú Zakó')",
+  "name": "Pontos és elegáns magyar megnevezés (pl. 'Sötétkék Olasz Gyapjú Zakó', 'Homokbézs Slim Chino', 'Fehér Poplin Pamuting')",
   "category": "outerwear" | "tops" | "bottoms" | "shoes" | "accessories",
   "subCategory": "blazer" | "shirt" | "t-shirt" | "knitwear" | "hoodie" | "trousers" | "jeans" | "shorts" | "loafers" | "sneakers" | "boots" | "overcoat" | "jacket" | "other",
-  "color": "Valódi fő szín magyarul (pl. Sötétkék, Homokbézs, Törtfehér)",
+  "color": "Valódi fő szín magyarul (pl. Sötétkék, Bézs, Törtfehér, Antracitszürke)",
   "colorHex": "#színkód",
-  "material": "Részletes anyag (pl. 100% Pamut, Gyapjú, Len, Farmer/Denim, Bőr)",
-  "qualityScore": 8.8,
+  "material": "Részletes anyag és szövés (pl. 100% Super 120s Gyapjú, Prémium Egyiptomi Pamut, Len-selyem keverék, Bőr)",
+  "qualityScore": 9.2,
   "season": ["tavasz", "nyar", "osz", "tel"],
-  "formality": "Casual" | "Smart Casual" | "Business Casual" | "Business / Formal" | "Streetwear" | "Athleisure",
-  "stylingTip": "Konkrét, stílusos tanács a ruhadarab viseléséhez",
-  "tags": ["stílusos", "elegáns", "alapdarab"]
+  "formality": "Casual" | "Smart Casual" | "Sprezzatura" | "Business" | "Black Tie",
+  "stylingTip": "Mivel hordd: Kombináld világoskék oxford inggel, sötétbarna bőr loaferrel és homokszínű chino nadrággal egy időtlen smart casual megjelenésért.",
+  "whenToWear": "Mikor hordd: Ideális üzleti tárgyalásokhoz, elegáns vacsorákhoz, tavaszi és őszi városi megjelenésekhez 16-24°C között.",
+  "stylingAdvice": "Kiemelkedően sokoldalú alapdarab, amely azonnal megemeli bármely összeállítás színvonalát.",
+  "tags": ["elegáns", "alapdarab", "olasz szabás", "sokoldalú"]
 }`;
 
       const contents = [{
@@ -108,18 +117,20 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
     }
   }
 
-  // Fallback ha nincs kulcs vagy manuális megadás
+  // Intelligens helyi alapértelmezett minta ha nincs aktív API kapcsolat
   return {
-    name: "Feltöltött ruhadarab",
+    name: "Feltöltött Ruhadarab",
     category: "tops",
     subCategory: "shirt",
-    color: "Kék",
-    colorHex: "#3b82f6",
+    color: "Sötétkék",
+    colorHex: "#1e293b",
     material: "100% Pamut",
-    qualityScore: 8.0,
+    qualityScore: 8.8,
     season: ["tavasz", "nyar", "osz"],
     formality: "Smart Casual",
-    stylingTip: "Kombináld semleges nadrággal és letisztult cipővel.",
+    stylingTip: "Mivel hordd: Viseld bézs chino nadrággal, barna bőr övvel és letisztult fehér sneakerrel vagy barna loaferrel.",
+    whenToWear: "Mikor hordd: Tökéletes irodai munkához, kötetlen üzleti találkozókhoz és hétvégi elegáns programokhoz.",
+    stylingAdvice: "Letisztult és univerzális alapdarab, ami szinte minden nadrággal harmonizál.",
     tags: ["alapdarab", "smart casual", "irodai"]
   };
 }

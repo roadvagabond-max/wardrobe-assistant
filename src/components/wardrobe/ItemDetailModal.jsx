@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trash2, Sparkles, Tag, ShieldCheck, Calendar, Layers } from 'lucide-react';
+import { X, Trash2, Sparkles, Tag, ShieldCheck, Calendar, Layers, Compass, Lightbulb } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ItemDetailModal({ item, onClose }) {
@@ -52,8 +52,15 @@ export default function ItemDetailModal({ item, onClose }) {
         </div>
 
         {/* Info */}
-        <div className="space-y-3">
-          <h3 className="text-xl font-bold font-serif text-white">{item.name}</h3>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-xl font-bold font-serif text-white">{item.name}</h3>
+            {item.stylingAdvice && (
+              <p className="text-xs text-[var(--text-secondary)] mt-1 italic">
+                "{item.stylingAdvice}"
+              </p>
+            )}
+          </div>
           
           <div className="grid grid-cols-2 gap-3 text-xs bg-black/30 p-3.5 rounded-xl border border-white/5">
             <div>
@@ -78,6 +85,35 @@ export default function ItemDetailModal({ item, onClose }) {
               <span className="font-medium text-white">{item.brand || 'Egyedi / Kézműves'}</span>
             </div>
           </div>
+
+          {/* AI Styling Recommendation: Mivel és Mikor hordd */}
+          {(item.stylingTip || item.whenToWear) && (
+            <div className="space-y-2.5">
+              {item.stylingTip && (
+                <div className="p-3.5 rounded-xl bg-black/40 border border-[var(--border-gold)] space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-gold-light)]">
+                    <Compass className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
+                    <span>Mivel érdemes hordani (AI Stylist tanács):</span>
+                  </div>
+                  <p className="text-xs text-white/90 leading-relaxed pl-5">
+                    {item.stylingTip}
+                  </p>
+                </div>
+              )}
+
+              {item.whenToWear && (
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300">
+                    <Calendar className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Mikor és milyen alkalomra ajánlott:</span>
+                  </div>
+                  <p className="text-xs text-emerald-100/90 leading-relaxed pl-5">
+                    {item.whenToWear}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Season badges */}
           <div>

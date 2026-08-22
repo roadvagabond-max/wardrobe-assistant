@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Camera, Upload, Link as LinkIcon, Sparkles, Check, Loader2, AlertCircle } from 'lucide-react';
+import { X, Camera, Upload, Link as LinkIcon, Sparkles, Check, Loader2, AlertCircle, Compass, Calendar } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
 import { uploadGarmentImage } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -29,7 +29,10 @@ export default function AddClothingModal({ isOpen, onClose }) {
     formality: 'Smart Casual',
     pattern: 'Egyszínű',
     brand: '',
-    tags: ['stílusos', 'kényelmes']
+    stylingTip: '',
+    whenToWear: '',
+    stylingAdvice: '',
+    tags: ['stílusos', 'alapdarab']
   });
 
   const fileInputRef = useRef(null);
@@ -82,6 +85,9 @@ export default function AddClothingModal({ isOpen, onClose }) {
           season: aiResult.season || prev.season,
           formality: aiResult.formality || prev.formality,
           pattern: aiResult.pattern || prev.pattern,
+          stylingTip: aiResult.stylingTip || prev.stylingTip,
+          whenToWear: aiResult.whenToWear || prev.whenToWear,
+          stylingAdvice: aiResult.stylingAdvice || prev.stylingAdvice,
           tags: aiResult.tags || prev.tags
         }));
       }
@@ -152,7 +158,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
             </div>
             <div>
               <h3 className="font-serif font-bold text-lg text-white">Új Ruha Hozzáadása</h3>
-              <p className="text-[11px] text-[var(--text-muted)]">AI automatikus felismeréssel és címkézéssel</p>
+              <p className="text-[11px] text-[var(--text-muted)]">AI felismerés, minősítés és stílustanácsadás</p>
             </div>
           </div>
           <button 
@@ -283,7 +289,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
               {isAnalyzing && (
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white">
                   <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin" />
-                  <p className="text-xs font-medium tracking-wide">Gemini Vision elemzi a szabást, anyagot és stílust...</p>
+                  <p className="text-xs font-medium tracking-wide">Gemini Vision elemzi a darabot és megírja a stílustanácsot...</p>
                 </div>
               )}
 
@@ -316,7 +322,42 @@ export default function AddClothingModal({ isOpen, onClose }) {
             ) : (
               <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-xs text-[var(--accent-gold-light)]">
                 <Sparkles className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
-                <span>Az AI automatikusan kitöltötte az alábbi adatokat. Szükség esetén módosíthatod!</span>
+                <span>Az AI elemezte a darabot és elkészítette a személyre szabott stílusajánlást!</span>
+              </div>
+            )}
+
+            {/* AI Styling Recommendation Box (Mivel és Mikor hordd) */}
+            {(formData.stylingTip || formData.whenToWear) && (
+              <div className="p-4 rounded-xl bg-black/50 border border-[var(--border-gold)] space-y-3 shadow-inner">
+                {formData.stylingTip && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[var(--accent-gold-light)] flex items-center gap-1.5">
+                      <Compass className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                      <span>Mivel érdemes hordani (AI Ajánlás):</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.stylingTip}
+                      onChange={(e) => setFormData({ ...formData, stylingTip: e.target.value })}
+                      className="custom-input text-xs leading-relaxed"
+                    />
+                  </div>
+                )}
+
+                {formData.whenToWear && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Mikor és milyen alkalomra ajánlott:</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={formData.whenToWear}
+                      onChange={(e) => setFormData({ ...formData, whenToWear: e.target.value })}
+                      className="custom-input text-xs leading-relaxed"
+                    />
+                  </div>
+                )}
               </div>
             )}
 

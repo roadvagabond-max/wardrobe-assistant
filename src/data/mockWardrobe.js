@@ -15,6 +15,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=800&q=80',
     tags: ['strukturálatlan', 'elegáns', 'ikonikus', 'olasz szabás'],
     fit: 'Slim tailored',
+    stylingTip: 'Viseld fehér poplin inggel, homokbézs chino nadrággal és barna penny loaferrel a klasszikus olasz sprezzatura hatáshoz.',
+    whenToWear: 'Tökéletes üzleti ebédekhez, tárgyalásokhoz, elegáns esti vacsorákhoz és tavaszi-őszi városi programokhoz.',
+    stylingAdvice: 'A férfi ruhatár legfontosabb sarokköve: strukturálatlan vállkialakítása miatt egyszerre elegáns és kényelmes.',
     createdAt: new Date().toISOString()
   },
   {
@@ -33,6 +36,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1620012253295-c15c429fbb41?auto=format&fit=crop&w=800&q=80',
     tags: ['cutaway gallér', 'légáteresztő', 'alapdarab'],
     fit: 'Contemporary',
+    stylingTip: 'Kombináld sötétkék zakóval vagy viseld önmagában felhajtott ujjakkal és szövetnadrággal.',
+    whenToWear: 'Bármilyen formális vagy smart casual alkalomra egész évben, a reggeli meetingektől az esti koktélpartikig.',
+    stylingAdvice: 'Kifogástalan esésű prémium ing, ami frissességet és letisztultságot kölcsönöz az arcnak.',
     createdAt: new Date().toISOString()
   },
   {
@@ -51,6 +57,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=800&q=80',
     tags: ['hajtott szár', 'nyári', 'kényelmes'],
     fit: 'Tapered',
+    stylingTip: 'Párosítsd sötétkék pólóinggel vagy világoskék oxford inggel és fehér bőr sneakerrel vagy barna loaferrel.',
+    whenToWear: 'Tavasztól kora őszig ideális nappali városi sétákhoz, teraszos kávézásokhoz és laza pénteki irodai napokra.',
+    stylingAdvice: 'A len tartalom miatt rendkívül szellős és könnyed viselet még a melegebb napokon is.',
     createdAt: new Date().toISOString()
   },
   {
@@ -69,6 +78,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?auto=format&fit=crop&w=800&q=80',
     tags: ['goorgyear varrott', 'kézműves', 'klasszikus'],
     fit: 'True to size',
+    stylingTip: 'Hordd láthatatlan titokzoknival cropped chino nadrághoz vagy gyapjúszövet nadrághoz.',
+    whenToWear: 'Minden tavaszi, nyári és őszi smart casual vagy üzleti alkalomra 15°C felett.',
+    stylingAdvice: 'Az olasz stílus védjegye: kézzel patinázott mélybarna színe bármilyen nadrágszínnel harmonizál.',
     createdAt: new Date().toISOString()
   },
   {
@@ -87,6 +99,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=800&q=80',
     tags: ['ultra-puha', 'rétegezhető', 'prémium meleg'],
     fit: 'Regular fit',
+    stylingTip: 'Rétegezd fehér vagy világoskék ing fölé úgy, hogy a gallér finoman kibukkanjon.',
+    whenToWear: 'Hűvösebb őszi-téli napokon, utazáshoz, irodai és kötetlen hétvégi programokhoz 5-18°C között.',
+    stylingAdvice: 'Pehelykönnyű, mégis kiváló hőszigetelő luxus alapdarab.',
     createdAt: new Date().toISOString()
   },
   {
@@ -105,6 +120,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80',
     tags: ['oldalsó csatok', 'elegáns esés', 'meleg'],
     fit: 'Tailored',
+    stylingTip: 'Párosítsd kék zakóval vagy kasmír pulóverrel és fekete vagy sötétbarna bőrcipővel.',
+    whenToWear: 'Őszi-téli üzleti megbeszélésekhez, formálisabb eseményekhez és színházi estékhez.',
+    stylingAdvice: 'A flanel textúra melegséget és mélységet ad az outfitnek öv nélküli, oldalsó csatos kialakításával.',
     createdAt: new Date().toISOString()
   },
   {
@@ -123,6 +141,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80',
     tags: ['roll gallér', 'strapabíró', 'időtlen'],
     fit: 'Classic',
+    stylingTip: 'Kombináld szürke pulóverrel vagy zakó alatt nyakkendő nélkül, nyitott felső gombbal.',
+    whenToWear: 'Egész évben kiváló mindennapi munkába járáshoz, egyetemi előadásokhoz és kötetlen hétvégi ebédekhez.',
+    stylingAdvice: 'A vastagabb oxford szövés texturált, ellenálló és mosásról mosásra szebb karaktert kap.',
     createdAt: new Date().toISOString()
   },
   {
@@ -141,6 +162,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=800&q=80',
     tags: ['letisztult', 'sokoldalú', 'prémium bőr'],
     fit: 'Standard',
+    stylingTip: 'Hordd chino nadrággal, letisztult sötét farmerrel vagy nyári len nadrággal.',
+    whenToWear: 'Hétvégi városi sétákhoz, utazáshoz és laza kreatív irodai környezetbe tavasztól őszig.',
+    stylingAdvice: 'Minden logótól mentes, letisztult sziluett, ami hidat képez a sportos és elegáns világ között.',
     createdAt: new Date().toISOString()
   },
   {
@@ -159,6 +183,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?auto=format&fit=crop&w=800&q=80',
     tags: ['kézi göngyölés', 'fókuszpont', 'stílusos kontraszt'],
     fit: 'One size',
+    stylingTip: 'Helyezd sötétkék vagy szürke zakó mellzsebébe laza puff hajtással.',
+    whenToWear: 'Esküvőkre, gálákra, színházi estekre és minden olyan alkalomra, ahol ki akarsz tűnni a részletekkel.',
+    stylingAdvice: 'Egyetlen apró kiegészítő, ami egy pillanat alatt karaktert és egyéniséget ad a zakónak.',
     createdAt: new Date().toISOString()
   },
   {
@@ -177,6 +204,9 @@ export const INITIAL_WARDROBE = [
     imageUrl: 'https://images.unsplash.com/photo-1544923246-77307dd654cb?auto=format&fit=crop&w=800&q=80',
     tags: ['peak lapel', 'ikonikus', 'statement darab'],
     fit: 'Structured tailored',
+    stylingTip: 'Viseld sötétkék öltöny vagy szürke kasmír pulóver és sötét nadrág fölé gombolatlanul vagy övvel.',
+    whenToWear: 'Késő őszi és téli napokon -5°C és +12°C között prémium utcai és üzleti megjelenéshez.',
+    stylingAdvice: 'A téli elegancia csúcsa: a meleg teveszín világosítja a téli szürkeséget és fenséges sziluettet nyújt.',
     createdAt: new Date().toISOString()
   }
 ];
