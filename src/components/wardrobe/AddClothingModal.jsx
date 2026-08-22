@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Upload, Link as LinkIcon, Sparkles, Check, Loader2, AlertCircle, Compass, Calendar, Tag, Plus } from 'lucide-react';
+import { X, Camera, Upload, Link as LinkIcon, Sparkles, Check, Loader2, AlertCircle, Compass, Calendar, Tag, Plus, Image as ImageIcon } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { uploadGarmentImage } from '../../services/firebase';
@@ -44,6 +44,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
 
   const [activeMode, setActiveMode] = useState('camera'); // 'camera', 'upload', 'link'
   const [imagePreview, setImagePreview] = useState(null);
+  const [availableImages, setAvailableImages] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [webshopUrl, setWebshopUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -59,9 +60,10 @@ export default function AddClothingModal({ isOpen, onClose }) {
   const stylingTipRef = useRef(null);
   const whenToWearRef = useRef(null);
 
-  // 1. Reset form on close or when opening fresh
+  // 1. Reset form on close or fresh open
   const resetForm = () => {
     setImagePreview(null);
+    setAvailableImages([]);
     setSelectedFile(null);
     setWebshopUrl('');
     setIsAnalyzing(false);
@@ -78,7 +80,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
     }
   }, [isOpen]);
 
-  // Auto-resize textareas when text changes
+  // Auto-resize textareas
   useEffect(() => {
     if (stylingTipRef.current) {
       stylingTipRef.current.style.height = 'auto';
@@ -106,6 +108,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
     reader.onloadend = async () => {
       const base64 = reader.result;
       setImagePreview(base64);
+      setAvailableImages([base64]);
       await triggerAIAnalysis(base64);
     };
     reader.readAsDataURL(file);
@@ -119,10 +122,12 @@ export default function AddClothingModal({ isOpen, onClose }) {
     setAnalysisError(null);
     try {
       const webshopData = await extractWebshopData(webshopUrl.trim());
-      if (webshopData.imageUrl) {
-        setImagePreview(webshopData.imageUrl);
-      }
-      await triggerAIAnalysis(webshopData.imageUrl, webshopData);
+      const chosenImage = webshopData.imageUrl || (webshopData.images && webshopData.images[0]) || '';
+      
+      setImagePreview(chosenImage);
+      setAvailableImages(webshopData.images || [chosenImage].filter(Boolean));
+
+      await triggerAIAnalysis(chosenImage, webshopData);
     } catch (err) {
       console.error('Webshop link hiba:', err);
       setAnalysisError(err.message || 'Nem sikerült kinyerni az adatokat a megadott webshop linkről. Próbáld közvetlen képcímmel vagy fotóval!');
@@ -143,7 +148,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
           subCategory: aiResult.subCategory || prev.subCategory,
           color: aiResult.color || prev.color,
           colorHex: aiResult.colorHex || prev.colorHex,
-          material: aiResult.material || prev.material,
+          material: aiResult.material || webshopContext.description || prev.material,
           brand: aiResult.brand || webshopContext.brand || prev.brand,
           qualityScore: aiResult.qualityScore || prev.qualityScore,
           season: aiResult.season || prev.season,
@@ -173,7 +178,6 @@ export default function AddClothingModal({ isOpen, onClose }) {
     });
   };
 
-  // 3. Style tag toggle
   const handleTagToggle = (tagToToggle) => {
     const norm = tagToToggle.trim().toLowerCase();
     setFormData(prev => {
@@ -237,7 +241,6 @@ export default function AddClothingModal({ isOpen, onClose }) {
     }
   };
 
-  // Merge popular tags with currently assigned tags
   const allAvailableTags = Array.from(new Set([
     ...POPULAR_STYLE_TAGS,
     ...(formData.tags || [])
@@ -357,13 +360,13 @@ export default function AddClothingModal({ isOpen, onClose }) {
             {activeMode === 'link' && (
               <form onSubmit={handleLinkImport} className="space-y-3">
                 <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                  Webshop Termék URL (pl. Zara, Massimo Dutti, Mr Porter):
+                  Webshop Termék URL (pl. Zara, Massimo Dutti, Reserved, Next, H&M):
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="url"
                     required
-                    placeholder="https://www.massimodutti.com/hu/..."
+                    placeholder="https://www.zara.com/hu/... vagy termékkép linkje"
                     value={webshopUrl}
                     onChange={(e) => setWebshopUrl(e.target.value)}
                     className="custom-input"
@@ -380,25 +383,62 @@ export default function AddClothingModal({ isOpen, onClose }) {
           /* Preview and AI Result Form */
           <form onSubmit={handleSave} className="space-y-4">
             
-            {/* Image Preview with AI Status */}
-            <div className="relative aspect-[16/9] w-full rounded-xl overflow-hidden bg-black/60 border border-white/10">
-              <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-              
-              {isAnalyzing && (
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white">
-                  <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin" />
-                  <p className="text-xs font-medium tracking-wide">Gemini Vision elemzi a darabot és megírja a stílustanácsot...</p>
+            {/* 1. Proportional Image Preview (object-contain, uncropped) */}
+            <div className="space-y-2">
+              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
+                <img 
+                  src={imagePreview} 
+                  alt="Preview" 
+                  className="max-h-full max-w-full object-contain rounded-xl shadow-lg transition-all" 
+                />
+                
+                {isAnalyzing && (
+                  <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white rounded-2xl">
+                    <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin" />
+                    <p className="text-xs font-medium tracking-wide">Gemini AI elemzi a terméket és a stílust...</p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setImagePreview(null)}
+                  className="absolute top-3 right-3 p-2 rounded-full bg-black/75 text-white hover:bg-black border border-white/10"
+                  title="Másik kép választása"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Multi-Image Packshot Selector */}
+              {availableImages.length > 1 && (
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                    <span>Válassz fotót a gardróbhoz (Kattints az izolált termékfotóra):</span>
+                  </label>
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    {availableImages.map((imgUrl, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setImagePreview(imgUrl)}
+                        className={`relative w-14 h-14 rounded-xl overflow-hidden bg-black/50 border shrink-0 transition-all ${
+                          imagePreview === imgUrl
+                            ? 'border-[var(--accent-gold)] ring-2 ring-[var(--accent-gold-glow)] scale-105'
+                            : 'border-white/10 opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={imgUrl} alt={`Foto ${idx + 1}`} className="w-full h-full object-contain" />
+                        {imagePreview === imgUrl && (
+                          <div className="absolute bottom-0 inset-x-0 bg-[var(--accent-gold)] text-black text-[8px] font-bold text-center py-0.2">
+                            Aktív
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={() => setImagePreview(null)}
-                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/70 text-white hover:bg-black"
-                title="Másik kép választása"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
 
             {/* AI Auto-filled notification badge */}
@@ -420,55 +460,14 @@ export default function AddClothingModal({ isOpen, onClose }) {
             ) : (
               <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-xs text-[var(--accent-gold-light)]">
                 <Sparkles className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
-                <span>Az AI elemezte a darabot és elkészítette a személyre szabott stílusajánlást!</span>
+                <span>Az AI sikeresen azonosította a darabot és megírta a stílustanácsot!</span>
               </div>
             )}
 
-            {/* 2. AI Styling Recommendation Box - Auto-sized textareas without scrollbars */}
-            {(formData.stylingTip || formData.whenToWear) && (
-              <div className="p-4 rounded-xl bg-black/50 border border-[var(--border-gold)] space-y-3.5 shadow-inner">
-                {formData.stylingTip && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-[var(--accent-gold-light)] flex items-center gap-1.5">
-                      <Compass className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                      <span>Mivel érdemes hordani (AI Ajánlás):</span>
-                    </label>
-                    <textarea
-                      ref={stylingTipRef}
-                      value={formData.stylingTip}
-                      onChange={(e) => {
-                        setFormData({ ...formData, stylingTip: e.target.value });
-                        e.target.style.height = 'auto';
-                        e.target.style.height = `${e.target.scrollHeight}px`;
-                      }}
-                      className="custom-input text-xs leading-relaxed min-h-[70px] resize-none overflow-hidden"
-                    />
-                  </div>
-                )}
-
-                {formData.whenToWear && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Mikor és milyen alkalomra ajánlott:</span>
-                    </label>
-                    <textarea
-                      ref={whenToWearRef}
-                      value={formData.whenToWear}
-                      onChange={(e) => {
-                        setFormData({ ...formData, whenToWear: e.target.value });
-                        e.target.style.height = 'auto';
-                        e.target.style.height = `${e.target.scrollHeight}px`;
-                      }}
-                      className="custom-input text-xs leading-relaxed min-h-[70px] resize-none overflow-hidden"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Editable Fields */}
-            <div className="space-y-3.5">
+            {/* 2. REORDERED FORM FIELDS: Megnevezés -> Kategória -> Anyag/Szín -> AI Ajánlások -> Szezonalitás -> Címkék */}
+            <div className="space-y-4">
+              
+              {/* Field 1: Megnevezés */}
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Megnevezés</label>
                 <input
@@ -480,6 +479,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
                 />
               </div>
 
+              {/* Field 2: Kategória & Formalitás */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Kategória</label>
@@ -512,6 +512,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
                 </div>
               </div>
 
+              {/* Field 3: Anyag & Szín */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Anyag & Szövés</label>
@@ -543,7 +544,50 @@ export default function AddClothingModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Seasons Selector */}
+              {/* Field 4: AI Ajánlások (Mivel hordd & Mikor hordd) - Elhelyezve a Szezonalitás ELŐTT! */}
+              {(formData.stylingTip || formData.whenToWear) && (
+                <div className="p-4 rounded-xl bg-black/50 border border-[var(--border-gold)] space-y-3.5 shadow-inner">
+                  {formData.stylingTip && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[var(--accent-gold-light)] flex items-center gap-1.5">
+                        <Compass className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                        <span>Mivel érdemes hordani (AI Ajánlás):</span>
+                      </label>
+                      <textarea
+                        ref={stylingTipRef}
+                        value={formData.stylingTip}
+                        onChange={(e) => {
+                          setFormData({ ...formData, stylingTip: e.target.value });
+                          e.target.style.height = 'auto';
+                          e.target.style.height = `${e.target.scrollHeight}px`;
+                        }}
+                        className="custom-input text-xs leading-relaxed min-h-[70px] resize-none overflow-hidden"
+                      />
+                    </div>
+                  )}
+
+                  {formData.whenToWear && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Mikor és milyen alkalomra ajánlott:</span>
+                      </label>
+                      <textarea
+                        ref={whenToWearRef}
+                        value={formData.whenToWear}
+                        onChange={(e) => {
+                          setFormData({ ...formData, whenToWear: e.target.value });
+                          e.target.style.height = 'auto';
+                          e.target.style.height = `${e.target.scrollHeight}px`;
+                        }}
+                        className="custom-input text-xs leading-relaxed min-h-[70px] resize-none overflow-hidden"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Field 5: Seasons Selector */}
               <div>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Szezonalitás</label>
                 <div className="flex gap-2">
@@ -569,7 +613,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* 3. Interactive Style Tags Selector */}
+              {/* Field 6: Interactive Style Tags Selector */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-medium text-[var(--text-secondary)] flex items-center gap-1.5">

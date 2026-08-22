@@ -228,11 +228,11 @@ export default function PurchaseAdvisorView() {
           ) : (
             /* Image Preview & Run Analysis */
             <div className="space-y-4">
-              <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden bg-black/60 border border-[var(--border-gold)]">
-                <img src={imagePreview} alt="Candidate Garment" className="w-full h-full object-cover" />
+              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-[var(--border-gold)] p-2 flex items-center justify-center">
+                <img src={imagePreview} alt="Candidate Garment" className="max-h-full max-w-full object-contain rounded-xl" />
                 <button
                   onClick={handleReset}
-                  className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-black/80 text-white text-xs font-medium hover:bg-black"
+                  className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-black/85 text-white text-xs font-medium hover:bg-black border border-white/10"
                 >
                   Másik kép
                 </button>

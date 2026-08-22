@@ -40,11 +40,11 @@ export default function ItemDetailModal({ item, onClose }) {
           </div>
         </div>
 
-        {/* Large Image */}
-        <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-black/60 border border-white/10">
-          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+        {/* Large Image (Uncropped, Proportional) */}
+        <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
+          <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain rounded-lg shadow-md" />
           {item.qualityScore && (
-            <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md border border-[var(--border-gold)] text-xs font-bold text-amber-300 flex items-center gap-1.5 shadow-lg">
+            <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/85 backdrop-blur-md border border-[var(--border-gold)] text-xs font-bold text-amber-300 flex items-center gap-1.5 shadow-lg">
               <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
               <span>Minőség: {item.qualityScore} / 10</span>
             </div>

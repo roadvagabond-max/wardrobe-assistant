@@ -1,5 +1,5 @@
 // Advanced Google Gemini Vision & Fashion Stylist Intelligence Engine
-import { fetchRemoteImageAsBase64 } from './webshop';
+import { convertImageViaCanvas } from './webshop';
 
 const getGeminiApiKey = () => {
   return import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || '';
@@ -65,7 +65,7 @@ async function callGeminiApi({ apiKey, contents, responseMimeType = "application
 
 /**
  * 1. Deep Multimodal & Text-First AI Garment Vision Analysis
- * Prioritizes official webshop textual descriptions and materials, supplemented by image vision.
+ * Targets specifically the target item even if model wears a full outfit.
  */
 export async function analyzeClothingImage(imageBase64OrUrl, webshopContext = {}) {
   const apiKey = getGeminiApiKey();
@@ -76,40 +76,46 @@ export async function analyzeClothingImage(imageBase64OrUrl, webshopContext = {}
       let hasImage = false;
 
       if (imageBase64OrUrl) {
-        try {
-          if (imageBase64OrUrl.startsWith('data:')) {
-            finalBase64 = imageBase64OrUrl;
-            hasImage = true;
-          } else {
-            finalBase64 = await fetchRemoteImageAsBase64(imageBase64OrUrl);
+        if (imageBase64OrUrl.startsWith('data:')) {
+          finalBase64 = imageBase64OrUrl;
+          hasImage = true;
+        } else {
+          try {
+            finalBase64 = await convertImageViaCanvas(imageBase64OrUrl);
             if (finalBase64 && finalBase64.startsWith('data:')) {
               hasImage = true;
             }
+          } catch (e) {
+            console.warn('Canvas képkonverzió figyelmeztetés:', e);
           }
-        } catch (e) {
-          console.warn('Kép betöltése sikertelen, folytatás szöveg-alapú elemzéssel:', e);
         }
       }
 
       // Build context from webshop text
       const webshopTextInfo = [
-        webshopContext.title ? `Hivatalos Terméknév a webshopból: "${webshopContext.title}"` : '',
-        webshopContext.brand ? `Márka / Forgalmazó: "${webshopContext.brand}"` : '',
-        webshopContext.description ? `Hivatalos Termékleírás és Anyagösszetétel: "${webshopContext.description}"` : '',
-        webshopContext.rawText ? `További részletek a weboldalról: "${webshopContext.rawText.slice(0, 800)}"` : ''
+        webshopContext.title ? `CÉLTERMÉK HIVATALOS NEVE: "${webshopContext.title}"` : '',
+        webshopContext.brand ? `Márka / Gyártó: "${webshopContext.brand}"` : '',
+        webshopContext.description ? `Hivatalos Leírás és Anyagösszetétel: "${webshopContext.description}"` : '',
+        webshopContext.rawText ? `Oldal további részletei: "${webshopContext.rawText.slice(0, 800)}"` : ''
       ].filter(Boolean).join('\n');
+
+      const targetFocusInstruction = webshopContext.title 
+        ? `FONTOS: A vizsgált céltermék a(z) "${webshopContext.title}". Amennyiben a fotón a modell egy teljes szettet visel (pl. zakó + nadrág + cipő), te KIZÁRÓLAG a nevezett célterméket (${webshopContext.title}) szegmentáld és elemezd! A szett többi darabját hagyd figyelmen kívül!`
+        : `Amennyiben a fotón több ruhadarab látható, fókuszálj a legfőbb, központi darabra!`;
 
       const prompt = `Te egy világklasszis professzionális személyi stylist, divattanácsadó és ruhatár-tervező vagy.
 Elemezd a ruhadarabot részletesen, szakértő szemmel!
 
-${webshopTextInfo ? `--- HIVATALOS WEBSHOP ADATOK ---\n${webshopTextInfo}\nFONTOS: Elsődlegesen a fenti hivatalos szöveges adatokból határozd meg a darab pontos anyagát (pl. 100% Pamut, Gyapjú, Len, stb.), nevét és márkáját!` : ''}
+${webshopTextInfo ? `--- HIVATALOS WEBSHOP ADATOK ---\n${webshopTextInfo}\n` : ''}
+${targetFocusInstruction}
+Elsődlegesen a hivatalos szöveges adatokból határozd meg az anyagot (pl. 100% Pamut, Gyapjú, Len, stb.), nevét és márkáját!
 
 Határozd meg:
 1. A darab pontos elnevezését, főkategóriáját, alkategóriáját, valódi színét, színkódját (#hex), anyagösszetételét, becsült minőségét (1.0-10.0 pont), formalitási szintjét és szezonalitását.
 2. RÉSZLETES SZÖVEGES AJÁNLÁST:
    - "stylingTip": Mivel érdemes kombinálni/hordani? (Konkrét színek, felsők, nadrágok, kabátok, cipők és kiegészítők, amikkel harmonizál).
    - "whenToWear": Mikor és milyen alkalmakkor érdemes viselni? (Alkalmak, napszakok, időjárási viszonyok, dress code).
-   - "stylingAdvice": Szakértői szöveges összefoglaló a darab stílusáról és karakteréről.
+   - "stylingAdvice": Szakértői összefoglaló a darab stílusáról és karakteréről.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
@@ -130,8 +136,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 
       const parts = [{ text: prompt }];
 
-      // Attach image if available
-      if (hasImage && finalBase64) {
+      if (hasImage && finalBase64 && finalBase64.startsWith('data:')) {
         const p = finalBase64.split(';base64,');
         const mimeType = p[0].replace('data:', '') || 'image/jpeg';
         const base64Data = p[1];
