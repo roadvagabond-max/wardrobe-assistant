@@ -386,11 +386,26 @@ export default function AddClothingModal({ isOpen, onClose }) {
             {/* 1. Proportional Image Preview (object-contain, uncropped) */}
             <div className="space-y-2">
               <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
-                <img 
-                  src={imagePreview} 
-                  alt="Preview" 
-                  className="max-h-full max-w-full object-contain rounded-xl shadow-lg transition-all" 
-                />
+                {imagePreview ? (
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    onError={() => {
+                      const nextAvailable = availableImages.find(img => img !== imagePreview);
+                      if (nextAvailable) {
+                        setImagePreview(nextAvailable);
+                      } else {
+                        setAnalysisError('A kép közvetlen betöltése nem sikerült a webshop védelme miatt. Kérlek fotózd le vagy másold be közvetlenül a kép linkjét!');
+                      }
+                    }}
+                    className="max-h-full max-w-full object-contain rounded-xl shadow-lg transition-all" 
+                  />
+                ) : (
+                  <div className="text-center p-4 text-[var(--text-muted)] text-xs">
+                    <AlertCircle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
+                    <p>Nincs érvényes termékkép kiválasztva.</p>
+                  </div>
+                )}
                 
                 {isAnalyzing && (
                   <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white rounded-2xl">
@@ -401,7 +416,10 @@ export default function AddClothingModal({ isOpen, onClose }) {
 
                 <button
                   type="button"
-                  onClick={() => setImagePreview(null)}
+                  onClick={() => {
+                    setImagePreview(null);
+                    setAvailableImages([]);
+                  }}
                   className="absolute top-3 right-3 p-2 rounded-full bg-black/75 text-white hover:bg-black border border-white/10"
                   title="Másik kép választása"
                 >

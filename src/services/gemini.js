@@ -132,22 +132,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
     }
   }
 
-  // Fallback
-  return {
-    name: webshopContext.title || "Feltöltött Ruhadarab",
-    category: "tops",
-    subCategory: "shirt",
-    color: "Sötétkék",
-    colorHex: "#1e293b",
-    material: webshopContext.description || "100% Pamut",
-    qualityScore: 8.8,
-    season: ["tavasz", "nyar", "osz"],
-    formality: "Smart Casual",
-    stylingTip: "Mivel hordd: Viseld bézs chino nadrággal és barna bőr loaferrel.",
-    whenToWear: "Mikor hordd: Kiváló irodai munkához és elegáns esti programokhoz.",
-    stylingAdvice: "Letisztult és univerzális alapdarab.",
-    tags: ["alapdarab", "smart casual", "irodai"]
-  };
+  throw new Error('Nincs beállítva Gemini API kulcs! Kérlek add meg a Beállítások menüben.');
 }
 
 /**
