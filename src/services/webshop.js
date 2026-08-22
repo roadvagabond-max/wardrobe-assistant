@@ -1,6 +1,7 @@
 /**
- * Webshop Link & Image Import Service
- * Fetches OpenGraph product images and converts remote images for Gemini Vision analysis.
+ * Webshop Link, Metadata & Image Extraction Service
+ * Uses Microlink API and Jina Reader API to bypass bot protections
+ * and extract official product titles, descriptions, materials, and high-res images.
  */
 
 // Helper to convert a Blob into a base64 DataURL
@@ -14,8 +15,7 @@ export function blobToBase64(blob) {
 }
 
 /**
- * Fetches a remote image and converts it into a base64 DataURL
- * with automatic CORS proxy fallback.
+ * Fetches a remote image and converts it into a base64 DataURL.
  */
 export async function fetchRemoteImageAsBase64(imageUrl) {
   if (!imageUrl) throw new Error('Üres kép URL.');
@@ -50,61 +50,87 @@ export async function fetchRemoteImageAsBase64(imageUrl) {
     } catch (_) {}
   }
 
-  // 3. Fallback: return image URL directly
   return imageUrl;
 }
 
 /**
- * Extracts the product preview image from a webshop page URL or direct image URL.
+ * Comprehensive Webshop Data Extractor
+ * Extracts: title, description (materials, composition), and product image URL.
  */
-export async function extractImageFromWebshopUrl(url) {
+export async function extractWebshopData(url) {
   const cleanUrl = url.trim();
   if (!cleanUrl) throw new Error('Kérlek adj meg egy érvényes webshop linket vagy képcímet!');
 
-  // A) If already a direct image URL (jpg, png, webp, avif, gif)
+  // Case 1: Direct Image URL
   if (/\.(jpeg|jpg|png|webp|avif|gif)($|\?)/i.test(cleanUrl)) {
-    return cleanUrl;
+    return {
+      imageUrl: cleanUrl,
+      title: '',
+      description: '',
+      brand: ''
+    };
   }
 
-  // B) Try scraping OpenGraph og:image from the webshop HTML via CORS proxy
-  const proxyEndpoints = [
-    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`
-  ];
+  let extractedData = {
+    imageUrl: '',
+    title: '',
+    description: '',
+    brand: '',
+    rawText: ''
+  };
 
-  for (const getProxyUrl of proxyEndpoints) {
+  // Case 2: Microlink API (Industry Standard Headless Link Metadata Engine)
+  try {
+    const microlinkUrl = `https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}&meta=true`;
+    const res = await fetch(microlinkUrl);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.status === 'success' && json.data) {
+        const d = json.data;
+        extractedData.title = d.title || '';
+        extractedData.description = d.description || '';
+        extractedData.brand = d.publisher || '';
+        extractedData.imageUrl = d.image?.url || d.logo?.url || '';
+      }
+    }
+  } catch (e) {
+    console.warn('Microlink scraping figyelmeztetés:', e);
+  }
+
+  // Case 3: Jina Reader API (Fallback / Supplementary Text Extractor)
+  if (!extractedData.description || !extractedData.imageUrl) {
     try {
-      const res = await fetch(getProxyUrl(cleanUrl), {
-        headers: { 'Accept': 'text/html,application/xhtml+xml' }
+      const jinaUrl = `https://r.jina.ai/${cleanUrl}`;
+      const jinaRes = await fetch(jinaUrl, {
+        headers: { 'Accept': 'application/json' }
       });
-      
-      if (res.ok) {
-        const html = await res.text();
-        
-        // Find og:image, twitter:image, or main product image meta tags
-        const match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-          || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
-          || html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)
-          || html.match(/<meta[^>]+property=["']og:image:secure_url["'][^>]+content=["']([^"']+)["']/i);
 
-        if (match && match[1]) {
-          let extractedUrl = match[1].replace(/&amp;/g, '&');
-          if (extractedUrl.startsWith('//')) {
-            extractedUrl = 'https:' + extractedUrl;
-          } else if (extractedUrl.startsWith('/')) {
-            try {
-              const urlObj = new URL(cleanUrl);
-              extractedUrl = `${urlObj.origin}${extractedUrl}`;
-            } catch (_) {}
+      if (jinaRes.ok) {
+        const jinaJson = await jinaRes.json();
+        if (jinaJson.data) {
+          const jd = jinaJson.data;
+          if (!extractedData.title && jd.title) extractedData.title = jd.title;
+          if (!extractedData.description && jd.description) extractedData.description = jd.description;
+          extractedData.rawText = (jd.content || '').slice(0, 3000);
+
+          // Find first image in markdown if not already found
+          if (!extractedData.imageUrl && jd.content) {
+            const imgMatch = jd.content.match(/!\[.*?\]\((https?:\/\/[^\s\)]+)\)/);
+            if (imgMatch && imgMatch[1]) {
+              extractedData.imageUrl = imgMatch[1];
+            }
           }
-          return extractedUrl;
         }
       }
     } catch (e) {
-      console.warn('Webshop scraper hiba a proxy-n keresztül:', e);
+      console.warn('Jina Reader scraping figyelmeztetés:', e);
     }
   }
 
-  // C) If HTML metadata scraping failed, return the URL to try loading directly
-  return cleanUrl;
+  // Fallback: If no image extracted, use URL as image URL
+  if (!extractedData.imageUrl) {
+    extractedData.imageUrl = cleanUrl;
+  }
+
+  return extractedData;
 }

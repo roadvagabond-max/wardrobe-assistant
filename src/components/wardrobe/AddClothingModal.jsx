@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, Upload, Link as LinkIcon, Sparkles, Check, Loader2, AlertCircle, Compass, Calendar, Tag, Plus } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
-import { extractImageFromWebshopUrl } from '../../services/webshop';
+import { extractWebshopData } from '../../services/webshop';
 import { uploadGarmentImage } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
 import confetti from 'canvas-confetti';
@@ -118,30 +118,33 @@ export default function AddClothingModal({ isOpen, onClose }) {
     setIsAnalyzing(true);
     setAnalysisError(null);
     try {
-      const extractedImageUrl = await extractImageFromWebshopUrl(webshopUrl.trim());
-      setImagePreview(extractedImageUrl);
-      await triggerAIAnalysis(extractedImageUrl);
+      const webshopData = await extractWebshopData(webshopUrl.trim());
+      if (webshopData.imageUrl) {
+        setImagePreview(webshopData.imageUrl);
+      }
+      await triggerAIAnalysis(webshopData.imageUrl, webshopData);
     } catch (err) {
       console.error('Webshop link hiba:', err);
-      setAnalysisError(err.message || 'Nem sikerült kinyerni a képet a megadott webshop linkről. Próbáld közvetlen képcímmel vagy fotóval!');
+      setAnalysisError(err.message || 'Nem sikerült kinyerni az adatokat a megadott webshop linkről. Próbáld közvetlen képcímmel vagy fotóval!');
       setIsAnalyzing(false);
     }
   };
 
-  const triggerAIAnalysis = async (imgSource) => {
+  const triggerAIAnalysis = async (imgSource, webshopContext = {}) => {
     setIsAnalyzing(true);
     setAnalysisError(null);
     try {
-      const aiResult = await analyzeClothingImage(imgSource);
+      const aiResult = await analyzeClothingImage(imgSource, webshopContext);
       if (aiResult) {
         setFormData(prev => ({
           ...prev,
-          name: aiResult.name || prev.name || 'Új Ruhadarab',
+          name: aiResult.name || webshopContext.title || prev.name || 'Új Ruhadarab',
           category: aiResult.category || prev.category,
           subCategory: aiResult.subCategory || prev.subCategory,
           color: aiResult.color || prev.color,
           colorHex: aiResult.colorHex || prev.colorHex,
           material: aiResult.material || prev.material,
+          brand: aiResult.brand || webshopContext.brand || prev.brand,
           qualityScore: aiResult.qualityScore || prev.qualityScore,
           season: aiResult.season || prev.season,
           formality: aiResult.formality || prev.formality,

@@ -42,7 +42,6 @@ async function callGeminiApi({ apiKey, contents, responseMimeType = "application
         const data = await response.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (rawText) {
-          // Clean up any potential markdown fences
           const cleaned = rawText
             .replace(/^```json\s*/i, '')
             .replace(/^```\s*/i, '')
@@ -65,28 +64,45 @@ async function callGeminiApi({ apiKey, contents, responseMimeType = "application
 }
 
 /**
- * 1. Deep Multimodal AI Garment Vision Analysis
- * Supports both Base64 DataURLs and remote Webshop/Image URLs.
+ * 1. Deep Multimodal & Text-First AI Garment Vision Analysis
+ * Prioritizes official webshop textual descriptions and materials, supplemented by image vision.
  */
-export async function analyzeClothingImage(imageBase64OrUrl) {
+export async function analyzeClothingImage(imageBase64OrUrl, webshopContext = {}) {
   const apiKey = getGeminiApiKey();
 
-  if (apiKey && imageBase64OrUrl) {
+  if (apiKey) {
     try {
-      let finalBase64 = imageBase64OrUrl;
+      let finalBase64 = null;
+      let hasImage = false;
 
-      // If it's a remote URL, fetch and convert to base64 DataURL
-      if (!imageBase64OrUrl.startsWith('data:')) {
-        finalBase64 = await fetchRemoteImageAsBase64(imageBase64OrUrl);
+      if (imageBase64OrUrl) {
+        try {
+          if (imageBase64OrUrl.startsWith('data:')) {
+            finalBase64 = imageBase64OrUrl;
+            hasImage = true;
+          } else {
+            finalBase64 = await fetchRemoteImageAsBase64(imageBase64OrUrl);
+            if (finalBase64 && finalBase64.startsWith('data:')) {
+              hasImage = true;
+            }
+          }
+        } catch (e) {
+          console.warn('Kép betöltése sikertelen, folytatás szöveg-alapú elemzéssel:', e);
+        }
       }
 
-      if (finalBase64 && finalBase64.startsWith('data:')) {
-        const parts = finalBase64.split(';base64,');
-        const mimeType = parts[0].replace('data:', '') || 'image/jpeg';
-        const base64Data = parts[1];
+      // Build context from webshop text
+      const webshopTextInfo = [
+        webshopContext.title ? `Hivatalos Terméknév a webshopból: "${webshopContext.title}"` : '',
+        webshopContext.brand ? `Márka / Forgalmazó: "${webshopContext.brand}"` : '',
+        webshopContext.description ? `Hivatalos Termékleírás és Anyagösszetétel: "${webshopContext.description}"` : '',
+        webshopContext.rawText ? `További részletek a weboldalról: "${webshopContext.rawText.slice(0, 800)}"` : ''
+      ].filter(Boolean).join('\n');
 
-        const prompt = `Te egy világklasszis professzionális személyi stylist, divattanácsadó és ruhatár-tervező vagy.
-Elemezd a fotón látható ruhadarabot részletesen, szakértő szemmel!
+      const prompt = `Te egy világklasszis professzionális személyi stylist, divattanácsadó és ruhatár-tervező vagy.
+Elemezd a ruhadarabot részletesen, szakértő szemmel!
+
+${webshopTextInfo ? `--- HIVATALOS WEBSHOP ADATOK ---\n${webshopTextInfo}\nFONTOS: Elsődlegesen a fenti hivatalos szöveges adatokból határozd meg a darab pontos anyagát (pl. 100% Pamut, Gyapjú, Len, stb.), nevét és márkáját!` : ''}
 
 Határozd meg:
 1. A darab pontos elnevezését, főkategóriáját, alkategóriáját, valódi színét, színkódját (#hex), anyagösszetételét, becsült minőségét (1.0-10.0 pont), formalitási szintjét és szezonalitását.
@@ -106,41 +122,43 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "qualityScore": 9.2,
   "season": ["tavasz", "nyar", "osz", "tel"],
   "formality": "Casual" | "Smart Casual" | "Sprezzatura" | "Business" | "Black Tie",
-  "stylingTip": "Mivel hordd: Kombináld világoskék oxford inggel, sötétbarna bőr loaferrel és homokszínű chino nadrággal egy időtlen smart casual megjelenésért.",
-  "whenToWear": "Mikor hordd: Ideális üzleti tárgyalásokhoz, elegáns vacsorákhoz, tavaszi és őszi városi megjelenésekhez 16-24°C között.",
-  "stylingAdvice": "Kiemelkedően sokoldalú alapdarab, amely azonnal megemeli bármely összeállítás színvonalát.",
-  "tags": ["elegáns", "alapdarab", "olasz szabás", "sokoldalú"]
+  "stylingTip": "Mivel hordd: Konkrét kombinációs javaslatok más darabokkal",
+  "whenToWear": "Mikor hordd: Események, időjárás és alkalmak",
+  "stylingAdvice": "Szakértői stílusjellemzés a darabról",
+  "tags": ["elegáns", "alapdarab", "olasz szabás"]
 }`;
 
-        const contents = [{
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType, data: base64Data } }
-          ]
-        }];
+      const parts = [{ text: prompt }];
 
-        return await callGeminiApi({ apiKey, contents });
+      // Attach image if available
+      if (hasImage && finalBase64) {
+        const p = finalBase64.split(';base64,');
+        const mimeType = p[0].replace('data:', '') || 'image/jpeg';
+        const base64Data = p[1];
+        parts.push({ inlineData: { mimeType, data: base64Data } });
       }
+
+      return await callGeminiApi({ apiKey, contents: [{ parts }] });
     } catch (err) {
-      console.error('Gemini Vision API hiba:', err);
+      console.error('Gemini Vision & Text API hiba:', err);
       throw err;
     }
   }
 
-  // Intelligens helyi alapértelmezett minta ha nincs aktív API kapcsolat
+  // Fallback
   return {
-    name: "Feltöltött Ruhadarab",
+    name: webshopContext.title || "Feltöltött Ruhadarab",
     category: "tops",
     subCategory: "shirt",
     color: "Sötétkék",
     colorHex: "#1e293b",
-    material: "100% Pamut",
+    material: webshopContext.description || "100% Pamut",
     qualityScore: 8.8,
     season: ["tavasz", "nyar", "osz"],
     formality: "Smart Casual",
-    stylingTip: "Mivel hordd: Viseld bézs chino nadrággal, barna bőr övvel és letisztult fehér sneakerrel vagy barna loaferrel.",
-    whenToWear: "Mikor hordd: Tökéletes irodai munkához, kötetlen üzleti találkozókhoz és hétvégi elegáns programokhoz.",
-    stylingAdvice: "Letisztult és univerzális alapdarab, ami szinte minden nadrággal harmonizál.",
+    stylingTip: "Mivel hordd: Viseld bézs chino nadrággal és barna bőr loaferrel.",
+    whenToWear: "Mikor hordd: Kiváló irodai munkához és elegáns esti programokhoz.",
+    stylingAdvice: "Letisztult és univerzális alapdarab.",
     tags: ["alapdarab", "smart casual", "irodai"]
   };
 }
@@ -186,7 +204,7 @@ Válaszolj KIZÁRÓLAG JSON formátumban:
     }
   }
 
-  // Intelligens lokális szimuláció ha nincs API kulcs vagy hálózati hiba
+  // Fallback szimuláció
   const sampleOutfits = [
     {
       id: 'mock-eval-1',

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeClothingImage, evaluatePrePurchaseItem } from '../../services/gemini';
-import { extractImageFromWebshopUrl } from '../../services/webshop';
+import { extractWebshopData } from '../../services/webshop';
 import confetti from 'canvas-confetti';
 
 export default function PurchaseAdvisorView() {
@@ -11,6 +11,7 @@ export default function PurchaseAdvisorView() {
   const [activeTab, setActiveTab] = useState('camera'); // 'camera', 'upload', 'link'
   const [imagePreview, setImagePreview] = useState(null);
   const [webshopUrl, setWebshopUrl] = useState('');
+  const [webshopContext, setWebshopContext] = useState(null);
   const [itemName, setItemName] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [evaluationResult, setEvaluationResult] = useState(null);
@@ -25,6 +26,7 @@ export default function PurchaseAdvisorView() {
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result);
+      setWebshopContext(null);
       setEvaluationResult(null);
     };
     reader.readAsDataURL(file);
@@ -36,8 +38,12 @@ export default function PurchaseAdvisorView() {
 
     setIsAnalyzing(true);
     try {
-      const extractedUrl = await extractImageFromWebshopUrl(webshopUrl.trim());
-      setImagePreview(extractedUrl);
+      const data = await extractWebshopData(webshopUrl.trim());
+      setImagePreview(data.imageUrl);
+      setWebshopContext(data);
+      if (data.title && !itemName) {
+        setItemName(data.title);
+      }
       setEvaluationResult(null);
     } catch (err) {
       console.error('Webshop link hiba:', err);
@@ -48,12 +54,12 @@ export default function PurchaseAdvisorView() {
   };
 
   const handleRunEvaluation = async () => {
-    if (!imagePreview) return;
+    if (!imagePreview && !webshopContext) return;
 
     setIsAnalyzing(true);
     try {
-      // 1. Képelemzés (tulajdonságok kinyerése)
-      const newItemAttributes = await analyzeClothingImage(imagePreview);
+      // 1. Képelemzés & Szöveges elemzés (tulajdonságok kinyerése)
+      const newItemAttributes = await analyzeClothingImage(imagePreview, webshopContext || {});
       if (itemName) newItemAttributes.name = itemName;
 
       // 2. 3-Outfit Szabály & Ruhatár Kompatibilitás Teszt
