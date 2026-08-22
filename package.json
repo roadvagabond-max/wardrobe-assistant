@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "push": "node push.js",
+    "sync": "node push.js"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
