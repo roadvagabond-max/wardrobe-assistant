@@ -6,6 +6,59 @@ const getGeminiApiKey = () => {
 
 export const isGeminiConfigured = () => Boolean(getGeminiApiKey());
 
+// Standard, verified Google Gemini models in order of attempt
+const GEMINI_MODELS = [
+  'gemini-1.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-pro'
+];
+
+/**
+ * Universal Gemini API caller with automatic multi-model fallback and JSON parser
+ */
+async function callGeminiApi({ apiKey, contents, responseMimeType = "application/json" }) {
+  let lastError = null;
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (rawText) {
+          // Clean up any potential markdown fences
+          const cleaned = rawText
+            .replace(/^```json\s*/i, '')
+            .replace(/^```\s*/i, '')
+            .replace(/\s*```$/i, '')
+            .trim();
+          return JSON.parse(cleaned);
+        }
+      } else {
+        const errBody = await response.text();
+        console.warn(`Gemini (${model}) válasz státusz: ${response.status}`, errBody);
+        lastError = new Error(`Gemini API hiba (${response.status}): ${errBody.slice(0, 180)}`);
+      }
+    } catch (e) {
+      console.warn(`Hiba a(z) ${model} modellel:`, e);
+      lastError = e;
+    }
+  }
+
+  throw lastError || new Error('Nem sikerült választ kapni a Gemini AI modelltől.');
+}
+
 /**
  * 1. Deep Multimodal AI Garment Vision Analysis
  */
@@ -18,50 +71,33 @@ export async function analyzeClothingImage(imageBase64OrUrl) {
       const mimeType = parts[0].replace('data:', '') || 'image/jpeg';
       const base64Data = parts[1];
 
-      const prompt = `Te egy sokoldalú, magasan képzett professzionális divattanácsadó és stílusszakértő vagy.
-      Értsz minden fő stílusirányzathoz (pl. Casual, Smart Casual, Business, Streetwear, Old Money / Classic Elegance, Minimalist, Quiet Luxury, Vintage, Sprezzatura, Athleisure).
-      Elemezd a fotón látható ruhadarabot objektíven és pontosan a tényleges stílusa szerint!
-      Határozd meg a darab pontos típusát, valódi színét, anyagösszetételét, szezonalitását, formalitási szintjét, és adj egy hozzá illő, releváns szakértői stílustippet a viseléséhez.
-      
-      VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
-      {
-        "name": "Pontos és igényes magyar megnevezés (pl. 'Sötétkék Pamut Chino Nadrág', 'Oversized Kötött Pulóver', 'Klasszikus Gyapjú Zakó')",
-        "category": "outerwear" | "tops" | "bottoms" | "shoes" | "accessories",
-        "subCategory": "blazer" | "shirt" | "t-shirt" | "knitwear" | "hoodie" | "trousers" | "jeans" | "shorts" | "loafers" | "sneakers" | "boots" | "overcoat" | "jacket" | "other",
-        "color": "Valódi fő szín magyarul",
-        "colorHex": "#színkód",
-        "material": "Részletes anyag és jelleg (pl. 100% Pamut, Gyapjú keverék, Len, Farmer/Denim, Bőr)",
-        "qualityScore": 8.5,
-        "season": ["tavasz", "nyar", "osz", "tel"],
-        "formality": "Casual" | "Smart Casual" | "Business Casual" | "Business / Formal" | "Streetwear" | "Athleisure",
-        "stylingTip": "Konkrét, a darab tényleges stílusához igazodó tanács a kombinálására",
-        "tags": ["3-5 db releváns stílus, alkalom és anyag címke (pl. 'streetwear', 'minimal', 'irodai', 'pamut')"]
-      }`;
+      const prompt = `Te egy professzionális, sokoldalú divattanácsadó és ruhatár-szakértő vagy.
+Elemezd a fotón látható ruhadarabot objektíven és pontosan!
+Határozd meg a darab pontos típusát, valódi színét, színkódját, anyagát, minőségét (1-10), szezonalitását, formalitási szintjét, és adj egy releváns szakértői stílustippet.
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType, data: base64Data } }
-            ]
-          }],
-          generationConfig: { responseMimeType: "application/json" }
-        })
-      });
+VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
+{
+  "name": "Pontos és igényes magyar megnevezés (pl. 'Sötétkék Pamut Chino Nadrág', 'Klasszikus Gyapjú Zakó')",
+  "category": "outerwear" | "tops" | "bottoms" | "shoes" | "accessories",
+  "subCategory": "blazer" | "shirt" | "t-shirt" | "knitwear" | "hoodie" | "trousers" | "jeans" | "shorts" | "loafers" | "sneakers" | "boots" | "overcoat" | "jacket" | "other",
+  "color": "Valódi fő szín magyarul (pl. Sötétkék, Homokbézs, Törtfehér)",
+  "colorHex": "#színkód",
+  "material": "Részletes anyag (pl. 100% Pamut, Gyapjú, Len, Farmer/Denim, Bőr)",
+  "qualityScore": 8.8,
+  "season": ["tavasz", "nyar", "osz", "tel"],
+  "formality": "Casual" | "Smart Casual" | "Business Casual" | "Business / Formal" | "Streetwear" | "Athleisure",
+  "stylingTip": "Konkrét, stílusos tanács a ruhadarab viseléséhez",
+  "tags": ["stílusos", "elegáns", "alapdarab"]
+}`;
 
-      if (!response.ok) {
-        const errBody = await response.text();
-        console.error('Gemini API válasz:', response.status, errBody);
-        throw new Error(`Gemini API hiba (${response.status}): ${errBody.slice(0, 200)}`);
-      }
+      const contents = [{
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType, data: base64Data } }
+        ]
+      }];
 
-      const result = await response.json();
-      const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) throw new Error('A Gemini nem adott vissza elemzést. Próbálj egy tisztább fotót!');
-      return JSON.parse(rawText);
+      return await callGeminiApi({ apiKey, contents });
     } catch (err) {
       console.error('Gemini Vision API hiba:', err);
       throw err;
@@ -79,7 +115,7 @@ export async function analyzeClothingImage(imageBase64OrUrl) {
     qualityScore: 8.0,
     season: ["tavasz", "nyar", "osz"],
     formality: "Smart Casual",
-    stylingTip: "Kombináld sötét nadrággal és letisztult cipővel.",
+    stylingTip: "Kombináld semleges nadrággal és letisztult cipővel.",
     tags: ["alapdarab", "smart casual", "irodai"]
   };
 }
@@ -93,50 +129,33 @@ export async function evaluatePrePurchaseItem({ newItem, wardrobe = [], stylePro
   if (apiKey) {
     try {
       const prompt = `Te egy prémium stílustanácsadó vagy.
-      A felhasználó ezt a darabot tervezi megvenni: ${JSON.stringify(newItem)}
-      Stílusprofilja: ${JSON.stringify(styleProfile)}
-      Meglévő ruhatára (${wardrobe.length} elem): ${JSON.stringify(wardrobe.map(w => ({ id: w.id, name: w.name, category: w.category, color: w.color, formality: w.formality })))}
-      
-      Végezd el a 3-Outfit Szabály tesztet! Készíts 3 komplett outfitet a meglévő ruhákból ezzel a darabbal párosítva.
-      Válaszolj KIZÁRÓLAG JSON formátumban:
-      {
-        "compatibilityScore": 92,
-        "verdict": "Erősen Ajánlott" | "Érdemes Megfontolni" | "Gondold Át",
-        "verdictSummary": "Részletes szakmai indoklás magyarul",
-        "stylingTip": "Kiemelt stylist tipp",
-        "outfits": [
-          {
-            "id": "eval-1",
-            "title": "1. Szett Címe (pl. Pénteki Smart Casual)",
-            "occasion": "Munka / Tárgyalás",
-            "matchScore": 95,
-            "stylingTip": "Stílustanács ehhez a szetthez",
-            "items": [
-              { "name": "${newItem.name || 'Új darab'}", "category": "${newItem.category || 'tops'}", "color": "${newItem.color || 'Kék'}" }
-            ]
-          }
-        ]
-      }`;
+A felhasználó ezt a darabot tervezi megvenni: ${JSON.stringify(newItem)}
+Stílusprofilja: ${JSON.stringify(styleProfile)}
+Meglévő ruhatára (${wardrobe.length} elem): ${JSON.stringify(wardrobe.map(w => ({ id: w.id, name: w.name, category: w.category, color: w.color, formality: w.formality })))}
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: "application/json" }
-        })
-      });
+Végezd el a 3-Outfit Szabály tesztet! Készíts 3 komplett outfitet a meglévő ruhákból ezzel a darabbal párosítva.
+Válaszolj KIZÁRÓLAG JSON formátumban:
+{
+  "compatibilityScore": 92,
+  "verdict": "Erősen Ajánlott" | "Érdemes Megfontolni" | "Gondold Át",
+  "verdictSummary": "Részletes szakmai indoklás magyarul",
+  "stylingTip": "Kiemelt stylist tipp",
+  "outfits": [
+    {
+      "id": "eval-1",
+      "title": "1. Szett Címe",
+      "occasion": "Munka / Tárgyalás",
+      "matchScore": 95,
+      "stylingTip": "Stílustanács ehhez a szetthez",
+      "items": [
+        { "name": "${newItem.name || 'Új darab'}", "category": "${newItem.category || 'tops'}", "color": "${newItem.color || 'Kék'}" }
+      ]
+    }
+  ]
+}`;
 
-      if (!res.ok) {
-        const errBody = await res.text();
-        console.error('Gemini 3-outfit API válasz:', res.status, errBody);
-        throw new Error(`Gemini API hiba (${res.status}): ${errBody.slice(0, 200)}`);
-      }
-
-      const d = await res.json();
-      const t = d.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!t) throw new Error('A Gemini nem adott vissza outfit javaslatokat.');
-      return JSON.parse(t);
+      const contents = [{ parts: [{ text: prompt }] }];
+      return await callGeminiApi({ apiKey, contents });
     } catch(e) {
       console.error("Gemini 3-outfit hiba:", e);
     }
@@ -151,7 +170,7 @@ export async function evaluatePrePurchaseItem({ newItem, wardrobe = [], stylePro
       matchScore: 94,
       stylingTip: 'Kombináld semleges alapszínekkel és minőségi kiegészítőkkel.',
       items: [
-        { name: newItem.name || 'Kiszemelt Darab', category: newItem.category || 'tops', color: newItem.color || 'Kék', image: newItem.image },
+        { name: newItem.name || 'Kiszemelt Darab', category: newItem.category || 'tops', color: newItem.color || 'Kék' },
         ...(wardrobe.slice(0, 3))
       ]
     },
@@ -162,7 +181,7 @@ export async function evaluatePrePurchaseItem({ newItem, wardrobe = [], stylePro
       matchScore: 89,
       stylingTip: 'A sötétebb tónusú kiegészítők kifinomult eleganciát kölcsönöznek.',
       items: [
-        { name: newItem.name || 'Kiszemelt Darab', category: newItem.category || 'tops', color: newItem.color || 'Kék', image: newItem.image },
+        { name: newItem.name || 'Kiszemelt Darab', category: newItem.category || 'tops', color: newItem.color || 'Kék' },
         ...(wardrobe.slice(2, 5))
       ]
     },
@@ -173,7 +192,7 @@ export async function evaluatePrePurchaseItem({ newItem, wardrobe = [], stylePro
       matchScore: 91,
       stylingTip: 'Kényelmes, mégis rendezett megjelenés letisztult lábbelivel.',
       items: [
-        { name: newItem.name || 'Kiszemelt Darab', category: newItem.category || 'tops', color: newItem.color || 'Kék', image: newItem.image },
+        { name: newItem.name || 'Kiszemelt Darab', category: newItem.category || 'tops', color: newItem.color || 'Kék' },
         ...(wardrobe.slice(1, 4))
       ]
     }
@@ -196,51 +215,40 @@ export async function generateEventOutfits({ eventName, weather, wardrobe = [], 
 
   if (apiKey && wardrobe.length > 0) {
     try {
-      const prompt = `Te egy mester styliszt és ruhatár-tervező vagy.
-      Esemény / Alkalom: "${eventName}"
-      Időjárás: ${weather?.temperature}°C, ${weather?.condition} (${weather?.recommendation || ''})
-      Felhasználó stílusprofilja: ${JSON.stringify(styleProfile)}
-      A felhasználó meglévő ruhatára (${wardrobe.length} elem):
-      ${JSON.stringify(wardrobe.map(w => ({ id: w.id, name: w.name, category: w.category, color: w.color, formality: w.formality })))}
+      const prompt = `Te egy mester stylist és ruhatár-tervező vagy.
+Esemény / Alkalom: "${eventName}"
+Időjárás: ${weather?.temperature}°C, ${weather?.condition} (${weather?.recommendation || ''})
+Felhasználó stílusprofilja: ${JSON.stringify(styleProfile)}
+A felhasználó meglévő ruhatára (${wardrobe.length} elem):
+${JSON.stringify(wardrobe.map(w => ({ id: w.id, name: w.name, category: w.category, color: w.color, formality: w.formality })))}
 
-      Készíts 3 különböző, kifinomult és komplett outfitet KIZÁRÓLAG a fenti ruhatári elemek kombinációjából!
-      VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
-      [
-        {
-          "id": "outfit-1",
-          "title": "Kifejező szett elnevezés",
-          "occasion": "${eventName}",
-          "matchScore": 96,
-          "stylingTip": "Konkrét tanács a szett viseléséhez és viselkedéséhez",
-          "itemIds": ["id1", "id2", "id3"]
-        }
-      ]`;
+Készíts 3 különböző, kifinomult és komplett outfitet KIZÁRÓLAG a fenti ruhatári elemek kombinációjából!
+VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
+[
+  {
+    "id": "outfit-1",
+    "title": "Kifejező szett elnevezés",
+    "occasion": "${eventName}",
+    "matchScore": 96,
+    "stylingTip": "Konkrét tanács a szett viseléséhez",
+    "itemIds": ["id1", "id2", "id3"]
+  }
+]`;
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: "application/json" }
-        })
-      });
-
-      if (res.ok) {
-        const d = await res.json();
-        const t = d.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (t) {
-          const parsed = JSON.parse(t);
-          return parsed.map((p, idx) => ({
-            id: p.id || `outfit-${Date.now()}-${idx}`,
-            title: p.title || `${idx + 1}. Stílusos Szett`,
-            occasion: p.occasion || eventName,
-            matchScore: p.matchScore || 90 + Math.floor(Math.random() * 8),
-            stylingTip: p.stylingTip || "Harmonikus, réteges összeállítás.",
-            items: (p.itemIds || [])
-              .map(id => wardrobe.find(w => w.id === id))
-              .filter(Boolean)
-          })).filter(o => o.items.length > 0);
-        }
+      const contents = [{ parts: [{ text: prompt }] }];
+      const parsed = await callGeminiApi({ apiKey, contents });
+      
+      if (Array.isArray(parsed)) {
+        return parsed.map((p, idx) => ({
+          id: p.id || `outfit-${Date.now()}-${idx}`,
+          title: p.title || `${idx + 1}. Stílusos Szett`,
+          occasion: p.occasion || eventName,
+          matchScore: p.matchScore || 90 + Math.floor(Math.random() * 8),
+          stylingTip: p.stylingTip || "Harmonikus, réteges összeállítás.",
+          items: (p.itemIds || [])
+            .map(id => wardrobe.find(w => w.id === id))
+            .filter(Boolean)
+        })).filter(o => o.items.length > 0);
       }
     } catch (e) {
       console.error("Gemini Stylist hiba:", e);
