@@ -6,8 +6,9 @@ const getGeminiApiKey = () => {
 
 export const isGeminiConfigured = () => Boolean(getGeminiApiKey());
 
-// Standard, verified Google Gemini models in order of attempt
+// Google Gemini models in order of priority (starting with 3.6-flash)
 const GEMINI_MODELS = [
+  'gemini-3.6-flash',
   'gemini-1.5-flash',
   'gemini-2.0-flash',
   'gemini-1.5-pro'
@@ -24,7 +25,10 @@ async function callGeminiApi({ apiKey, contents, responseMimeType = "application
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
+        },
         body: JSON.stringify({
           contents,
           generationConfig: {
@@ -47,7 +51,7 @@ async function callGeminiApi({ apiKey, contents, responseMimeType = "application
         }
       } else {
         const errBody = await response.text();
-        console.warn(`Gemini (${model}) válasz státusz: ${response.status}`, errBody);
+        console.warn(`Gemini (${model}) státusz: ${response.status}`, errBody);
         lastError = new Error(`Gemini API hiba (${response.status}): ${errBody.slice(0, 180)}`);
       }
     } catch (e) {
