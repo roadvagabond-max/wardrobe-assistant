@@ -1,5 +1,4 @@
 // Advanced Google Gemini Vision & Fashion Stylist Intelligence Engine
-import { convertImageViaCanvas } from './webshop';
 
 const getGeminiApiKey = () => {
   return import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || '';
@@ -72,31 +71,13 @@ export async function analyzeClothingImage(imageBase64OrUrl, webshopContext = {}
 
   if (apiKey) {
     try {
-      let finalBase64 = null;
-      let hasImage = false;
-
-      if (imageBase64OrUrl) {
-        if (imageBase64OrUrl.startsWith('data:')) {
-          finalBase64 = imageBase64OrUrl;
-          hasImage = true;
-        } else {
-          try {
-            finalBase64 = await convertImageViaCanvas(imageBase64OrUrl);
-            if (finalBase64 && finalBase64.startsWith('data:')) {
-              hasImage = true;
-            }
-          } catch (e) {
-            console.warn('Canvas képkonverzió figyelmeztetés:', e);
-          }
-        }
-      }
-
       // Build context from webshop text
       const webshopTextInfo = [
         webshopContext.title ? `CÉLTERMÉK HIVATALOS NEVE: "${webshopContext.title}"` : '',
         webshopContext.brand ? `Márka / Gyártó: "${webshopContext.brand}"` : '',
         webshopContext.description ? `Hivatalos Leírás és Anyagösszetétel: "${webshopContext.description}"` : '',
-        webshopContext.rawText ? `Oldal további részletei: "${webshopContext.rawText.slice(0, 800)}"` : ''
+        webshopContext.rawText ? `Oldal további részletei: "${webshopContext.rawText.slice(0, 800)}"` : '',
+        (!imageBase64OrUrl?.startsWith('data:') && imageBase64OrUrl) ? `Termékkép URL: "${imageBase64OrUrl}"` : ''
       ].filter(Boolean).join('\n');
 
       const targetFocusInstruction = webshopContext.title 
@@ -136,8 +117,9 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 
       const parts = [{ text: prompt }];
 
-      if (hasImage && finalBase64 && finalBase64.startsWith('data:')) {
-        const p = finalBase64.split(';base64,');
+      // Attach image if it's base64 (from camera or file upload)
+      if (imageBase64OrUrl && imageBase64OrUrl.startsWith('data:')) {
+        const p = imageBase64OrUrl.split(';base64,');
         const mimeType = p[0].replace('data:', '') || 'image/jpeg';
         const base64Data = p[1];
         parts.push({ inlineData: { mimeType, data: base64Data } });

@@ -4,63 +4,40 @@
  * descriptions, materials, and high-resolution packshot images.
  */
 
-// Helper to convert an image URL into a base64 DataURL via an HTML Image element and Canvas
-export function convertImageViaCanvas(imageUrl) {
-  return new Promise((resolve) => {
-    if (!imageUrl) return resolve('');
-    if (imageUrl.startsWith('data:')) return resolve(imageUrl);
-
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        resolve(dataUrl);
-      } catch (_) {
-        // If crossOrigin is tainted by strict CDN, return the original URL
-        resolve(imageUrl);
-      }
-    };
-
-    img.onerror = () => {
-      resolve(imageUrl);
-    };
-
-    img.src = imageUrl;
-  });
-}
-
 /**
- * Filter out favicons, logos and invalid micro-images
+ * Filter out favicons, badges, partner logos, and non-product graphics
  */
 function isFaviconOrLogo(url = '') {
+  if (!url) return true;
   const lower = url.toLowerCase();
   return (
     lower.includes('favicon') ||
-    lower.includes('t1.gstatic.com') ||
-    lower.includes('t0.gstatic.com') ||
+    lower.includes('gstatic.com') ||
     lower.endsWith('.ico') ||
-    lower.includes('logo-') ||
-    lower.includes('/logo.') ||
-    lower.includes('apple-touch-icon')
+    lower.endsWith('.svg') ||
+    lower.includes('akamai') ||
+    lower.includes('logo') ||
+    lower.includes('badge') ||
+    lower.includes('trustpilot') ||
+    lower.includes('payment') ||
+    lower.includes('visa') ||
+    lower.includes('mastercard') ||
+    lower.includes('apple-touch-icon') ||
+    lower.includes('banner') ||
+    lower.includes('sprite') ||
+    lower.includes('avatar')
   );
 }
 
 /**
- * Extracts product metadata and images from a webshop URL
+ * Extracts product metadata and clean images from a webshop URL
  */
 export async function extractWebshopData(url) {
   const cleanUrl = url.trim();
   if (!cleanUrl) throw new Error('Kérlek adj meg egy érvényes webshop linket vagy képcímet!');
 
   // Case 1: Direct Image URL
-  if (/\.(jpeg|jpg|png|webp|avif|gif)($|\?)/i.test(cleanUrl)) {
+  if (/\.(jpeg|jpg|png|webp|avif)($|\?)/i.test(cleanUrl)) {
     return {
       imageUrl: cleanUrl,
       images: [cleanUrl],
@@ -79,7 +56,7 @@ export async function extractWebshopData(url) {
     rawText: ''
   };
 
-  // Case 2: Microlink API
+  // Case 2: Microlink API (Structured Metadata)
   try {
     const microlinkUrl = `https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}&meta=true`;
     const res = await fetch(microlinkUrl);
@@ -99,10 +76,10 @@ export async function extractWebshopData(url) {
       }
     }
   } catch (e) {
-    console.warn('Microlink figyelmeztetés:', e);
+    console.warn('Microlink scraping info:', e);
   }
 
-  // Case 3: Jina Reader API (Fallback & Extra Product Images Extractor)
+  // Case 3: Jina Reader API (Deep Product Description & Image Extractor)
   try {
     const jinaUrl = `https://r.jina.ai/${cleanUrl}`;
     const jinaRes = await fetch(jinaUrl, {
@@ -117,12 +94,12 @@ export async function extractWebshopData(url) {
         if (!extractedData.description && jd.description) extractedData.description = jd.description;
         extractedData.rawText = (jd.content || '').slice(0, 3000);
 
-        // Find all product images in markdown content
+        // Find all real product image URLs in the Markdown content
         if (jd.content) {
           const imgMatches = Array.from(jd.content.matchAll(/!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g));
           const foundUrls = imgMatches
             .map(m => m[1])
-            .filter(u => !isFaviconOrLogo(u) && (u.includes('product') || u.includes('catalog') || u.includes('image') || u.includes('media') || /\.(jpe?g|png|webp)/i.test(u)));
+            .filter(u => !isFaviconOrLogo(u) && (u.includes('product') || u.includes('catalog') || u.includes('media') || u.includes('image') || /\.(jpe?g|png|webp)/i.test(u)));
 
           for (const u of foundUrls) {
             if (!extractedData.images.includes(u)) {
@@ -131,15 +108,13 @@ export async function extractWebshopData(url) {
           }
 
           if (!extractedData.imageUrl && extractedData.images.length > 0) {
-            // Prioritize packshot / clean item photos if keyword matches
-            const packshot = extractedData.images.find(img => img.includes('_02') || img.includes('flat') || img.includes('packshot') || img.includes('still'));
-            extractedData.imageUrl = packshot || extractedData.images[0];
+            extractedData.imageUrl = extractedData.images[0];
           }
         }
       }
     }
   } catch (e) {
-    console.warn('Jina Reader figyelmeztetés:', e);
+    console.warn('Jina Reader scraping info:', e);
   }
 
   // Fallback: If still no image, use cleanUrl
