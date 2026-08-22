@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeClothingImage, evaluatePrePurchaseItem } from '../../services/gemini';
+import { extractImageFromWebshopUrl } from '../../services/webshop';
 import confetti from 'canvas-confetti';
 
 export default function PurchaseAdvisorView() {
@@ -29,14 +30,21 @@ export default function PurchaseAdvisorView() {
     reader.readAsDataURL(file);
   };
 
-  const handleLinkInput = (e) => {
+  const handleLinkInput = async (e) => {
     e.preventDefault();
-    if (!webshopUrl) return;
+    if (!webshopUrl.trim()) return;
 
-    // Sample preview from link
-    const sampleImage = 'https://images.unsplash.com/photo-1544923246-77307dd654cb?auto=format&fit=crop&w=800&q=80';
-    setImagePreview(sampleImage);
-    setEvaluationResult(null);
+    setIsAnalyzing(true);
+    try {
+      const extractedUrl = await extractImageFromWebshopUrl(webshopUrl.trim());
+      setImagePreview(extractedUrl);
+      setEvaluationResult(null);
+    } catch (err) {
+      console.error('Webshop link hiba:', err);
+      setImagePreview(webshopUrl.trim());
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleRunEvaluation = async () => {

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, Upload, Link as LinkIcon, Sparkles, Check, Loader2, AlertCircle, Compass, Calendar, Tag, Plus } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
+import { extractImageFromWebshopUrl } from '../../services/webshop';
 import { uploadGarmentImage } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
 import confetti from 'canvas-confetti';
@@ -112,13 +113,19 @@ export default function AddClothingModal({ isOpen, onClose }) {
 
   const handleLinkImport = async (e) => {
     e.preventDefault();
-    if (!webshopUrl) return;
+    if (!webshopUrl.trim()) return;
 
     setIsAnalyzing(true);
-    const sampleImage = 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?auto=format&fit=crop&w=800&q=80';
-    setImagePreview(sampleImage);
-
-    await triggerAIAnalysis(sampleImage);
+    setAnalysisError(null);
+    try {
+      const extractedImageUrl = await extractImageFromWebshopUrl(webshopUrl.trim());
+      setImagePreview(extractedImageUrl);
+      await triggerAIAnalysis(extractedImageUrl);
+    } catch (err) {
+      console.error('Webshop link hiba:', err);
+      setAnalysisError(err.message || 'Nem sikerült kinyerni a képet a megadott webshop linkről. Próbáld közvetlen képcímmel vagy fotóval!');
+      setIsAnalyzing(false);
+    }
   };
 
   const triggerAIAnalysis = async (imgSource) => {

@@ -1,4 +1,5 @@
 // Advanced Google Gemini Vision & Fashion Stylist Intelligence Engine
+import { fetchRemoteImageAsBase64 } from './webshop';
 
 const getGeminiApiKey = () => {
   return import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || '';
@@ -65,18 +66,26 @@ async function callGeminiApi({ apiKey, contents, responseMimeType = "application
 
 /**
  * 1. Deep Multimodal AI Garment Vision Analysis
- * Részletes felismerés, minősítés, valamint szöveges ajánlás: Mivel és Mikor érdemes hordani!
+ * Supports both Base64 DataURLs and remote Webshop/Image URLs.
  */
 export async function analyzeClothingImage(imageBase64OrUrl) {
   const apiKey = getGeminiApiKey();
 
-  if (apiKey && imageBase64OrUrl.startsWith('data:')) {
+  if (apiKey && imageBase64OrUrl) {
     try {
-      const parts = imageBase64OrUrl.split(';base64,');
-      const mimeType = parts[0].replace('data:', '') || 'image/jpeg';
-      const base64Data = parts[1];
+      let finalBase64 = imageBase64OrUrl;
 
-      const prompt = `Te egy világklasszis professzionális személyi stylist, divattanácsadó és ruhatár-tervező vagy.
+      // If it's a remote URL, fetch and convert to base64 DataURL
+      if (!imageBase64OrUrl.startsWith('data:')) {
+        finalBase64 = await fetchRemoteImageAsBase64(imageBase64OrUrl);
+      }
+
+      if (finalBase64 && finalBase64.startsWith('data:')) {
+        const parts = finalBase64.split(';base64,');
+        const mimeType = parts[0].replace('data:', '') || 'image/jpeg';
+        const base64Data = parts[1];
+
+        const prompt = `Te egy világklasszis professzionális személyi stylist, divattanácsadó és ruhatár-tervező vagy.
 Elemezd a fotón látható ruhadarabot részletesen, szakértő szemmel!
 
 Határozd meg:
@@ -103,14 +112,15 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "tags": ["elegáns", "alapdarab", "olasz szabás", "sokoldalú"]
 }`;
 
-      const contents = [{
-        parts: [
-          { text: prompt },
-          { inlineData: { mimeType, data: base64Data } }
-        ]
-      }];
+        const contents = [{
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType, data: base64Data } }
+          ]
+        }];
 
-      return await callGeminiApi({ apiKey, contents });
+        return await callGeminiApi({ apiKey, contents });
+      }
     } catch (err) {
       console.error('Gemini Vision API hiba:', err);
       throw err;
