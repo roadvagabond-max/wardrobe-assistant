@@ -206,19 +206,30 @@ export default function PurchaseAdvisorView() {
               {activeTab === 'link' && (
                 <form onSubmit={handleLinkInput} className="space-y-3">
                   <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                    Webshop termék oldalának linkje:
+                    Webshop termék oldalának linkje vagy közvetlen képcím:
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="url"
                       required
-                      placeholder="https://www.mrporter.com/en-hu/mens/product/..."
+                      placeholder="https://www.mrporter.com/... vagy kép linkje"
                       value={webshopUrl}
                       onChange={(e) => setWebshopUrl(e.target.value)}
                       className="custom-input"
                     />
-                    <button type="submit" className="btn-gold whitespace-nowrap">
-                      Betöltés
+                    <button 
+                      type="submit" 
+                      disabled={isAnalyzing}
+                      className="btn-gold whitespace-nowrap flex items-center gap-1.5"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Betöltés...</span>
+                        </>
+                      ) : (
+                        <span>Betöltés</span>
+                      )}
                     </button>
                   </div>
                 </form>

@@ -360,21 +360,46 @@ export default function AddClothingModal({ isOpen, onClose }) {
             {activeMode === 'link' && (
               <form onSubmit={handleLinkImport} className="space-y-3">
                 <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                  Webshop Termék URL (pl. Zara, Massimo Dutti, Reserved, Next, H&M):
+                  Webshop Termék URL (pl. Zara, Massimo Dutti, Reserved, Next, H&M) vagy közvetlen képcím:
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="url"
                     required
-                    placeholder="https://www.zara.com/hu/... vagy termékkép linkje"
+                    placeholder="https://www.zara.com/... vagy kép URL"
                     value={webshopUrl}
-                    onChange={(e) => setWebshopUrl(e.target.value)}
+                    onChange={(e) => {
+                      setWebshopUrl(e.target.value);
+                      if (analysisError) setAnalysisError(null);
+                    }}
                     className="custom-input"
                   />
-                  <button type="submit" className="btn-gold whitespace-nowrap">
-                    Kinyerés
+                  <button 
+                    type="submit" 
+                    disabled={isAnalyzing}
+                    className="btn-gold whitespace-nowrap flex items-center gap-1.5"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Kinyerés...</span>
+                      </>
+                    ) : (
+                      <span>Kinyerés</span>
+                    )}
                   </button>
                 </div>
+
+                {/* Error Box in Link Mode */}
+                {analysisError && (
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 animate-slide-up">
+                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold block mb-0.5">Sikertelen linkkinyerés:</span>
+                      <span>{analysisError}</span>
+                    </div>
+                  </div>
+                )}
               </form>
             )}
 
