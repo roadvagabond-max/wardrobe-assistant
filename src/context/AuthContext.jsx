@@ -106,6 +106,19 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Update Item in Wardrobe
+  const updateItem = async (itemId, updatedData) => {
+    setWardrobe(prev => prev.map(item => item.id === itemId ? { ...item, ...updatedData } : item));
+
+    if (currentUser && db && isFirebaseConfigured) {
+      try {
+        await updateDoc(doc(db, `users/${currentUser.uid}/wardrobe`, itemId), updatedData);
+      } catch (e) {
+        console.error('Hiba a Firestore frissítéskor:', e);
+      }
+    }
+  };
+
   // Update Profile
   const updateProfile = async (newProfile) => {
     setProfile(newProfile);
@@ -162,6 +175,7 @@ export function AuthProvider({ children }) {
         savedOutfits,
         loading,
         addItem,
+        updateItem,
         deleteItem,
         updateProfile,
         saveOutfit,

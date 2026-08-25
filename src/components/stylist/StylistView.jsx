@@ -1,28 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, CloudSun, Calendar, Compass, ArrowRight, Bookmark, Check, RefreshCw, Loader2 } from 'lucide-react';
+import { Sparkles, CloudSun, Calendar, Compass, ArrowRight, Bookmark, Check, RefreshCw, Loader2, Plus, X, Layers, Lock, Unlock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { generateEventOutfits } from '../../services/gemini';
 import { fetchCurrentWeather, CITIES } from '../../services/weather';
 import confetti from 'canvas-confetti';
 
-export default function StylistView({ weather, setWeather }) {
+const DEFAULT_EVENT_PRESETS = [
+  'Üzleti Tárgyalás & Ebéd',
+  'Nyári Teraszos Randevú',
+  'Sprezzatura Kötetlen Péntek',
+  'Esküvő & Ünnepi Esemény',
+  'Hétvégi Városi Séta & Kávézás',
+  'Elegáns Esti Színház / Vacsora'
+];
+
+export default function StylistView({ weather, setWeather, initialAnchorItem = null }) {
   const { wardrobe, profile, saveOutfit, savedOutfits } = useAuth();
 
   const [selectedEvent, setSelectedEvent] = useState('Üzleti Tárgyalás & Ebéd');
   const [customEvent, setCustomEvent] = useState('');
   const [selectedCity, setSelectedCity] = useState('Budapest');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRefreshingIndex, setIsRefreshingIndex] = useState(null);
   const [generatedOutfits, setGeneratedOutfits] = useState([]);
   const [savedIds, setSavedIds] = useState(new Set());
 
-  const eventPresets = [
-    'Üzleti Tárgyalás & Ebéd',
-    'Nyári Teraszos Randevú',
-    'Sprezzatura Kötetlen Péntek',
-    'Esküvő & Ünnepi Esemény',
-    'Hétvégi Városi Séta & Kávézás',
-    'Elegáns Esti Színház / Vacsora'
-  ];
+  // Anchor / Key Items to build outfit around
+  const [anchorItems, setAnchorItems] = useState(initialAnchorItem ? [initialAnchorItem] : []);
+  const [showAnchorModal, setShowAnchorModal] = useState(false);
+
+  // Dynamic Recent Events (from localStorage history)
+  const [recentEvents, setRecentEvents] = useState(() => {
+    const saved = localStorage.getItem('user_event_history');
+    return saved ? JSON.parse(saved) : DEFAULT_EVENT_PRESETS;
+  });
+
+  // Sync if initialAnchorItem is passed from ItemDetailModal
+  useEffect(() => {
+    if (initialAnchorItem && !anchorItems.some(a => a.id === initialAnchorItem.id)) {
+      setAnchorItems(prev => [...prev, initialAnchorItem]);
+    }
+  }, [initialAnchorItem]);
 
   // Load weather when city changes
   useEffect(() => {
@@ -33,16 +51,28 @@ export default function StylistView({ weather, setWeather }) {
     loadCityWeather();
   }, [selectedCity]);
 
+  const saveEventToHistory = (evt) => {
+    if (!evt || DEFAULT_EVENT_PRESETS.includes(evt)) return;
+    setRecentEvents(prev => {
+      const filtered = prev.filter(e => e !== evt);
+      const updated = [evt, ...filtered].slice(0, 8);
+      localStorage.setItem('user_event_history', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     const eventName = customEvent.trim() || selectedEvent;
+    if (customEvent.trim()) saveEventToHistory(customEvent.trim());
 
     try {
       const outfits = await generateEventOutfits({
         eventName,
         weather: weather || { temperature: 21, condition: 'Kellemes' },
         wardrobe,
-        styleProfile: profile
+        styleProfile: profile,
+        anchorItemIds: anchorItems.map(a => a.id)
       });
       setGeneratedOutfits(outfits);
 
@@ -61,9 +91,53 @@ export default function StylistView({ weather, setWeather }) {
     }
   };
 
+  // Single Outfit Card Shuffle / Refresh
+  const handleRefreshSingleOutfit = async (indexToRefresh) => {
+    setIsRefreshingIndex(indexToRefresh);
+    const eventName = customEvent.trim() || selectedEvent;
+
+    try {
+      const newOutfits = await generateEventOutfits({
+        eventName,
+        weather: weather || { temperature: 21, condition: 'Kellemes' },
+        wardrobe,
+        styleProfile: profile,
+        anchorItemIds: anchorItems.map(a => a.id)
+      });
+
+      if (newOutfits && newOutfits.length > 0) {
+        setGeneratedOutfits(prev => {
+          const updated = [...prev];
+          // Take the matching or next new outfit
+          const replacement = newOutfits[indexToRefresh] || newOutfits[0];
+          updated[indexToRefresh] = {
+            ...replacement,
+            id: `outfit-${Date.now()}-${indexToRefresh}`
+          };
+          return updated;
+        });
+      }
+    } catch (e) {
+      console.error('Hiba az egyedi szett frissítésekor:', e);
+    } finally {
+      setIsRefreshingIndex(null);
+    }
+  };
+
   const handleSaveOutfit = (outfit) => {
     saveOutfit(outfit);
     setSavedIds(prev => new Set(prev).add(outfit.id));
+  };
+
+  const handleToggleAnchor = (item) => {
+    setAnchorItems(prev => {
+      const exists = prev.some(a => a.id === item.id);
+      if (exists) {
+        return prev.filter(a => a.id !== item.id);
+      } else {
+        return prev.length < 2 ? [...prev, item] : [prev[1], item];
+      }
+    });
   };
 
   return (
@@ -75,7 +149,7 @@ export default function StylistView({ weather, setWeather }) {
           AI Outfit Ajánló & Stylist
         </h2>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Személyre szabott szettek az aktuális eseményre, időjárásra és a gardróbod darabjaira hangolva.
+          Személyre szabott szettek az eseményre, időjárásra, napszakra és a gardróbod darabjaira hangolva.
         </p>
       </div>
 
@@ -110,13 +184,53 @@ export default function StylistView({ weather, setWeather }) {
           </div>
         </div>
 
-        {/* Event Selection */}
+        {/* Anchor Item (Kulcsdarab) Selection */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+              <span>Kötelező Kulcsdarab a szetthez (opcionális):</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowAnchorModal(true)}
+              className="text-xs text-[var(--accent-gold)] hover:underline flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{anchorItems.length > 0 ? 'Módosítás' : 'Ruha kiválasztása'}</span>
+            </button>
+          </div>
+
+          {anchorItems.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {anchorItems.map(item => (
+                <div key={item.id} className="flex items-center gap-2 p-2 rounded-xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-xs">
+                  <img src={item.imageUrl} alt={item.name} className="w-7 h-7 rounded-lg object-contain bg-black" />
+                  <span className="font-semibold text-white truncate max-w-[180px]">{item.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleAnchor(item)}
+                    className="p-1 hover:text-rose-400 text-[var(--text-muted)]"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] text-[var(--text-muted)] italic">
+              Nincs kulcsdarab rögzítve (az AI a teljes ruhatáradból szabadon válogat).
+            </p>
+          )}
+        </div>
+
+        {/* Event Selection & Learning History */}
         <div className="space-y-2.5">
           <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-            Válassz eseményt / alkalmat:
+            Válassz eseményt / alkalmat (vagy írd be szabadon):
           </label>
           <div className="flex flex-wrap gap-2">
-            {eventPresets.map(preset => (
+            {recentEvents.map(preset => (
               <button
                 key={preset}
                 onClick={() => {
@@ -134,13 +248,14 @@ export default function StylistView({ weather, setWeather }) {
             ))}
           </div>
 
+          {/* Natural language free text input */}
           <div className="pt-2">
             <input
               type="text"
-              placeholder="Vagy írj be egyedi eseményt (pl. 'Olasz tengerparti esküvő', 'Befektetői pitch')..."
+              placeholder="Írj be bármit: pl. 'Holnap este elegáns vacsora', 'Szombat délután kerti parti 26 fokban'..."
               value={customEvent}
               onChange={(e) => setCustomEvent(e.target.value)}
-              className="custom-input text-sm"
+              className="custom-input text-sm font-medium"
             />
           </div>
         </div>
@@ -149,17 +264,17 @@ export default function StylistView({ weather, setWeather }) {
         <button
           onClick={handleGenerate}
           disabled={isGenerating || wardrobe.length === 0}
-          className="btn-gold w-full py-3.5 text-base shadow-xl"
+          className="btn-gold w-full py-3.5 text-base shadow-xl flex items-center justify-center gap-2"
         >
           {isGenerating ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>AI Stylist kombinálja a ruhatáradat...</span>
+              <span>Gemini 3.7 Flash kombinálja a ruhatáradat...</span>
             </>
           ) : (
             <>
               <Sparkles className="w-5 h-5" />
-              <span>Outfit Kombinációk Összeállítása</span>
+              <span>3 Egyéni Outfit Összeállítása</span>
             </>
           )}
         </button>
@@ -171,29 +286,30 @@ export default function StylistView({ weather, setWeather }) {
         <div className="space-y-6 pt-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold font-serif gold-gradient-text">
-              Ajánlott Szettek ({generatedOutfits.length})
+              Ajánlott Szettek ({generatedOutfits.length} stílusvariáció)
             </h3>
             <span className="text-xs text-[var(--text-muted)]">
-              Kizárólag a saját gardróbod elemeiből
+              Kizárólag a saját ruhatáradból
             </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {generatedOutfits.map((outfit, index) => {
               const isSaved = savedIds.has(outfit.id);
+              const isThisRefreshing = isRefreshingIndex === index;
 
               return (
-                <div key={index} className="glass-card p-5 space-y-4 flex flex-col justify-between border-[var(--border-subtle)] hover:border-[var(--border-gold)]">
+                <div key={index} className="glass-card p-5 space-y-4 flex flex-col justify-between border-[var(--border-subtle)] hover:border-[var(--border-gold)] transition-all">
                   
                   {/* Card Header */}
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="badge badge-gold text-[10px]">
-                          {outfit.matchScore}% Stílusharmónia
+                          {outfit.styleArchetype || 'Stílusos'}
                         </span>
-                        <span className="text-xs text-[var(--text-muted)]">
-                          {outfit.occasion}
+                        <span className="text-[11px] text-[var(--text-muted)]">
+                          {outfit.matchScore}% Összhang
                         </span>
                       </div>
                       <h4 className="text-lg font-serif font-bold text-white mt-1">
@@ -201,30 +317,41 @@ export default function StylistView({ weather, setWeather }) {
                       </h4>
                     </div>
 
-                    <button
-                      onClick={() => handleSaveOutfit(outfit)}
-                      className={`p-2 rounded-xl transition-all ${
-                        isSaved 
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                          : 'bg-white/5 text-[var(--text-secondary)] hover:text-white hover:bg-white/10'
-                      }`}
-                      title={isSaved ? 'Mentve' : 'Mentés a kedvencekbe'}
-                    >
-                      {isSaved ? <Check className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {/* Individual Refresh / Shuffle Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRefreshSingleOutfit(index)}
+                        disabled={isThisRefreshing}
+                        className="p-2 rounded-xl bg-white/5 text-[var(--text-secondary)] hover:text-white hover:bg-white/10 transition-all"
+                        title="Másik szett ebben a stílusban"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isThisRefreshing ? 'animate-spin text-[var(--accent-gold)]' : ''}`} />
+                      </button>
+
+                      {/* Bookmark Button */}
+                      <button
+                        onClick={() => handleSaveOutfit(outfit)}
+                        className={`p-2 rounded-xl transition-all ${
+                          isSaved 
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                            : 'bg-white/5 text-[var(--text-secondary)] hover:text-white hover:bg-white/10'
+                        }`}
+                        title={isSaved ? 'Mentve a kedvencekbe' : 'Mentés a kedvencekbe'}
+                      >
+                        {isSaved ? <Check className="w-3.5 h-3.5" /> : <Bookmark className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Items Showcase Row */}
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 py-2">
+                  {/* Visual Items Showcase Row (Uncropped / proportional flat-lay) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-2 p-2 rounded-xl bg-black/40 border border-white/5">
                     {outfit.items?.map((item, iIdx) => (
                       <div key={iIdx} className="space-y-1 group">
-                        <div className="aspect-[3/4] rounded-lg overflow-hidden bg-black/40 border border-white/10 relative">
-                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                          <span className="absolute bottom-1 left-1 right-1 text-[9px] font-semibold text-white/90 bg-black/70 px-1 py-0.5 rounded truncate">
-                            {item.category}
-                          </span>
+                        <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] border border-white/10 p-1 flex items-center justify-center relative">
+                          <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
                         </div>
-                        <p className="text-[11px] text-[var(--text-secondary)] line-clamp-1 font-medium">
+                        <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5">
                           {item.name}
                         </p>
                       </div>
@@ -247,6 +374,63 @@ export default function StylistView({ weather, setWeather }) {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Modal for selecting Anchor / Key Items */}
+      {showAnchorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md">
+          <div className="glass-card max-w-lg w-full max-h-[85vh] overflow-y-auto p-5 border-[var(--border-gold)] space-y-4 animate-scale-up">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <h3 className="font-serif font-bold text-white text-lg">Válassz Kötelező Kulcsdarabot:</h3>
+              <button onClick={() => setShowAnchorModal(false)} className="p-1 text-[var(--text-muted)] hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[var(--text-secondary)]">
+              Kattints arra a ruhára (max 2), amire feltétlenül építeni szeretnéd a mai szetteket:
+            </p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-96 overflow-y-auto pr-1">
+              {wardrobe.map(item => {
+                const isSelected = anchorItems.some(a => a.id === item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleToggleAnchor(item)}
+                    className={`p-2 rounded-xl border text-left transition-all relative ${
+                      isSelected
+                        ? 'bg-[var(--accent-gold-glow)] border-[var(--accent-gold)] ring-2 ring-[var(--accent-gold)]'
+                        : 'bg-black/40 border-white/10 hover:border-white/30'
+                    }`}
+                  >
+                    <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center mb-1.5">
+                      <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain" />
+                    </div>
+                    <p className="text-[11px] font-medium text-white line-clamp-1">{item.name}</p>
+                    <span className="text-[9px] text-[var(--text-muted)] block">{item.category}</span>
+                    {isSelected && (
+                      <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-[var(--accent-gold)] text-black flex items-center justify-center text-[10px] font-bold">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 border-t border-white/10 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAnchorModal(false)}
+                className="btn-gold py-2 px-5 text-xs font-bold"
+              >
+                Kész
+              </button>
+            </div>
           </div>
         </div>
       )}

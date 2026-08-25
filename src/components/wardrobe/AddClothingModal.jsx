@@ -1,101 +1,135 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Upload, Link as LinkIcon, Sparkles, Check, Loader2, AlertCircle, Compass, Calendar, Tag, Plus, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus, Tag, ShieldCheck, Heart } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
-import { uploadGarmentImage } from '../../services/firebase';
+import { optimizeImageForUpload } from '../../services/imageOptimizer';
+import ColorPalettePicker from '../common/ColorPalettePicker';
 import { useAuth } from '../../context/AuthContext';
-import confetti from 'canvas-confetti';
 
-const DEFAULT_FORM_DATA = {
-  name: '',
-  category: 'tops',
-  subCategory: 'shirt',
-  color: 'Sötétkék',
-  colorHex: '#1e293b',
-  material: '100% Pamut',
-  qualityScore: 9.0,
-  season: ['tavasz', 'nyar', 'osz', 'tel'],
-  formality: 'Smart Casual',
-  pattern: 'Egyszínű',
-  brand: '',
-  stylingTip: '',
-  whenToWear: '',
-  stylingAdvice: '',
-  tags: ['alapdarab', 'smart casual']
-};
+const FORMALITY_LEVELS = [
+  'Casual (Laza)',
+  'Smart Casual',
+  'Business Casual',
+  'Business Formal',
+  'Black Tie & Formal'
+];
 
-const POPULAR_STYLE_TAGS = [
+const STYLE_ARCHETYPES = [
+  'Klasszikus & Időtlen',
+  'Old Money & Quiet Luxury',
+  'Smart Urban',
+  'Streetwear',
+  'Olasz Sprezzatura',
+  'Minimalista',
+  'Vintage & Retro'
+];
+
+const CONDITION_LEVELS = [
+  { label: '✨ Vadonatúj / Kifogástalan', val: 'Vadonatúj / Kifogástalan' },
+  { label: '👔 Megkímélt / Kiváló', val: 'Megkímélt / Kiváló' },
+  { label: '🧸 Játszós / Kopott', val: 'Játszós / Kopott' },
+  { label: '🧵 Javításra vár', val: 'Javításra vár' },
+  { label: '🗑️ Lecserélendő', val: 'Lecserélendő' }
+];
+
+const STYLE_TAG_SUGGESTIONS = [
   'Elegáns',
   'Business',
   'Smart Casual',
-  'Casual',
   'Sprezzatura',
   'Old Money',
+  'Quiet Luxury',
   'Streetwear',
   'Minimalista',
-  'Klasszikus',
-  'Alapdarab',
-  'Kényelmes',
-  'Prémium'
+  'Időtlen',
+  'Olasz szabás',
+  'Nyári laza',
+  'Alapdarab'
 ];
 
-export default function AddClothingModal({ isOpen, onClose }) {
-  const { addItem, currentUser } = useAuth();
+export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
+  const { profile } = useAuth();
 
   const [activeMode, setActiveMode] = useState('camera'); // 'camera', 'upload', 'link'
+  const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [availableImages, setAvailableImages] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
   const [webshopUrl, setWebshopUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
   const [customTagInput, setCustomTagInput] = useState('');
 
-  // Form Fields
-  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
+  const [formData, setFormData] = useState({
+    name: '',
+    category: 'tops',
+    subCategory: 'shirt',
+    color: 'Sötétkék (Navy)',
+    colorHex: '#1b2a4a',
+    material: '',
+    brand: '',
+    qualityScore: 9.0,
+    season: ['tavasz', 'nyar', 'osz'],
+    formality: 'Smart Casual',
+    styleArchetype: 'Klasszikus & Időtlen',
+    condition: 'Megkímélt / Kiváló',
+    pattern: 'Egyszínű',
+    stylingTip: '',
+    whenToWear: '',
+    stylingAdvice: '',
+    colorHarmony: '',
+    bodyFitAdvice: '',
+    tags: ['alapdarab', 'elegáns']
+  });
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const stylingTipRef = useRef(null);
   const whenToWearRef = useRef(null);
 
-  // 1. Reset form on close or fresh open
-  const resetForm = () => {
-    setImagePreview(null);
-    setAvailableImages([]);
-    setSelectedFile(null);
-    setWebshopUrl('');
-    setIsAnalyzing(false);
-    setIsSaving(false);
-    setAnalysisError(null);
-    setActiveMode('camera');
-    setCustomTagInput('');
-    setFormData(DEFAULT_FORM_DATA);
-  };
-
-  useEffect(() => {
-    if (!isOpen) {
-      resetForm();
-    }
-  }, [isOpen]);
-
-  // Auto-resize textareas
+  // Auto-resize dynamic textareas
   useEffect(() => {
     if (stylingTipRef.current) {
       stylingTipRef.current.style.height = 'auto';
-      stylingTipRef.current.style.height = `${Math.max(70, stylingTipRef.current.scrollHeight)}px`;
+      stylingTipRef.current.style.height = `${Math.max(stylingTipRef.current.scrollHeight, 72)}px`;
     }
+  }, [formData.stylingTip, imagePreview]);
+
+  useEffect(() => {
     if (whenToWearRef.current) {
       whenToWearRef.current.style.height = 'auto';
-      whenToWearRef.current.style.height = `${Math.max(70, whenToWearRef.current.scrollHeight)}px`;
+      whenToWearRef.current.style.height = `${Math.max(whenToWearRef.current.scrollHeight, 72)}px`;
     }
-  }, [formData.stylingTip, formData.whenToWear]);
-
-  if (!isOpen) return null;
+  }, [formData.whenToWear, imagePreview]);
 
   const handleClose = () => {
-    resetForm();
+    setSelectedFile(null);
+    setImagePreview(null);
+    setAvailableImages([]);
+    setWebshopUrl('');
+    setAnalysisError(null);
+    setIsAnalyzing(false);
+    setCustomTagInput('');
+    setFormData({
+      name: '',
+      category: 'tops',
+      subCategory: 'shirt',
+      color: 'Sötétkék (Navy)',
+      colorHex: '#1b2a4a',
+      material: '',
+      brand: '',
+      qualityScore: 9.0,
+      season: ['tavasz', 'nyar', 'osz'],
+      formality: 'Smart Casual',
+      styleArchetype: 'Klasszikus & Időtlen',
+      condition: 'Megkímélt / Kiváló',
+      pattern: 'Egyszínű',
+      stylingTip: '',
+      whenToWear: '',
+      stylingAdvice: '',
+      colorHarmony: '',
+      bodyFitAdvice: '',
+      tags: ['alapdarab', 'elegáns']
+    });
     onClose();
   };
 
@@ -104,14 +138,18 @@ export default function AddClothingModal({ isOpen, onClose }) {
     if (!file) return;
 
     setSelectedFile(file);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result;
-      setImagePreview(base64);
-      setAvailableImages([base64]);
-      await triggerAIAnalysis(base64);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsAnalyzing(true);
+      // Fast client-side image compression
+      const optimizedBase64 = await optimizeImageForUpload(file);
+      setImagePreview(optimizedBase64);
+      setAvailableImages([optimizedBase64]);
+      await triggerAIAnalysis(optimizedBase64);
+    } catch (err) {
+      console.error('Képfeltöltési hiba:', err);
+      setAnalysisError('Nem sikerült a kép optimalizálása.');
+      setIsAnalyzing(false);
+    }
   };
 
   const handleLinkImport = async (e) => {
@@ -139,7 +177,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
     setIsAnalyzing(true);
     setAnalysisError(null);
     try {
-      const aiResult = await analyzeClothingImage(imgSource, webshopContext);
+      const aiResult = await analyzeClothingImage(imgSource, webshopContext, profile);
       if (aiResult) {
         setFormData(prev => ({
           ...prev,
@@ -153,9 +191,13 @@ export default function AddClothingModal({ isOpen, onClose }) {
           qualityScore: aiResult.qualityScore || prev.qualityScore,
           season: aiResult.season || prev.season,
           formality: aiResult.formality || prev.formality,
+          styleArchetype: aiResult.styleArchetype || prev.styleArchetype,
+          condition: aiResult.condition || prev.condition,
           pattern: aiResult.pattern || prev.pattern,
           stylingTip: aiResult.stylingTip || prev.stylingTip,
           whenToWear: aiResult.whenToWear || prev.whenToWear,
+          colorHarmony: aiResult.colorHarmony || prev.colorHarmony,
+          bodyFitAdvice: aiResult.bodyFitAdvice || prev.bodyFitAdvice,
           stylingAdvice: aiResult.stylingAdvice || prev.stylingAdvice,
           tags: aiResult.tags && aiResult.tags.length > 0 ? aiResult.tags : prev.tags
         }));
@@ -178,195 +220,166 @@ export default function AddClothingModal({ isOpen, onClose }) {
     });
   };
 
-  const handleTagToggle = (tagToToggle) => {
-    const norm = tagToToggle.trim().toLowerCase();
+  const handleTagToggle = (tag) => {
     setFormData(prev => {
-      const currentTags = prev.tags || [];
-      const exists = currentTags.some(t => t.toLowerCase() === norm);
+      const exists = prev.tags.includes(tag);
       return {
         ...prev,
-        tags: exists 
-          ? currentTags.filter(t => t.toLowerCase() !== norm)
-          : [...currentTags, tagToToggle.trim()]
+        tags: exists ? prev.tags.filter(t => t !== tag) : [...prev.tags, tag]
       };
     });
   };
 
   const handleAddCustomTag = (e) => {
-    if (e) e.preventDefault();
-    if (!customTagInput.trim()) return;
-
-    const newTag = customTagInput.trim();
-    if (!formData.tags.some(t => t.toLowerCase() === newTag.toLowerCase())) {
+    e.preventDefault();
+    const cleanTag = customTagInput.trim().replace(/^#/, '');
+    if (cleanTag && !formData.tags.includes(cleanTag)) {
       setFormData(prev => ({
         ...prev,
-        tags: [...prev.tags, newTag]
+        tags: [...prev.tags, cleanTag]
       }));
+      setCustomTagInput('');
     }
-    setCustomTagInput('');
   };
 
-  const handleSave = async (e) => {
+  const handleSave = (e) => {
     e.preventDefault();
-    if (!imagePreview) return;
+    if (!formData.name) return;
 
-    setIsSaving(true);
-    try {
-      let finalImageUrl = imagePreview;
+    onAddClothing({
+      ...formData,
+      imageUrl: imagePreview || 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=800&q=80'
+    });
 
-      if (selectedFile) {
-        finalImageUrl = await uploadGarmentImage(selectedFile, currentUser?.uid || 'demo-user');
-      }
-
-      await addItem({
-        ...formData,
-        imageUrl: finalImageUrl
-      });
-
-      try {
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.8 },
-          colors: ['#d4af37', '#f3e5ab', '#ffffff']
-        });
-      } catch (_) {}
-
-      handleClose();
-    } catch (err) {
-      console.error('Mentési hiba:', err);
-      alert('Hiba történt a mentés során. Kérlek próbáld újra.');
-    } finally {
-      setIsSaving(false);
-    }
+    handleClose();
   };
 
-  const allAvailableTags = Array.from(new Set([
-    ...POPULAR_STYLE_TAGS,
-    ...(formData.tags || [])
-  ]));
+  if (!isOpen) return null;
 
   return (
-    <div className="modal-backdrop">
-      <div className="glass-card max-w-xl w-full max-h-[92vh] overflow-y-auto p-5 sm:p-7 border-[var(--border-gold)] space-y-5 animate-slide-up">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-[#0b0e14] border border-[var(--border-gold)] rounded-2xl shadow-2xl p-5 sm:p-7 space-y-6 my-auto animate-scale-up max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent-gold-glow)] flex items-center justify-center text-[var(--accent-gold)]">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-serif font-bold text-lg text-white">Új Ruha Hozzáadása</h3>
-              <p className="text-[11px] text-[var(--text-muted)]">AI felismerés, minősítés és stílustanácsadás</p>
-            </div>
+          <div>
+            <span className="badge badge-gold">Digitális Ruhatár Bővítés</span>
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
+              Új Ruhadarab Hozzáadása
+            </h3>
           </div>
           <button 
-            type="button"
             onClick={handleClose}
-            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white hover:bg-white/10"
+            className="p-2 rounded-full text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Input Source Tabs */}
-        {!imagePreview && (
-          <div className="grid grid-cols-3 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
-            <button
-              type="button"
-              onClick={() => setActiveMode('camera')}
-              className={`py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                activeMode === 'camera' ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              <Camera className="w-4 h-4" />
-              <span>Fotózás</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveMode('upload')}
-              className={`py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                activeMode === 'upload' ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              <Upload className="w-4 h-4" />
-              <span>Feltöltés</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveMode('link')}
-              className={`py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                activeMode === 'link' ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              <LinkIcon className="w-4 h-4" />
-              <span>Webshop Link</span>
-            </button>
-          </div>
-        )}
-
-        {/* Action Input Section */}
+        {/* Input Method Selector / Form */}
         {!imagePreview ? (
-          <div className="space-y-4">
+          <div className="space-y-6">
             
+            {/* Mode Tabs */}
+            <div className="grid grid-cols-3 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+              <button
+                type="button"
+                onClick={() => setActiveMode('camera')}
+                className={`py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                  activeMode === 'camera' 
+                    ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
+                    : 'text-[var(--text-secondary)] hover:text-white'
+                }`}
+              >
+                <Camera className="w-4 h-4" />
+                <span>Fotó Készítése</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMode('upload')}
+                className={`py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                  activeMode === 'upload' 
+                    ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
+                    : 'text-[var(--text-secondary)] hover:text-white'
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                <span>Kép Feltöltése</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMode('link')}
+                className={`py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                  activeMode === 'link' 
+                    ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
+                    : 'text-[var(--text-secondary)] hover:text-white'
+                }`}
+              >
+                <LinkIcon className="w-4 h-4" />
+                <span>Webshop Link</span>
+              </button>
+            </div>
+
+            {/* Mode 1: Camera */}
             {activeMode === 'camera' && (
               <div 
                 onClick={() => cameraInputRef.current?.click()}
-                className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all group"
+                className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3 bg-[var(--accent-gold-glow)]"
               >
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={handleFileChange}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment" 
+                  ref={cameraInputRef} 
+                  onChange={handleFileChange} 
+                  className="hidden" 
                 />
-                <div className="w-14 h-14 rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-gold)] flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                <div className="w-14 h-14 rounded-full bg-[var(--accent-gold)]/20 flex items-center justify-center text-[var(--accent-gold)]">
                   <Camera className="w-7 h-7" />
                 </div>
-                <h4 className="font-semibold text-white text-sm">Kattints a kamera megnyitásához</h4>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Fotózd le a ruhádat a gardróbodban vagy a próbafülkében!
-                </p>
+                <div>
+                  <p className="text-sm font-semibold text-white">Kattints a kamera megnyitásához</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">Fotózd le a ruhát (lehetőleg terítve vagy fogason)</p>
+                </div>
               </div>
             )}
 
+            {/* Mode 2: Upload */}
             {activeMode === 'upload' && (
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-white/15 rounded-2xl p-8 text-center cursor-pointer hover:border-[var(--accent-gold)] hover:bg-white/5 transition-all group"
+                className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center cursor-pointer hover:border-[var(--border-gold)] hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3"
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange} 
+                  className="hidden" 
                 />
-                <div className="w-14 h-14 rounded-full bg-white/5 text-[var(--text-secondary)] flex items-center justify-center mx-auto mb-3 group-hover:scale-110 group-hover:text-[var(--accent-gold)] transition-all">
+                <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-[var(--text-secondary)]">
                   <Upload className="w-7 h-7" />
                 </div>
-                <h4 className="font-semibold text-white text-sm">Kép kiválasztása a galériából vagy gépről</h4>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  PNG, JPG vagy WEBP formátum támogatott
-                </p>
+                <div>
+                  <p className="text-sm font-semibold text-white">Válassz fotót a galériádból</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">JPG, PNG, WEBP formátum támogatott</p>
+                </div>
               </div>
             )}
 
+            {/* Mode 3: Webshop Link */}
             {activeMode === 'link' && (
               <form onSubmit={handleLinkImport} className="space-y-3">
                 <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                  Webshop Termék URL (pl. Zara, Massimo Dutti, Reserved, Next, H&M) vagy közvetlen képcím:
+                  Webshop Termék URL (Zara, Next, Reserved, Massimo Dutti, H&M) vagy képcím:
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="url"
                     required
-                    placeholder="https://www.zara.com/... vagy kép URL"
+                    placeholder="https://www.nextdirect.com/... vagy termékkép linkje"
                     value={webshopUrl}
                     onChange={(e) => {
                       setWebshopUrl(e.target.value);
@@ -406,7 +419,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
           </div>
         ) : (
           /* Preview and AI Result Form */
-          <form onSubmit={handleSave} className="space-y-4">
+          <form onSubmit={handleSave} className="space-y-5">
             
             {/* 1. Proportional Image Preview (object-contain, uncropped) */}
             <div className="space-y-2">
@@ -435,7 +448,7 @@ export default function AddClothingModal({ isOpen, onClose }) {
                 {isAnalyzing && (
                   <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white rounded-2xl">
                     <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin" />
-                    <p className="text-xs font-medium tracking-wide">Gemini AI elemzi a terméket és a stílust...</p>
+                    <p className="text-xs font-medium tracking-wide">Gemini 3.7 Flash AI elemzi a terméket...</p>
                   </div>
                 )}
 
@@ -473,8 +486,8 @@ export default function AddClothingModal({ isOpen, onClose }) {
                       >
                         <img src={imgUrl} alt={`Foto ${idx + 1}`} className="w-full h-full object-contain" />
                         {imagePreview === imgUrl && (
-                          <div className="absolute bottom-0 inset-x-0 bg-[var(--accent-gold)] text-black text-[8px] font-bold text-center py-0.2">
-                            Aktív
+                          <div className="absolute inset-0 bg-[var(--accent-gold)]/20 flex items-center justify-center">
+                            <Check className="w-3.5 h-3.5 text-[var(--accent-gold)] drop-shadow" />
                           </div>
                         )}
                       </button>
@@ -484,263 +497,272 @@ export default function AddClothingModal({ isOpen, onClose }) {
               )}
             </div>
 
-            {/* AI Auto-filled notification badge */}
-            {analysisError ? (
-              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            {/* Error Message if any */}
+            {analysisError && (
+              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold">AI elemzés sikertelen:</span>{' '}
+                  <span className="font-semibold block mb-0.5">Figyelmeztetés:</span>
                   <span>{analysisError}</span>
-                  <button
-                    type="button"
-                    onClick={() => triggerAIAnalysis(imagePreview)}
-                    className="ml-2 underline hover:text-red-300"
-                  >
-                    Újra próbálom
-                  </button>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-xs text-[var(--accent-gold-light)]">
-                <Sparkles className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
-                <span>Az AI sikeresen azonosította a darabot és megírta a stílustanácsot!</span>
               </div>
             )}
 
-            {/* 2. REORDERED FORM FIELDS: Megnevezés -> Kategória -> Anyag/Szín -> AI Ajánlások -> Szezonalitás -> Címkék */}
-            <div className="space-y-4">
-              
-              {/* Field 1: Megnevezés */}
+            {/* 2. Item Name */}
+            <div>
+              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                Megnevezés:
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="custom-input text-base font-medium"
+                placeholder="pl. Zöld Slim Fit Olasz Lenkeverék Zakó"
+              />
+            </div>
+
+            {/* 3. Category & Formality */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Megnevezés</label>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Kategória:
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="custom-input"
+                >
+                  <option value="outerwear">🧥 Zakó & Kabát (Outerwear)</option>
+                  <option value="knitwear">🧶 Pulóverek & Kötöttáru (Knitwear)</option>
+                  <option value="tops">👔 Ingek & Felsők (Tops)</option>
+                  <option value="bottoms">👖 Nadrágok & Farmerek (Bottoms)</option>
+                  <option value="shoes">👞 Cipők & Lábbelik (Shoes)</option>
+                  <option value="dresses">👗 Ruhák & Egyrészesek (Dresses)</option>
+                  <option value="skirts">💃 Szoknyák (Skirts)</option>
+                  <option value="accessories">⌚ Kiegészítők (Accessories)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Formalitási Szint (Dress Code):
+                </label>
+                <select
+                  value={formData.formality}
+                  onChange={(e) => setFormData({ ...formData, formality: e.target.value })}
+                  className="custom-input"
+                >
+                  {FORMALITY_LEVELS.map(f => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 4. Material & Curated Color Palette */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Anyagösszetétel & Szövés:
+                </label>
                 <input
                   type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="custom-input text-sm"
+                  value={formData.material}
+                  onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                  className="custom-input"
+                  placeholder="pl. 100% Olasz Lenvászon"
                 />
               </div>
 
-              {/* Field 2: Kategória & Formalitás */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Kategória</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="custom-input text-sm"
-                  >
-                    <option value="outerwear">Zakó & Kabát</option>
-                    <option value="tops">Felső / Ing / Kötött</option>
-                    <option value="bottoms">Nadrág</option>
-                    <option value="shoes">Cipő & Lábbeli</option>
-                    <option value="accessories">Kiegészítő</option>
-                  </select>
-                </div>
+              <ColorPalettePicker
+                selectedColor={formData.color}
+                selectedHex={formData.colorHex}
+                onSelectColor={(colName, hex) => {
+                  setFormData(prev => ({ ...prev, color: colName, colorHex: hex }));
+                }}
+              />
+            </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Formalitási szint</label>
-                  <select
-                    value={formData.formality}
-                    onChange={(e) => setFormData({ ...formData, formality: e.target.value })}
-                    className="custom-input text-sm"
-                  >
-                    <option value="Casual">Casual (Laza)</option>
-                    <option value="Smart Casual">Smart Casual</option>
-                    <option value="Sprezzatura">Sprezzatura Olasz</option>
-                    <option value="Business">Business / Formális</option>
-                    <option value="Black Tie">Black Tie / Ünnepi</option>
-                  </select>
-                </div>
+            {/* 5. AI Recommendations: Mivel hordd & Mikor hordd */}
+            <div className="space-y-3 p-4 rounded-2xl bg-black/40 border border-[var(--border-gold)]/40 shadow-inner">
+              <div className="flex items-center gap-2 pb-2 border-b border-white/5">
+                <Sparkles className="w-4 h-4 text-[var(--accent-gold)]" />
+                <span className="text-xs font-serif font-bold text-white">AI Stylist Elemzés & Ajánlások</span>
               </div>
 
-              {/* Field 3: Anyag & Szín */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Anyag & Szövés</label>
-                  <input
-                    type="text"
-                    value={formData.material}
-                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                    className="custom-input text-sm"
-                    placeholder="pl. 100% Gyapjú, Len"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Szín</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={formData.colorHex}
-                      onChange={(e) => setFormData({ ...formData, colorHex: e.target.value })}
-                      className="w-8 h-8 rounded-lg bg-transparent border-0 cursor-pointer"
-                    />
-                    <input
-                      type="text"
-                      value={formData.color}
-                      onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                      className="custom-input text-sm"
-                    />
-                  </div>
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-amber-300 mb-1">
+                  💡 Mivel érdemes hordani (AI Ajánlás):
+                </label>
+                <textarea
+                  ref={stylingTipRef}
+                  value={formData.stylingTip}
+                  onChange={(e) => setFormData({ ...formData, stylingTip: e.target.value })}
+                  rows={2}
+                  className="custom-input text-xs resize-none overflow-hidden leading-relaxed text-amber-100 bg-amber-950/20 border-amber-500/30 focus:border-amber-400"
+                  placeholder="Mivel kombinálható a legszebben..."
+                />
               </div>
 
-              {/* Field 4: AI Ajánlások (Mivel hordd & Mikor hordd) - Elhelyezve a Szezonalitás ELŐTT! */}
-              {(formData.stylingTip || formData.whenToWear) && (
-                <div className="p-4 rounded-xl bg-black/50 border border-[var(--border-gold)] space-y-3.5 shadow-inner">
-                  {formData.stylingTip && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-[var(--accent-gold-light)] flex items-center gap-1.5">
-                        <Compass className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                        <span>Mivel érdemes hordani (AI Ajánlás):</span>
-                      </label>
-                      <textarea
-                        ref={stylingTipRef}
-                        value={formData.stylingTip}
-                        onChange={(e) => {
-                          setFormData({ ...formData, stylingTip: e.target.value });
-                          e.target.style.height = 'auto';
-                          e.target.style.height = `${e.target.scrollHeight}px`;
-                        }}
-                        className="custom-input text-xs leading-relaxed min-h-[70px] resize-none overflow-hidden"
-                      />
-                    </div>
-                  )}
+              <div>
+                <label className="block text-xs font-medium text-emerald-300 mb-1">
+                  📅 Mikor és milyen alkalomra ajánlott:
+                </label>
+                <textarea
+                  ref={whenToWearRef}
+                  value={formData.whenToWear}
+                  onChange={(e) => setFormData({ ...formData, whenToWear: e.target.value })}
+                  rows={2}
+                  className="custom-input text-xs resize-none overflow-hidden leading-relaxed text-emerald-100 bg-emerald-950/20 border-emerald-500/30 focus:border-emerald-400"
+                  placeholder="Milyen eseményre, hőmérsékletre ajánlott..."
+                />
+              </div>
 
-                  {formData.whenToWear && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Mikor és milyen alkalomra ajánlott:</span>
-                      </label>
-                      <textarea
-                        ref={whenToWearRef}
-                        value={formData.whenToWear}
-                        onChange={(e) => {
-                          setFormData({ ...formData, whenToWear: e.target.value });
-                          e.target.style.height = 'auto';
-                          e.target.style.height = `${e.target.scrollHeight}px`;
-                        }}
-                        className="custom-input text-xs leading-relaxed min-h-[70px] resize-none overflow-hidden"
-                      />
-                    </div>
-                  )}
+              {/* Personal Harmony Notes */}
+              {formData.colorHarmony && (
+                <div className="text-[11px] text-[var(--text-secondary)] italic pt-1 flex items-start gap-1.5">
+                  <Heart className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                  <span><strong>Színharmónia:</strong> {formData.colorHarmony}</span>
                 </div>
               )}
+            </div>
 
-              {/* Field 5: Seasons Selector */}
-              <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Szezonalitás</label>
-                <div className="flex gap-2">
-                  {[
-                    { id: 'tavasz', label: '🌸 Tavasz' },
-                    { id: 'nyar', label: '☀️ Nyár' },
-                    { id: 'osz', label: '🍂 Ősz' },
-                    { id: 'tel', label: '❄️ Tél' }
-                  ].map(s => (
+            {/* 6. Seasonality Toggle */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                Szezonalitás (Mely évszakokban hordható):
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { id: 'tavasz', label: '🌸 Tavasz' },
+                  { id: 'nyar', label: '☀️ Nyár' },
+                  { id: 'osz', label: '🍂 Ősz' },
+                  { id: 'tel', label: '❄️ Tél' }
+                ].map((s) => {
+                  const isSelected = formData.season.includes(s.id);
+                  return (
                     <button
                       key={s.id}
                       type="button"
                       onClick={() => handleSeasonToggle(s.id)}
-                      className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                        formData.season.includes(s.id)
-                          ? 'bg-[var(--accent-gold)] text-black border-[var(--accent-gold)] font-bold'
-                          : 'bg-white/5 text-[var(--text-muted)] border-white/5 hover:text-white'
+                      className={`py-2 px-2 rounded-xl text-xs font-medium border text-center transition-all ${
+                        isSelected
+                          ? 'bg-[var(--accent-gold)] text-black font-bold border-[var(--accent-gold)] shadow'
+                          : 'bg-white/5 text-[var(--text-secondary)] border-white/5 hover:bg-white/10'
                       }`}
                     >
                       {s.label}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-
-              {/* Field 6: Interactive Style Tags Selector */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-medium text-[var(--text-secondary)] flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                    <span>Stílus és alkalom címkék (Kattints a ki/bekapcsoláshoz):</span>
-                  </label>
-                  <span className="text-[10px] text-[var(--text-muted)]">{formData.tags?.length || 0} kiválasztva</span>
-                </div>
-
-                {/* Tag Pills */}
-                <div className="flex flex-wrap gap-1.5 mb-2.5">
-                  {allAvailableTags.map((tag) => {
-                    const isSelected = (formData.tags || []).some(t => t.toLowerCase() === tag.toLowerCase());
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => handleTagToggle(tag)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
-                          isSelected
-                            ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-sm'
-                            : 'bg-white/5 text-[var(--text-muted)] hover:text-white hover:bg-white/10 border border-white/5'
-                        }`}
-                      >
-                        <span>#{tag}</span>
-                        {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Add Custom Tag input */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Egyedi címke hozzáadása (pl. 'vintage', 'old money')..."
-                    value={customTagInput}
-                    onChange={(e) => setCustomTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddCustomTag();
-                      }
-                    }}
-                    className="custom-input text-xs py-1.5"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomTag}
-                    className="btn-secondary text-xs px-3 py-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Hozzáad</span>
-                  </button>
-                </div>
-              </div>
-
             </div>
 
-            {/* Save Buttons */}
-            <div className="flex items-center gap-3 pt-3 border-t border-white/10">
+            {/* 7. Garment Condition (5 levels) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                Ruha Állapota:
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {CONDITION_LEVELS.map(c => {
+                  const isSelected = formData.condition === c.val;
+                  return (
+                    <button
+                      key={c.val}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, condition: c.val })}
+                      className={`py-2 px-2.5 rounded-xl text-[11px] font-medium border text-left truncate transition-all ${
+                        isSelected
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 ring-1 ring-emerald-400'
+                          : 'bg-white/5 text-[var(--text-secondary)] border-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 8. Style Archetype (7 directions) */}
+            <div>
+              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                Stílusirányzat:
+              </label>
+              <select
+                value={formData.styleArchetype}
+                onChange={(e) => setFormData({ ...formData, styleArchetype: e.target.value })}
+                className="custom-input text-xs"
+              >
+                {STYLE_ARCHETYPES.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 9. Interactive Style Tags */}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                Stílus Címkék (Kattints a be/kikapcsoláshoz):
+              </label>
+              
+              <div className="flex flex-wrap gap-1.5">
+                {STYLE_TAG_SUGGESTIONS.map(tag => {
+                  const isSelected = formData.tags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleTagToggle(tag)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                        isSelected
+                          ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-sm'
+                          : 'bg-white/5 text-[var(--text-muted)] hover:bg-white/10 hover:text-white border border-white/5'
+                      }`}
+                    >
+                      #{tag}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Custom tag add */}
+              <div className="flex gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="Egyedi címke hozzáadása..."
+                  value={customTagInput}
+                  onChange={(e) => setCustomTagInput(e.target.value)}
+                  className="custom-input text-xs py-1.5"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCustomTag}
+                  className="btn-secondary text-xs px-3 whitespace-nowrap"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Hozzáadás</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="pt-3 border-t border-white/10 flex gap-3">
               <button
                 type="button"
                 onClick={handleClose}
-                className="btn-secondary flex-1 text-xs"
+                className="btn-secondary flex-1 py-3"
               >
                 Mégse
               </button>
               <button
                 type="submit"
-                disabled={isSaving || isAnalyzing}
-                className="btn-gold flex-1 text-xs"
+                className="btn-gold flex-1 py-3 text-sm font-bold shadow-xl flex items-center justify-center gap-2"
               >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Mentés folyamatban...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4" />
-                    <span>Hozzáadás a Gardróbhoz</span>
-                  </>
-                )}
+                <Check className="w-4 h-4" />
+                <span>Mentés a Gardróbba</span>
               </button>
             </div>
 

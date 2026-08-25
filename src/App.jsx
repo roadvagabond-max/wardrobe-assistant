@@ -12,8 +12,10 @@ import StyleDNAView from './components/profile/StyleDNAView';
 import AuthModal from './components/auth/AuthModal';
 import SettingsModal from './components/settings/SettingsModal';
 import { fetchCurrentWeather } from './services/weather';
+import { useAuth } from './context/AuthContext';
 
 export default function App() {
+  const { addItem } = useAuth();
   const [activeTab, setActiveTab] = useState('wardrobe');
   const [weather, setWeather] = useState(null);
 
@@ -22,6 +24,7 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [initialAnchorItem, setInitialAnchorItem] = useState(null);
 
   // Load weather initially
   useEffect(() => {
@@ -34,6 +37,11 @@ export default function App() {
 
   const handleTestInAdvisor = (gapItem) => {
     setActiveTab('advisor');
+  };
+
+  const handlePlanWithItem = (item) => {
+    setInitialAnchorItem(item);
+    setActiveTab('stylist');
   };
 
   return (
@@ -62,6 +70,7 @@ export default function App() {
           <StylistView
             weather={weather}
             setWeather={setWeather}
+            initialAnchorItem={initialAnchorItem}
           />
         )}
 
@@ -85,11 +94,13 @@ export default function App() {
       <AddClothingModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+        onAddClothing={(item) => addItem(item)}
       />
 
       <ItemDetailModal
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
+        onPlanWithItem={handlePlanWithItem}
       />
 
       <AuthModal

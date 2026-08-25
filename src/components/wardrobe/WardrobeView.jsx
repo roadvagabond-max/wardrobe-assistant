@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Sparkles, Tag, Shirt, Check } from 'lucide-react';
+import { Plus, Search, Filter, Sparkles, Tag, Shirt, Check, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function WardrobeView({ onAddNewItem, onSelectItem }) {
@@ -7,15 +7,18 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSeason, setSelectedSeason] = useState('all');
+  const [selectedCondition, setSelectedCondition] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const categories = [
     { id: 'all', label: 'Összes darab' },
-    { id: 'outerwear', label: 'Zakók & Kabátok' },
-    { id: 'tops', label: 'Ingek & Kötöttáru' },
-    { id: 'bottoms', label: 'Nadrágok' },
-    { id: 'shoes', label: 'Cipők & Loaferek' },
-    { id: 'accessories', label: 'Kiegészítők' }
+    { id: 'outerwear', label: '🧥 Zakók & Kabátok' },
+    { id: 'knitwear', label: '🧶 Kötöttáru & Pulóverek' },
+    { id: 'tops', label: '👔 Ingek & Felsők' },
+    { id: 'bottoms', label: '👖 Nadrágok' },
+    { id: 'shoes', label: '👞 Cipők' },
+    { id: 'dresses', label: '👗 Ruhák' },
+    { id: 'accessories', label: '⌚ Kiegészítők' }
   ];
 
   const seasons = [
@@ -26,20 +29,38 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
     { id: 'tel', label: '❄️ Tél' }
   ];
 
+  const conditions = [
+    { id: 'all', label: 'Minden állapot' },
+    { id: 'clean', label: '✨ Csak szép / megkímélt' },
+    { id: 'casual', label: '🧸 Játszós / kopott' },
+    { id: 'replace', label: '🗑️ Lecserélendő' }
+  ];
+
   const filteredWardrobe = useMemo(() => {
     return wardrobe.filter(item => {
       const matchCategory = selectedCategory === 'all' || item.category === selectedCategory;
       const matchSeason = selectedSeason === 'all' || (item.season && item.season.includes(selectedSeason));
+      
+      let matchCondition = true;
+      if (selectedCondition === 'clean') {
+        matchCondition = !item.condition || item.condition.includes('Vadonatúj') || item.condition.includes('Megkímélt');
+      } else if (selectedCondition === 'casual') {
+        matchCondition = item.condition && item.condition.includes('Játszós');
+      } else if (selectedCondition === 'replace') {
+        matchCondition = item.condition && (item.condition.includes('Lecserélendő') || item.condition.includes('Javításra'));
+      }
+
       const matchSearch = !searchQuery || 
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.color.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.material?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.formality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.styleArchetype?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.tags && item.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
 
-      return matchCategory && matchSeason && matchSearch;
+      return matchCategory && matchSeason && matchCondition && matchSearch;
     });
-  }, [wardrobe, selectedCategory, selectedSeason, searchQuery]);
+  }, [wardrobe, selectedCategory, selectedSeason, selectedCondition, searchQuery]);
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -51,13 +72,13 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
             Digitális Gardróbom
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            {wardrobe.length} prémium ruhadarab rendszerezve és AI-val címkézve.
+            {wardrobe.length} prémium ruhadarab rendszerezve, állapot és stílus szerint címkézve.
           </p>
         </div>
 
         <button
           onClick={onAddNewItem}
-          className="btn-gold w-full sm:w-auto shadow-lg"
+          className="btn-gold w-full sm:w-auto shadow-lg flex items-center justify-center gap-2"
         >
           <Plus className="w-5 h-5" />
           <span>Új Ruha Feltöltése</span>
@@ -72,7 +93,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
             type="text"
-            placeholder="Keresés szín, anyag, márka vagy stílus szerint (pl. 'kasmír', 'sötétkék', 'loafer')..."
+            placeholder="Keresés szín, anyag, márka vagy stílus szerint (pl. 'lenvászon', 'sötétkék', 'loafer')..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="custom-input pl-10"
@@ -88,128 +109,152 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
         </div>
 
         {/* Category Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {categories.map(cat => {
-            const count = cat.id === 'all' 
-              ? wardrobe.length 
-              : wardrobe.filter(w => w.category === cat.id).length;
-            const isSelected = selectedCategory === cat.id;
-
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
-                  isSelected
-                    ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md shadow-[var(--accent-gold-glow)]'
-                    : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 hover:text-white border border-white/5'
-                }`}
-              >
-                <span>{cat.label}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${isSelected ? 'bg-black/20 text-black' : 'bg-white/10 text-[var(--text-muted)]'}`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Season Selector */}
-        <div className="flex items-center gap-2 pt-2 border-t border-white/5 overflow-x-auto">
-          <span className="text-[11px] uppercase font-bold tracking-wider text-[var(--text-muted)] mr-1">
-            Évszak:
-          </span>
-          {seasons.map(season => (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+          {categories.map(cat => (
             <button
-              key={season.id}
-              onClick={() => setSelectedSeason(season.id)}
-              className={`px-2.5 py-1 rounded-lg text-xs transition-colors ${
-                selectedSeason === season.id
-                  ? 'bg-white/15 text-white font-medium border border-white/20'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                selectedCategory === cat.id
+                  ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md'
+                  : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 hover:text-white border border-white/5'
               }`}
             >
-              {season.label}
+              {cat.label}
             </button>
           ))}
         </div>
 
+        {/* Sub-Filters: Season & Condition */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/5 text-xs">
+          
+          {/* Season Selector */}
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <span className="text-[var(--text-muted)] whitespace-nowrap">Évszak:</span>
+            {seasons.map(s => (
+              <button
+                key={s.id}
+                onClick={() => setSelectedSeason(s.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs transition-colors whitespace-nowrap ${
+                  selectedSeason === s.id
+                    ? 'bg-white/20 text-white font-medium'
+                    : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Condition Selector */}
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <span className="text-[var(--text-muted)] whitespace-nowrap">Állapot:</span>
+            {conditions.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setSelectedCondition(c.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs transition-colors whitespace-nowrap ${
+                  selectedCondition === c.id
+                    ? 'bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30'
+                    : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+        </div>
+
       </div>
 
-      {/* Wardrobe Items Grid */}
-      {filteredWardrobe.length === 0 ? (
-        <div className="glass-card p-12 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto text-[var(--text-muted)]">
-            <Shirt className="w-6 h-6" />
-          </div>
-          <h3 className="text-lg font-serif font-bold text-white">Nincs találat a szűrésre</h3>
-          <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
-            Próbálj más kategóriát vagy töröld a keresőkifejezést az összes ruhadarab megjelenítéséhez.
-          </p>
-        </div>
-      ) : (
-        <div className="wardrobe-grid">
+      {/* Grid of Clothing Items */}
+      {filteredWardrobe.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {filteredWardrobe.map(item => (
             <div
               key={item.id}
               onClick={() => onSelectItem(item)}
-              className="glass-card group overflow-hidden cursor-pointer flex flex-col justify-between hover:scale-[1.02] transition-all"
+              className="glass-card overflow-hidden group cursor-pointer border-[var(--border-subtle)] hover:border-[var(--border-gold)] transition-all duration-300 flex flex-col justify-between hover:scale-[1.02]"
             >
-              {/* Image Container with Luxury Badges */}
-              <div className="relative aspect-[3/4] w-full bg-black/40 overflow-hidden">
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 opacity-80 group-hover:opacity-90 transition-opacity"></div>
-                
-                {/* Formality Tag Top-Left */}
-                <div className="absolute top-2.5 left-2.5">
-                  <span className="badge badge-gold shadow-sm backdrop-blur-md">
-                    {item.formality ? item.formality.split('/')[0].trim() : 'Sartorial'}
+              <div>
+                {/* Image Container (Uncropped, Proportional object-contain) */}
+                <div className="relative aspect-[4/3] bg-[#07090e] p-2 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
+                  />
+                  
+                  {/* Category Badge */}
+                  <span className="absolute top-2 left-2 badge badge-gold text-[10px] uppercase font-bold tracking-wider backdrop-blur-md">
+                    {item.category === 'outerwear' ? 'Zakó' : item.category === 'knitwear' ? 'Kötött' : item.category === 'tops' ? 'Felső' : item.category === 'bottoms' ? 'Nadrág' : item.category === 'shoes' ? 'Cipő' : item.category}
                   </span>
+
+                  {/* Condition Badge */}
+                  {item.condition && (
+                    <span className={`absolute bottom-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded shadow ${
+                      item.condition.includes('Lecserélendő')
+                        ? 'bg-rose-500/80 text-white'
+                        : item.condition.includes('Játszós')
+                        ? 'bg-amber-500/80 text-black'
+                        : 'bg-black/70 text-emerald-300'
+                    }`}>
+                      {item.condition.split('/')[0].trim()}
+                    </span>
+                  )}
                 </div>
 
-                {/* Quality Score Top-Right */}
-                {item.qualityScore && (
-                  <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-[10px] font-bold text-amber-300 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[var(--accent-gold)]" />
-                    <span>{item.qualityScore} / 10</span>
-                  </div>
-                )}
+                {/* Card Info */}
+                <div className="p-3.5 space-y-1.5">
+                  <h3 className="font-serif font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent-gold)] transition-colors">
+                    {item.name}
+                  </h3>
 
-                {/* Color Dot & Material at Bottom of Image */}
-                <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-[11px] text-white/90">
-                  <span className="font-medium truncate max-w-[70%]">{item.material || item.brand}</span>
-                  {item.colorHex && (
-                    <span 
-                      className="w-3.5 h-3.5 rounded-full border border-white/40 shadow-sm shrink-0" 
-                      style={{ backgroundColor: item.colorHex }}
-                      title={item.color}
-                    />
+                  <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+                    <span className="truncate">{item.material || 'Természetes'}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {item.colorHex && (
+                        <span className="w-2.5 h-2.5 rounded-full border border-white/30" style={{ backgroundColor: item.colorHex }} />
+                      )}
+                      <span className="text-white text-[11px]">{item.color}</span>
+                    </div>
+                  </div>
+
+                  {item.styleArchetype && (
+                    <span className="text-[10px] text-[var(--accent-gold-light)] block truncate font-medium">
+                      ✦ {item.styleArchetype}
+                    </span>
                   )}
                 </div>
               </div>
 
-              {/* Card Meta Content */}
-              <div className="p-3.5 space-y-1.5 bg-gradient-to-b from-transparent to-black/30">
-                <h4 className="font-medium text-sm text-white line-clamp-1 group-hover:text-[var(--accent-gold-light)] transition-colors">
-                  {item.name}
-                </h4>
-                
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {item.tags?.slice(0, 2).map((tag, idx) => (
-                    <span key={idx} className="text-[10px] text-[var(--text-muted)] bg-white/5 px-2 py-0.5 rounded-md">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
+              {/* Card Footer with Tags */}
+              <div className="p-3.5 pt-0 flex items-center justify-between text-[10px] text-[var(--text-muted)] border-t border-white/5">
+                <span className="capitalize">{item.formality || 'Smart Casual'}</span>
+                <span className="text-[var(--accent-gold)] font-bold">Részletek ➔</span>
               </div>
-
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="glass-card p-12 text-center space-y-4">
+          <Shirt className="w-12 h-12 text-[var(--accent-gold)] mx-auto opacity-50" />
+          <div className="space-y-1">
+            <h3 className="text-lg font-serif font-bold text-white">Nincs találat a szűrésre</h3>
+            <p className="text-xs text-[var(--text-secondary)]">Próbálj más kategóriát vagy szűrőt választani.</p>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedCategory('all');
+              setSelectedSeason('all');
+              setSelectedCondition('all');
+              setSearchQuery('');
+            }}
+            className="btn-secondary text-xs"
+          >
+            Szűrők Visszaállítása
+          </button>
         </div>
       )}
 

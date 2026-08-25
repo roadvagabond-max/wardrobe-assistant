@@ -1,35 +1,44 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeClothingImage, evaluatePrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
+import { optimizeImageForUpload } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
 
 export default function PurchaseAdvisorView() {
-  const { wardrobe, profile } = useAuth();
+  const { wardrobe, profile, addItem } = useAuth();
 
   const [activeTab, setActiveTab] = useState('camera'); // 'camera', 'upload', 'link'
   const [imagePreview, setImagePreview] = useState(null);
   const [webshopUrl, setWebshopUrl] = useState('');
   const [webshopContext, setWebshopContext] = useState(null);
   const [itemName, setItemName] = useState('');
+  const [itemPrice, setItemPrice] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
+  const [addedToWardrobe, setAddedToWardrobe] = useState(false);
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
+    try {
+      setIsAnalyzing(true);
+      const optimized = await optimizeImageForUpload(file);
+      setImagePreview(optimized);
       setWebshopContext(null);
       setEvaluationResult(null);
-    };
-    reader.readAsDataURL(file);
+      setAnalysisError(null);
+    } catch (err) {
+      console.error('Képfeltöltési hiba:', err);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleLinkInput = async (e) => {
@@ -37,9 +46,11 @@ export default function PurchaseAdvisorView() {
     if (!webshopUrl.trim()) return;
 
     setIsAnalyzing(true);
+    setAnalysisError(null);
     try {
       const data = await extractWebshopData(webshopUrl.trim());
-      setImagePreview(data.imageUrl);
+      const chosenImg = data.imageUrl || (data.images && data.images[0]) || '';
+      setImagePreview(chosenImg);
       setWebshopContext(data);
       if (data.title && !itemName) {
         setItemName(data.title);
@@ -47,7 +58,7 @@ export default function PurchaseAdvisorView() {
       setEvaluationResult(null);
     } catch (err) {
       console.error('Webshop link hiba:', err);
-      setImagePreview(webshopUrl.trim());
+      setAnalysisError(err.message || 'A link feldolgozása nem sikerült. Próbáld közvetlen képcímmel vagy fotóval!');
     } finally {
       setIsAnalyzing(false);
     }
@@ -57,19 +68,23 @@ export default function PurchaseAdvisorView() {
     if (!imagePreview && !webshopContext) return;
 
     setIsAnalyzing(true);
+    setAnalysisError(null);
     try {
-      // 1. Képelemzés & Szöveges elemzés (tulajdonságok kinyerése)
-      const newItemAttributes = await analyzeClothingImage(imagePreview, webshopContext || {});
+      // 1. Image & Text attribute extraction
+      const newItemAttributes = await analyzeClothingImage(imagePreview, webshopContext || {}, profile);
       if (itemName) newItemAttributes.name = itemName;
 
-      // 2. 3-Outfit Szabály & Ruhatár Kompatibilitás Teszt
+      // 2. 3-Outfit Rule & 3 Decision Pillars Test
       const result = await evaluatePrePurchaseItem({
-        newItem: { ...newItemAttributes, imageUrl: imagePreview },
+        newItem: { ...newItemAttributes, imageUrl: imagePreview, price: itemPrice },
         wardrobe,
         styleProfile: profile
       });
 
-      setEvaluationResult(result);
+      setEvaluationResult({
+        ...result,
+        extractedItem: { ...newItemAttributes, imageUrl: imagePreview }
+      });
 
       if (result.compatibilityScore >= 80) {
         try {
@@ -83,16 +98,26 @@ export default function PurchaseAdvisorView() {
       }
     } catch (e) {
       console.error('Hiba az értékelés során:', e);
+      setAnalysisError(e.message || 'Hiba történt a döntéstámogató futtatása közben.');
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleAddToWardrobe = () => {
+    if (!evaluationResult?.extractedItem) return;
+    addItem(evaluationResult.extractedItem);
+    setAddedToWardrobe(true);
   };
 
   const handleReset = () => {
     setImagePreview(null);
     setEvaluationResult(null);
     setItemName('');
+    setItemPrice('');
     setWebshopUrl('');
+    setAnalysisError(null);
+    setAddedToWardrobe(false);
   };
 
   return (
@@ -102,13 +127,13 @@ export default function PurchaseAdvisorView() {
       <div>
         <div className="flex items-center gap-2">
           <span className="badge badge-gold">Vásárlási Döntéstámogató</span>
-          <span className="badge badge-emerald">3-Outfit Szabály</span>
+          <span className="badge badge-emerald">3 Döntési Pillér</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
           Megvegyem ezt a ruhadarabot?
         </h2>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Fotózd le a próbafülkében vagy másold be a webshop linket. Az AI azonnal ellenőrzi, hogy kijön-e belőle <strong>legalább 3 komplett szett</strong> a meglévő ruháiddal!
+          Fotózd le a próbafülkében vagy másold be a webshop linket. Az AI ellenőrzi a <strong>Kombinálhatóságot</strong>, a <strong>Változatosságot</strong> és a <strong>Személyes Illeszkedést</strong>!
         </p>
       </div>
 
@@ -138,7 +163,7 @@ export default function PurchaseAdvisorView() {
                 }`}
               >
                 <Upload className="w-4 h-4" />
-                <span>Feltöltés</span>
+                <span>Kép Feltöltése</span>
               </button>
 
               <button
@@ -149,133 +174,158 @@ export default function PurchaseAdvisorView() {
                 }`}
               >
                 <LinkIcon className="w-4 h-4" />
-                <span>Terméklink</span>
+                <span>Webshop Link</span>
               </button>
             </div>
           )}
 
-          {/* Action Boxes */}
-          {!imagePreview ? (
-            <div className="space-y-4">
-              
-              {activeTab === 'camera' && (
-                <div 
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all group"
-                >
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <div className="w-16 h-16 rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-gold)] flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                    <Camera className="w-8 h-8" />
-                  </div>
-                  <h4 className="font-semibold text-white text-base">Fotózd le a ruhát a boltban vagy próbafülkében</h4>
-                  <p className="text-xs text-[var(--text-muted)] mt-1 max-w-sm mx-auto">
-                    A kamera automatikusan megnyílik. Készíts egy tiszta fotót a kiszemelt zakóról, ingről vagy cipőről!
-                  </p>
-                </div>
-              )}
-
-              {activeTab === 'upload' && (
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-white/15 rounded-2xl p-8 text-center cursor-pointer hover:border-[var(--accent-gold)] hover:bg-white/5 transition-all group"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <div className="w-16 h-16 rounded-full bg-white/5 text-[var(--text-secondary)] flex items-center justify-center mx-auto mb-3 group-hover:scale-110 group-hover:text-[var(--accent-gold)] transition-all">
-                    <Upload className="w-8 h-8" />
-                  </div>
-                  <h4 className="font-semibold text-white text-base">Kép feltöltése a telefonodról / gépedről</h4>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">
-                    Válassz ki egy lementett ruhafotót a galériádból!
-                  </p>
-                </div>
-              )}
-
-              {activeTab === 'link' && (
-                <form onSubmit={handleLinkInput} className="space-y-3">
-                  <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                    Webshop termék oldalának linkje vagy közvetlen képcím:
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      required
-                      placeholder="https://www.mrporter.com/... vagy kép linkje"
-                      value={webshopUrl}
-                      onChange={(e) => setWebshopUrl(e.target.value)}
-                      className="custom-input"
-                    />
-                    <button 
-                      type="submit" 
-                      disabled={isAnalyzing}
-                      className="btn-gold whitespace-nowrap flex items-center gap-1.5"
-                    >
-                      {isAnalyzing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Betöltés...</span>
-                        </>
-                      ) : (
-                        <span>Betöltés</span>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
-
+          {/* Tab 1: Camera */}
+          {activeTab === 'camera' && !imagePreview && (
+            <div
+              onClick={() => cameraInputRef.current?.click()}
+              className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3 bg-[var(--accent-gold-glow)]"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                ref={cameraInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <div className="w-14 h-14 rounded-full bg-[var(--accent-gold)]/20 flex items-center justify-center text-[var(--accent-gold)]">
+                <Camera className="w-7 h-7" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Fotózd le a ruhát a tükörben vagy a próbafülkében</p>
+                <p className="text-xs text-[var(--text-secondary)] mt-1">Azonnali elemzés és ruhatár-összevetés</p>
+              </div>
             </div>
-          ) : (
-            /* Image Preview & Run Analysis */
-            <div className="space-y-4">
-              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-[var(--border-gold)] p-2 flex items-center justify-center">
-                <img src={imagePreview} alt="Candidate Garment" className="max-h-full max-w-full object-contain rounded-xl" />
-                <button
-                  onClick={handleReset}
-                  className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-black/85 text-white text-xs font-medium hover:bg-black border border-white/10"
+          )}
+
+          {/* Tab 2: Upload */}
+          {activeTab === 'upload' && !imagePreview && (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center cursor-pointer hover:border-[var(--border-gold)] hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-[var(--text-secondary)]">
+                <Upload className="w-7 h-7" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Válassz fotót a galériádból</p>
+                <p className="text-xs text-[var(--text-secondary)] mt-1">Elmentett fotó vagy képernyőkép</p>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 3: Link */}
+          {activeTab === 'link' && !imagePreview && (
+            <form onSubmit={handleLinkInput} className="space-y-3">
+              <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                Webshop termék oldalának linkje vagy közvetlen képcím:
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  required
+                  placeholder="https://www.nextdirect.com/... vagy zara.com / reserved.com"
+                  value={webshopUrl}
+                  onChange={(e) => {
+                    setWebshopUrl(e.target.value);
+                    if (analysisError) setAnalysisError(null);
+                  }}
+                  className="custom-input"
+                />
+                <button 
+                  type="submit" 
+                  disabled={isAnalyzing}
+                  className="btn-gold whitespace-nowrap flex items-center gap-1.5"
                 >
-                  Másik kép
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Betöltés...</span>
+                    </>
+                  ) : (
+                    <span>Betöltés</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Error Message if any */}
+          {analysisError && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <span>{analysisError}</span>
+            </div>
+          )}
+
+          {/* Preview & Evaluation trigger */}
+          {imagePreview && (
+            <div className="space-y-4">
+              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
+                <img src={imagePreview} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl shadow-lg" />
+                <button
+                  type="button"
+                  onClick={() => setImagePreview(null)}
+                  className="absolute top-3 right-3 p-2 rounded-full bg-black/80 text-white hover:bg-black border border-white/10"
+                >
+                  <RefreshCw className="w-4 h-4" />
                 </button>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                  Opcionális megnevezés / ár:
-                </label>
-                <input
-                  type="text"
-                  placeholder="pl. Massimo Dutti Tevebarna Gyapjú Kabát (65.000 Ft)"
-                  value={itemName}
-                  onChange={(e) => setItemName(e.target.value)}
-                  className="custom-input text-sm"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    Megnevezés (opcionális):
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="pl. Zöld Slim Fit Lenkeverék Zakó"
+                    value={itemName}
+                    onChange={(e) => setItemName(e.target.value)}
+                    className="custom-input text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    Ár (opcionális):
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="pl. 38 000 Ft"
+                    value={itemPrice}
+                    onChange={(e) => setItemPrice(e.target.value)}
+                    className="custom-input text-xs"
+                  />
+                </div>
               </div>
 
               <button
                 onClick={handleRunEvaluation}
                 disabled={isAnalyzing}
-                className="btn-gold w-full py-3.5 text-base shadow-xl"
+                className="btn-gold w-full py-3.5 text-sm font-bold shadow-xl flex items-center justify-center gap-2"
               >
                 {isAnalyzing ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>AI elemzi a ruhatáradat és generálja a 3 szettet...</span>
+                    <span>Gemini 3.7 Flash elemzi a 3 Döntési Pillért és szetteket épít...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span>3-Outfit Döntéstámogató Teszt Futtatása</span>
+                    <span>3 Döntési Pillér & Outfit Teszt Futtatása</span>
                   </>
                 )}
               </button>
@@ -319,13 +369,30 @@ export default function PurchaseAdvisorView() {
                 </div>
               </div>
 
-              <button
-                onClick={handleReset}
-                className="btn-secondary text-xs self-start sm:self-center"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Új ruha tesztelése</span>
-              </button>
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <button
+                  onClick={handleReset}
+                  className="btn-secondary text-xs"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Új teszt</span>
+                </button>
+
+                {addedToWardrobe ? (
+                  <span className="badge badge-emerald py-2 px-3 flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Hozzáadva a Gardróbhoz</span>
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleAddToWardrobe}
+                    className="btn-gold text-xs py-2 px-3 font-bold flex items-center gap-1.5 shadow-lg"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Hozzáadás a Gardróbhoz</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Verdict summary */}
@@ -333,16 +400,43 @@ export default function PurchaseAdvisorView() {
               {evaluationResult.verdictSummary}
             </p>
 
-            {/* Duplication Alert if exists */}
-            {evaluationResult.duplicationWarning && (
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{evaluationResult.duplicationWarning}</span>
+            {/* 3 Pillars Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              
+              {/* Pillar 1: Combinability */}
+              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
+                <span className="text-[11px] font-bold uppercase text-[var(--accent-gold)] block">
+                  1. Kombinálhatóság
+                </span>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  Garantált 3 komplett outfit a meglévő ruháiddal.
+                </p>
               </div>
-            )}
+
+              {/* Pillar 2: Versatility & Upgrade */}
+              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
+                <span className="text-[11px] font-bold uppercase text-sky-400 block">
+                  2. Változatosság & Csere
+                </span>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  {evaluationResult.duplicationWarning || 'Új szín és fazon kombinációkat hoz a ruhatáradba.'}
+                </p>
+              </div>
+
+              {/* Pillar 3: Personal Fit */}
+              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
+                <span className="text-[11px] font-bold uppercase text-emerald-400 block">
+                  3. Személyes Illeszkedés
+                </span>
+                <p className="text-xs text-[var(--text-secondary)]">
+                  {evaluationResult.personalFitVerdict || 'Harmonizál a bőrtónusoddal és a testalkatoddal.'}
+                </p>
+              </div>
+
+            </div>
 
             {/* Pros & Cons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <div className="space-y-2 bg-black/30 p-4 rounded-xl border border-white/5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
@@ -370,36 +464,63 @@ export default function PurchaseAdvisorView() {
 
           </div>
 
-          {/* The 3 Outfits Generated from Existing Closet */}
+          {/* VISUAL FLAT-LAY OUTFIT COLLAGE OF 3 GUARANTEED OUTFITS */}
           <div className="space-y-4">
             <div>
               <h3 className="text-xl font-serif font-bold gold-gradient-text">
-                ✨ A 3 Garantált Outfit a Meglévő Ruhatáradból
+                ✨ A 3 Garantált Outfit a Meglévő Ruhatáradból (Képi Kollázs)
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Így kombinálhatod azonnal a szekrényedben lévő darabjaiddal:
+                Így kombinálhatod azonnal a szekrényedben lévő minőségi darabjaiddal:
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {evaluationResult.outfits?.map((outfit, idx) => (
-                <div key={idx} className="glass-card p-4 space-y-3 flex flex-col justify-between border-white/10 hover:border-[var(--border-gold)]">
+                <div key={idx} className="glass-card p-4 space-y-3 flex flex-col justify-between border-white/10 hover:border-[var(--border-gold)] transition-all">
                   <div>
-                    <span className="badge badge-gold text-[10px] mb-2 block w-max">
-                      {outfit.occasion}
-                    </span>
-                    <h4 className="font-serif font-bold text-white text-base">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="badge badge-gold text-[10px]">
+                        {outfit.styleType || 'Klasszikus & Kifinomult'}
+                      </span>
+                      <span className="text-[11px] text-[var(--text-muted)]">
+                        {outfit.occasion}
+                      </span>
+                    </div>
+
+                    <h4 className="font-serif font-bold text-white text-base mb-3">
                       {outfit.title}
                     </h4>
 
-                    {/* Outfit Components List */}
-                    <div className="space-y-1.5 mt-3">
-                      {outfit.items?.map((item, iIdx) => (
-                        <div key={iIdx} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] bg-white/5 p-2 rounded-lg">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-gold)]"></span>
-                          <span className="font-medium text-white truncate">{item.name}</span>
-                        </div>
-                      ))}
+                    {/* Visual Flat-lay Photo Grid */}
+                    <div className="grid grid-cols-2 gap-2 p-2 rounded-xl bg-black/50 border border-white/5">
+                      {outfit.items?.map((item, iIdx) => {
+                        const isCandidateItem = iIdx === 0;
+
+                        return (
+                          <div key={iIdx} className="space-y-1 group relative">
+                            <div className={`aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center border transition-all ${
+                              isCandidateItem
+                                ? 'border-[var(--accent-gold)] ring-1 ring-[var(--accent-gold-glow)]'
+                                : 'border-white/10 group-hover:border-white/30'
+                            }`}>
+                              <img
+                                src={item.imageUrl}
+                                alt={item.name}
+                                className="max-h-full max-w-full object-contain rounded"
+                              />
+                              {isCandidateItem && (
+                                <span className="absolute top-1 left-1 bg-[var(--accent-gold)] text-black text-[9px] font-bold px-1 py-0.5 rounded shadow">
+                                  ÚJ
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5">
+                              {item.name}
+                            </p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
