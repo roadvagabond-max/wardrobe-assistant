@@ -1,4 +1,5 @@
 // Advanced Google Gemini Vision & Fashion Stylist Intelligence Engine
+import { ensureBase64Image } from './imageOptimizer';
 
 const getGeminiApiKey = () => {
   return import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || '';
@@ -73,14 +74,16 @@ export async function analyzeClothingImage(imageBase64OrUrl, webshopContext = {}
 
   if (apiKey) {
     try {
+      // Ensure image is converted to Base64 so Gemini Vision API receives the actual pixels
+      const resolvedBase64 = await ensureBase64Image(imageBase64OrUrl);
+
       // Build context from webshop text
       const webshopTextInfo = [
         webshopContext.title ? `CÉLTERMÉK HIVATALOS NEVE: "${webshopContext.title}"` : '',
         webshopContext.brand ? `Márka / Gyártó: "${webshopContext.brand}"` : '',
         webshopContext.productCode ? `Cikkszám / Termékkód (SKU): "${webshopContext.productCode}"` : '',
         webshopContext.description ? `Hivatalos Leírás és Anyagösszetétel: "${webshopContext.description}"` : '',
-        webshopContext.rawText ? `Oldal további részletei: "${webshopContext.rawText.slice(0, 800)}"` : '',
-        (!imageBase64OrUrl?.startsWith('data:') && imageBase64OrUrl) ? `Termékkép URL: "${imageBase64OrUrl}"` : ''
+        webshopContext.rawText ? `Oldal további részletei: "${webshopContext.rawText.slice(0, 800)}"` : ''
       ].filter(Boolean).join('\n');
 
       const userProfileInfo = userProfile && Object.keys(userProfile).length > 0 ? `
@@ -94,19 +97,21 @@ Preferált stílusok: ${JSON.stringify(userProfile.preferredStyles || [])}
 Kedvenc színek: ${JSON.stringify(userProfile.favoriteColors || [])}
 ` : '';
 
-      const targetFocusInstruction = webshopContext.title || webshopContext.productCode
-        ? `FONTOS: A vizsgált céltermék a(z) "${webshopContext.title || webshopContext.productCode}". Amennyiben a fotón a modell egy teljes szettet visel, te KIZÁRÓLAG a nevezett célterméket szegmentáld és elemezd!`
-        : `Amennyiben a fotón több ruhadarab látható, fókuszálj a legfőbb, központi darabra!`;
+      const targetFocusInstruction = `FONTOS: A csatolt fotó a vizsgált céltermék valós fotója. A fotó pixelei (sziluett, gallér, ujjak, szabás, textúra, valódi szín) az abszolút elsődleges forrás a darab azonosításához!
+- Ha a fotón póló, ing vagy pulóver látható, a kategória KÖTELEZŐEN 'tops' vagy 'knitwear' (soha ne téveszd össze nadrággal)!
+- Ha a fotón nadrág vagy farmer látható, a kategória 'bottoms'.
+- Ha zakó vagy kabát, a kategória 'outerwear'.
+- A valódi színt közvetlenül a fotón látható árnyalatból állapítsd meg!`;
 
       const prompt = `Te egy világklasszis professzionális személyi stylist, divattanácsadó és ruhatár-tervező vagy.
-Elemezd a ruhadarabot részletesen, szakértő szemmel!
+Elemezd a csatolt képen látható ruhadarabot részletesen és szakértő szemmel!
 
-${webshopTextInfo ? `--- HIVATALOS WEBSHOP ADATOK ---\n${webshopTextInfo}\n` : ''}
-${userProfileInfo}
 ${targetFocusInstruction}
+${webshopTextInfo ? `\n--- HIVATALOS WEBSHOP ADATOK ---\n${webshopTextInfo}\n` : ''}
+${userProfileInfo}
 
 SZABÁLYOK:
-1. "category": "outerwear" (Zakó & Kabát) | "knitwear" (Pulóverek & Kötöttáru) | "tops" (Ingek & Felsők) | "bottoms" (Nadrág) | "shoes" (Cipő & Lábbeli) | "dresses" (Ruhák & Egyrészesek) | "skirts" (Szoknyák) | "accessories" (Kiegészítők).
+1. "category": "outerwear" (Zakó & Kabát) | "knitwear" (Pulóverek & Kötöttáru) | "tops" (Ingek & Felsők & Pólók) | "bottoms" (Nadrág) | "shoes" (Cipő & Lábbeli) | "dresses" (Ruhák & Egyrészesek) | "skirts" (Szoknyák) | "accessories" (Kiegészítők).
 2. "formality": "Casual (Laza)" | "Smart Casual" | "Business Casual" | "Business Formal" | "Black Tie & Formal".
 3. "styleArchetype": "Klasszikus & Időtlen" | "Old Money & Quiet Luxury" | "Smart Urban" | "Streetwear" | "Olasz Sprezzatura" | "Minimalista" | "Vintage & Retro".
 4. "condition": "Vadonatúj / Kifogástalan" | "Megkímélt / Kiváló" | "Játszós / Kopott" | "Javításra vár" | "Lecserélendő".
@@ -119,32 +124,32 @@ SZABÁLYOK:
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
-  "name": "Pontos és elegáns magyar megnevezés (pl. 'Zöld Slim Fit Olasz Lenkeverék Zakó')",
+  "name": "Pontos és elegáns magyar megnevezés (pl. 'Navy Kék Pique Pamut Pólóing' vagy 'Fekete Slim Fit Póló')",
   "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "dresses" | "skirts" | "accessories",
-  "subCategory": "blazer" | "knitwear" | "shirt" | "t-shirt" | "trousers" | "jeans" | "loafers" | "sneakers" | "dress" | "skirt" | "coat" | "other",
-  "color": "Valódi fő szín magyarul (pl. Olívazöld, Homokbézs, Sötétkék, Törtfehér)",
+  "subCategory": "blazer" | "knitwear" | "shirt" | "t-shirt" | "polo" | "trousers" | "jeans" | "loafers" | "sneakers" | "dress" | "skirt" | "coat" | "other",
+  "color": "Valódi fő szín magyarul (pl. Sötétkék, Fekete, Fehér, Homokbézs, Olívazöld)",
   "colorHex": "#hex_színkód",
-  "material": "Részletes anyag és szövés (pl. 55% Len, 45% Olasz Gyapjú)",
+  "material": "Részletes anyag és szövés (pl. 100% Pima Pamut Pique)",
   "brand": "Márkanév ha felismerhető",
-  "qualityScore": 9.3,
+  "qualityScore": 9.2,
   "season": ["tavasz", "nyar", "osz", "tel"],
   "formality": "Smart Casual",
-  "styleArchetype": "Olasz Sprezzatura",
+  "styleArchetype": "Old Money & Quiet Luxury",
   "condition": "Vadonatúj / Kifogástalan",
   "stylingTip": "Mivel hordd: Konkrét kombinációs javaslatok",
   "whenToWear": "Mikor hordd: Események és hőmérséklet",
-  "colorHarmony": "A mély zöld tónus kiemeli a meleg bőrtónust...",
-  "bodyFitAdvice": "A strukturált vállvonal nyújtja a felsőtestet...",
-  "stylingAdvice": "Karakteres, mégis sokoldalú prémium darab.",
-  "personalMatchScore": 96,
-  "tags": ["olasz szövet", "lenkeverék", "alapdarab"]
+  "colorHarmony": "A szín és tónus harmóniája a felhasználóval",
+  "bodyFitAdvice": "Hogyan áll a szabás a felhasználó testalkatán",
+  "stylingAdvice": "Karakteres, sokoldalú darab.",
+  "personalMatchScore": 95,
+  "tags": ["alapdarab", "pamut", "nyári"]
 }`;
 
       const parts = [{ text: prompt }];
 
-      // Attach image if it's base64 (from camera or file upload)
-      if (imageBase64OrUrl && imageBase64OrUrl.startsWith('data:')) {
-        const p = imageBase64OrUrl.split(';base64,');
+      // Attach image if base64 exists
+      if (resolvedBase64 && resolvedBase64.startsWith('data:')) {
+        const p = resolvedBase64.split(';base64,');
         const mimeType = p[0].replace('data:', '') || 'image/jpeg';
         const base64Data = p[1];
         parts.push({ inlineData: { mimeType, data: base64Data } });

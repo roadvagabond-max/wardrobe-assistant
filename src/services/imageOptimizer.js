@@ -1,25 +1,88 @@
 /**
- * Client-side High-Speed Image Optimizer
- * Compresses phone camera photos / large uploads to max 1024x1024px, JPEG 85% (~120KB)
- * for ultra-fast network transfer to Gemini Vision API while maintaining crystal-clear quality.
+ * Client-side High-Speed Image Optimizer & Base64 Converter
+ * Ensures any image (local file, camera capture, or remote webshop URL)
+ * is converted to optimized Base64 JPEG so Gemini Vision can directly see the garment pixels.
  */
 
-export function optimizeImageForUpload(fileOrDataUrl, maxWidth = 1024, maxHeight = 1024, quality = 0.85) {
-  return new Promise((resolve, reject) => {
-    if (!fileOrDataUrl) return resolve(null);
+export async function ensureBase64Image(fileOrUrl, maxWidth = 1024, maxHeight = 1024, quality = 0.85) {
+  if (!fileOrUrl) return null;
 
-    // If it's already a small string or remote URL, return as-is
-    if (typeof fileOrDataUrl === 'string' && !fileOrDataUrl.startsWith('data:')) {
-      return resolve(fileOrDataUrl);
+  // 1. If it's already a base64 Data URL, optimize it
+  if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('data:')) {
+    return optimizeBase64String(fileOrUrl, maxWidth, maxHeight, quality);
+  }
+
+  // 2. If it's a File or Blob
+  if (fileOrUrl instanceof Blob || fileOrUrl instanceof File) {
+    const base64 = await readFileAsDataUrl(fileOrUrl);
+    return optimizeBase64String(base64, maxWidth, maxHeight, quality);
+  }
+
+  // 3. If it's a remote HTTP/HTTPS URL
+  if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('http')) {
+    // Try method A: Direct fetch / Proxy fetch as Blob
+    try {
+      let res = null;
+      try {
+        res = await fetch(fileOrUrl);
+      } catch (_) {
+        // Fallback to CORS proxy if direct fetch is blocked
+        res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(fileOrUrl)}`);
+      }
+
+      if (res && res.ok) {
+        const blob = await res.blob();
+        const base64 = await readFileAsDataUrl(blob);
+        return optimizeBase64String(base64, maxWidth, maxHeight, quality);
+      }
+    } catch (e) {
+      console.warn('Fetch to blob failed, trying canvas load:', e);
     }
 
+    // Try method B: Image with crossOrigin
+    try {
+      const base64FromCanvas = await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.min(img.naturalWidth || img.width, maxWidth);
+            canvas.height = Math.min(img.naturalHeight || img.height, maxHeight);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          } catch (_) {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = fileOrUrl;
+      });
+
+      if (base64FromCanvas) return base64FromCanvas;
+    } catch (_) {}
+  }
+
+  return fileOrUrl;
+}
+
+function readFileAsDataUrl(blobOrFile) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blobOrFile);
+  });
+}
+
+function optimizeBase64String(dataUrl, maxWidth, maxHeight, quality) {
+  return new Promise((resolve) => {
     const img = new Image();
-    
     img.onload = () => {
       let width = img.naturalWidth || img.width;
       let height = img.naturalHeight || img.height;
 
-      // Scale down proportionally if larger than max bounds
       if (width > maxWidth || height > maxHeight) {
         if (width > height) {
           height = Math.round((height * maxWidth) / width);
@@ -39,26 +102,11 @@ export function optimizeImageForUpload(fileOrDataUrl, maxWidth = 1024, maxHeight
       ctx.imageSmoothingQuality = 'high';
       ctx.drawImage(img, 0, 0, width, height);
 
-      const optimizedBase64 = canvas.toDataURL('image/jpeg', quality);
-      resolve(optimizedBase64);
+      resolve(canvas.toDataURL('image/jpeg', quality));
     };
-
-    img.onerror = (err) => {
-      console.warn('Képtömörítési hiba, eredeti kép megtartása:', err);
-      resolve(fileOrDataUrl);
-    };
-
-    if (typeof fileOrDataUrl === 'string') {
-      img.src = fileOrDataUrl;
-    } else if (fileOrDataUrl instanceof Blob || fileOrDataUrl instanceof File) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        img.src = reader.result;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(fileOrDataUrl);
-    } else {
-      resolve(fileOrDataUrl);
-    }
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
   });
 }
+
+export const optimizeImageForUpload = ensureBase64Image;
