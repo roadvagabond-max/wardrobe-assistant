@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { User, Compass, Sparkles, Edit3, Check, Palette, Ruler, PieChart, Award, Heart, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { User, Compass, Sparkles, Edit3, Check, Palette, Ruler, PieChart, Award, Heart, ShieldCheck, Camera, Upload, Loader2, Sparkle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { analyzeColorSeason } from '../../services/gemini';
+import { optimizeImageForUpload } from '../../services/imageOptimizer';
 
 const ALL_STYLE_ARCHETYPES = [
   'Klasszikus & Időtlen',
@@ -16,6 +18,11 @@ export default function StyleDNAView() {
   const { profile, updateProfile, wardrobe } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(profile);
+  const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
+  const [colorSeasonResult, setColorSeasonResult] = useState(null);
+
+  const cameraInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -32,6 +39,37 @@ export default function StyleDNAView() {
         preferredStyles: exists ? current.filter(s => s !== styleName) : [...current, styleName]
       };
     });
+  };
+
+  const handlePortraitFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsAnalyzingPhoto(true);
+      const base64 = await optimizeImageForUpload(file);
+      
+      // Run AI Color Season Analysis
+      const result = await analyzeColorSeason(base64);
+      setColorSeasonResult(result);
+
+      if (result) {
+        const updated = {
+          ...formData,
+          avatarUrl: base64,
+          skinTone: `${result.seasonName} - ${result.skinTone}`,
+          favoriteColors: result.recommendedPalette && result.recommendedPalette.length > 0
+            ? result.recommendedPalette
+            : formData.favoriteColors
+        };
+        setFormData(updated);
+        updateProfile(updated);
+      }
+    } catch (err) {
+      console.error('Színtípus elemzési hiba:', err);
+    } finally {
+      setIsAnalyzingPhoto(false);
+    }
   };
 
   // Calculate wardrobe analytics
@@ -57,7 +95,7 @@ export default function StyleDNAView() {
             Stílus DNA & Profil
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Az AI a preferenciáidból, testalkatodból és a gardróbod valós darabjaiból tanul.
+            Az AI a fizikai adottságaidból, bőrtónusodból és a ruhatárad valós darabjaiból tanul.
           </p>
         </div>
 
@@ -75,6 +113,91 @@ export default function StyleDNAView() {
             </>
           )}
         </button>
+      </div>
+
+      {/* 📷 AI Photo Color Season Analysis Card */}
+      <div className="glass-card p-5 sm:p-6 border-[var(--border-gold)]/60 bg-gradient-to-r from-black/60 to-[var(--accent-gold-glow)]/10 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[var(--accent-gold)]" />
+              <h3 className="font-serif font-bold text-white text-base sm:text-lg">
+                Portré / Szelfi alapú AI Színtípus & Bőrtónus Elemző
+              </h3>
+            </div>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Készíts egy természetes fényű fotót, és a Gemini 3.7 Flash automatikusan meghatározza a 12 évszakos színtípusodat és a hozzád legjobban illő színpalettát!
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <input 
+              type="file" 
+              accept="image/*" 
+              capture="user" 
+              ref={cameraInputRef} 
+              onChange={handlePortraitFile} 
+              className="hidden" 
+            />
+            <input 
+              type="file" 
+              accept="image/*" 
+              ref={fileInputRef} 
+              onChange={handlePortraitFile} 
+              className="hidden" 
+            />
+
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={isAnalyzingPhoto}
+              className="btn-gold text-xs py-2 px-3 flex items-center gap-1.5 shadow"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Kamera</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isAnalyzingPhoto}
+              className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Kép Feltöltése</span>
+            </button>
+          </div>
+        </div>
+
+        {isAnalyzingPhoto && (
+          <div className="p-4 rounded-xl bg-black/50 border border-[var(--border-gold)] text-center text-xs text-amber-200 flex items-center justify-center gap-2.5">
+            <Loader2 className="w-4 h-4 text-[var(--accent-gold)] animate-spin" />
+            <span>Gemini 3.7 Flash elemzi a bőrtónust, szemszínt és a színtípust...</span>
+          </div>
+        )}
+
+        {colorSeasonResult && (
+          <div className="p-4 rounded-xl bg-black/40 border border-emerald-500/30 space-y-2 animate-slide-up text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-emerald-300 text-sm flex items-center gap-1.5">
+                <Check className="w-4 h-4" />
+                <span>Meghatározott Színtípus: {colorSeasonResult.seasonName}</span>
+              </span>
+            </div>
+            <p className="text-[var(--text-secondary)] leading-relaxed">{colorSeasonResult.description}</p>
+            
+            <div className="pt-2">
+              <span className="text-[11px] font-semibold text-white block mb-1">Ragyogó, legjobban álló színeid:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {colorSeasonResult.recommendedPalette?.map((c, i) => (
+                  <span key={i} className="badge badge-gold text-[10px]">
+                    ✦ {c}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {isEditing ? (
@@ -105,11 +228,14 @@ export default function StyleDNAView() {
             </div>
 
             <div>
-              <label className="block text-xs text-[var(--text-secondary)] mb-1">Testsúly (opcionális)</label>
+              <label className="block text-xs text-[var(--text-secondary)] mb-1">Testsúly (kg):</label>
               <input
                 type="text"
                 value={formData.weight || ''}
-                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setFormData({ ...formData, weight: val ? `${val} kg` : '' });
+                }}
                 className="custom-input text-sm"
                 placeholder="pl. 78 kg"
               />
@@ -187,13 +313,17 @@ export default function StyleDNAView() {
           <div className="lg:col-span-2 glass-card p-6 sm:p-7 border-[var(--border-gold)] space-y-6">
             
             <div className="flex items-center gap-4 pb-4 border-b border-white/10">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#d4af37] to-[#785908] flex items-center justify-center text-black font-bold text-2xl shadow-xl shadow-[#d4af37]/20">
-                {profile.name?.[0] || 'A'}
+              <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-[#d4af37] to-[#785908] flex items-center justify-center text-black font-bold text-2xl shadow-xl shadow-[#d4af37]/20 border border-[var(--border-gold)] shrink-0">
+                {profile.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span>{profile.name?.[0] || 'A'}</span>
+                )}
               </div>
               <div>
                 <h3 className="text-xl font-serif font-bold text-white">{profile.name}</h3>
                 <p className="text-xs text-[var(--accent-gold-light)] font-medium">{profile.title}</p>
-                <div className="flex items-center gap-2 mt-1 text-[11px] text-[var(--text-muted)]">
+                <div className="flex items-center gap-2 mt-1 text-[11px] text-[var(--text-muted)] flex-wrap">
                   <span>{profile.height}</span>
                   {profile.weight && <span>• {profile.weight}</span>}
                   <span>• {profile.bodyType}</span>

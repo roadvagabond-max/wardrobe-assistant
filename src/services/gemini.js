@@ -18,33 +18,41 @@ const GEMINI_MODELS = [
 /**
  * Universal Gemini API caller with automatic multi-model fallback and JSON parser
  */
-async function callGeminiApi({ apiKey, contents, maxOutputTokens = 1200, temperature = 0.2 }) {
+async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens = 1200, temperature = 0.2 }) {
   let lastError = null;
 
   for (const model of GEMINI_MODELS) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const requestBody = {
+        contents,
+        generationConfig: {
+          maxOutputTokens,
+          temperature
+        }
+      };
+
+      if (tools) {
+        requestBody.tools = tools;
+      } else {
+        requestBody.generationConfig.responseMimeType = "application/json";
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-goog-api-key': apiKey
         },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            responseMimeType: "application/json",
-            maxOutputTokens,
-            temperature
-          }
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (response.ok) {
         const data = await response.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (rawText) {
-          const cleaned = rawText
+          const jsonMatch = rawText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+          const cleaned = jsonMatch ? jsonMatch[0] : rawText
             .replace(/^```json\s*/i, '')
             .replace(/^```\s*/i, '')
             .replace(/\s*```$/i, '')
@@ -155,7 +163,10 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         parts.push({ inlineData: { mimeType, data: base64Data } });
       }
 
-      return await callGeminiApi({ apiKey, contents: [{ parts }] });
+      // Enable live Google Search Grounding if productCode is present
+      const tools = webshopContext.productCode ? [{ googleSearch: {} }] : null;
+
+      return await callGeminiApi({ apiKey, contents: [{ parts }], tools });
     } catch (err) {
       console.error('Gemini Vision & Text API hiba:', err);
       throw err;
@@ -166,37 +177,71 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 }
 
 /**
- * 2. Vásárlás Előtti Tanácsadó: 3 Döntési Pillér & Vizuális Szett-tervezés
- * 1. Kombinálhatóság (3 szett meglévő ruhákból)
- * 2. Változatosság & Duplikáció / Állapot-alapú Csere (Upgrade) Javaslat
- * 3. Személyes Illeszkedés (Testalkat + Bőrtónus + Stílus)
+ * 2. UNIFIED ULTRA-FAST Vásárlás Előtti Döntéstámogató (1 Hívásban végzi a képelemzést és a 3 pillért)
  */
-export async function evaluatePrePurchaseItem({ newItem, wardrobe = [], styleProfile = {} }) {
+export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webshopContext = {}, itemName = '', itemPrice = '', wardrobe = [], styleProfile = {} }) {
   const apiKey = getGeminiApiKey();
 
   if (apiKey) {
     try {
-      const activeWardrobe = wardrobe.filter(w => w.condition !== 'Javításra vár');
+      const resolvedBase64 = await ensureBase64Image(imageBase64OrUrl);
+      
+      // Lean, compact representation of wardrobe for ultra-low token transfer
+      const compactWardrobe = wardrobe
+        .filter(w => w.condition !== 'Javításra vár')
+        .map(w => ({
+          id: w.id,
+          name: w.name,
+          cat: w.category,
+          col: w.color,
+          form: w.formality,
+          cond: w.condition,
+          style: w.styleArchetype
+        }));
 
-      const prompt = `Te egy világklasszis személyi stylist és befektetés-alapú ruhatár-tervező vagy.
-A felhasználó ezt a darabot tervezi megvenni: ${JSON.stringify(newItem)}
-Stílusprofilja: ${JSON.stringify(styleProfile)}
-Meglévő ruhatára (${activeWardrobe.length} aktív elem): ${JSON.stringify(activeWardrobe.map(w => ({ id: w.id, name: w.name, category: w.category, color: w.color, formality: w.formality, condition: w.condition, imageUrl: w.imageUrl })))}
+      const webshopTextInfo = [
+        webshopContext.title ? `CÉLTERMÉK: "${webshopContext.title}"` : '',
+        webshopContext.productCode ? `Cikkszám: "${webshopContext.productCode}"` : '',
+        webshopContext.description ? `Leírás: "${webshopContext.description.slice(0, 300)}"` : ''
+      ].filter(Boolean).join(' | ');
 
-Végezd el a 3 Döntési Pillér értékelést:
-1. PILLÉR: Kombinálhatóság (Készíts 3 komplett, különböző outfitet KIZÁRÓLAG a meglévő ruhatári elemekkel párosítva, pontos ruha ID-kkal!).
-2. PILLÉR: Változatosság & Duplikáció (Ha van már hasonló darab, de az 'Kopott / Játszós' vagy 'Lecserélendő', akkor KIFEJEZETTEN AJÁNLANI KELL a vételt mint minőségi ruhatár-frissítést! Ha van szép állapotú hasonló, jelezd a duplikációt).
-3. PILLÉR: Személyes Illeszkedés (Hogyan passzol a felhasználó testalkatához, bőrtónusához és preferált stílusához).
+      const prompt = `Te egy világklasszis személyi stylist és vásárlási döntéstámogató vagy.
+ELEMEZD A CSATOLT KÉPEN LÉVŐ KISZEMELT RUHÁT ÉS VÉGEZD EL A 3 DÖNTÉSI PILLÉR ÉRTÉKELÉST EGYETLEN MENETBEN!
+${itemName ? `Megadott név: "${itemName}"` : ''} ${itemPrice ? `Ár: "${itemPrice}"` : ''} ${webshopTextInfo ? `Webshop info: ${webshopTextInfo}` : ''}
+Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: styleProfile.weight, body: styleProfile.bodyType, skin: styleProfile.skinTone, styles: styleProfile.preferredStyles })}
+Meglévő ruhatár (${compactWardrobe.length} elem): ${JSON.stringify(compactWardrobe)}
+
+3 DÖNTÉSI PILLÉR:
+1. Kombinálhatóság: Készíts 3 különböző outfitet a meglévő gardrób elemeivel (használd a pontos 'id'-kat a 'matchedItemIds' tömbben!).
+2. Változatosság & Duplikáció: Ha van már hasonló ruha, de az 'Kopott / Játszós' vagy 'Lecserélendő', KIFEJEZETTEN AJÁNLANI KELL a megvásárlást mint minőségi pótlást! Ha van szép állapotú hasonló, jelezd a duplikációt.
+3. Személyes Illeszkedés: Értékeld a testalkathoz, bőrtónushoz és stílushoz való passzolást.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
+  "item": {
+    "name": "${itemName || 'Elegáns magyar terméknév'}",
+    "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "dresses" | "skirts" | "accessories",
+    "subCategory": "blazer" | "knitwear" | "shirt" | "t-shirt" | "polo" | "trousers" | "jeans" | "loafers" | "sneakers" | "dress" | "coat" | "other",
+    "color": "Valódi fő szín magyarul (pl. Sötétkék, Homokbézs, Fekete)",
+    "colorHex": "#hex",
+    "material": "Anyagösszetétel",
+    "qualityScore": 9.2,
+    "formality": "Smart Casual",
+    "styleArchetype": "Old Money & Quiet Luxury",
+    "condition": "Vadonatúj / Kifogástalan",
+    "stylingTip": "Mivel hordd",
+    "whenToWear": "Mikor hordd",
+    "colorHarmony": "Színharmónia indoklás",
+    "bodyFitAdvice": "Szabás és testalkat indoklás",
+    "tags": ["alapdarab"]
+  },
   "compatibilityScore": 94,
   "verdict": "Erősen Ajánlott" | "Érdemes Megfontolni" | "Gondold Át",
-  "verdictSummary": "Részletes szakmai indoklás magyarul",
-  "duplicationWarning": "Értékelés a duplikációról vagy csere-javaslatról",
-  "personalFitVerdict": "Értékelés a testalkat, bőrtónus és stílus összhangjáról",
+  "verdictSummary": "Részletes szakmai összefoglaló a vásárlási döntésről",
+  "duplicationWarning": "Duplikáció vagy csere-javaslat",
+  "personalFitVerdict": "Személyes illeszkedés értékelése",
   "pros": ["3 konkrét előny"],
-  "cons": ["1-2 megfontolandó szempont"],
+  "cons": ["1 megfontolandó szempont"],
   "outfits": [
     {
       "id": "eval-1",
@@ -204,33 +249,102 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
       "occasion": "Munka / Tárgyalás",
       "styleType": "Klasszikus & Kifinomult",
       "matchScore": 96,
-      "stylingTip": "Stílustanács ehhez a szetthez",
-      "matchedItemIds": ["létező ruha ID-k a fenti gardróbból"]
+      "stylingTip": "Stílustipp",
+      "matchedItemIds": ["létező ID-k a fenti gardróbból"]
     }
   ]
 }`;
 
-      const contents = [{ parts: [{ text: prompt }] }];
-      const parsed = await callGeminiApi({ apiKey, contents });
-      
+      const parts = [{ text: prompt }];
+
+      if (resolvedBase64 && resolvedBase64.startsWith('data:')) {
+        const p = resolvedBase64.split(';base64,');
+        const mimeType = p[0].replace('data:', '') || 'image/jpeg';
+        const base64Data = p[1];
+        parts.push({ inlineData: { mimeType, data: base64Data } });
+      }
+
+      const tools = webshopContext.productCode ? [{ googleSearch: {} }] : null;
+      const parsed = await callGeminiApi({ apiKey, contents: [{ parts }], tools, temperature: 0.1 });
+
+      const extractedItem = {
+        ...(parsed.item || {}),
+        name: itemName || parsed.item?.name || 'Új Ruhadarab',
+        imageUrl: imageBase64OrUrl,
+        price: itemPrice
+      };
+
       if (parsed && Array.isArray(parsed.outfits)) {
         parsed.outfits = parsed.outfits.map(o => ({
           ...o,
           items: [
-            newItem,
+            extractedItem,
             ...(o.matchedItemIds || []).map(id => wardrobe.find(w => w.id === id)).filter(Boolean)
           ]
         }));
       }
 
-      return parsed;
-    } catch(e) {
-      console.error("Gemini 3-outfit hiba:", e);
+      return {
+        ...parsed,
+        extractedItem
+      };
+    } catch (e) {
+      console.error('Gemini unified purchase check hiba:', e);
       throw e;
     }
   }
 
   throw new Error('Nincs beállítva Gemini API kulcs! Kérlek add meg a Beállításokban.');
+}
+
+/**
+ * 2b. Backward compatibility alias
+ */
+export const evaluatePrePurchaseItem = evaluateAndExtractPrePurchaseItem;
+
+/**
+ * 2c. Szelfi / Portré alapú AI Színtípus & Bőrtónus Elemző (Color Season Analysis)
+ */
+export async function analyzeColorSeason(portraitBase64OrUrl) {
+  const apiKey = getGeminiApiKey();
+
+  if (apiKey) {
+    try {
+      const resolvedBase64 = await ensureBase64Image(portraitBase64OrUrl);
+
+      const prompt = `Te egy mester szín- és stílustanácsadó (Color Analysis Expert) vagy.
+Elemezd a csatolt portréfotót / szelfit!
+Vizsgáld meg:
+1. Bőr altónusa (Meleg arany/olíva vs Hideg rózsaszínes/kékesszürke).
+2. Szemszín és hajszín kontrasztja.
+3. Hivatalos 12 évszakos besorolás: Meleg Ősz (Warm Autumn), Sötét Ősz (Dark Autumn), Lágy Ősz (Soft Autumn), Világos Tavasz (Light Spring), Tiszta Tavasz (Clear Spring), Meleg Tavasz (Warm Spring), Hideg Tél (Cool Winter), Sötét Tél (Dark Winter), Tiszta Tél (Clear Winter), Lágy Nyár (Soft Summer), Világos Nyár (Light Summer), Hideg Nyár (Cool Summer).
+
+VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
+{
+  "seasonName": "pl. Meleg Ősz (Warm Autumn)",
+  "skinTone": "Közép-világos meleg arany altónussal",
+  "description": "Részletes szakmai leírás arról, miért ez a színtípus és milyen árnyalatok világosítják a legszebben az arcot",
+  "recommendedPalette": ["Sötétkék (Navy)", "Olívazöld (Olive)", "Teveszín (Camel)", "Dohánybarna", "Törtfehér", "Bordó", "Terrakotta"],
+  "avoidPalette": ["Hideg neon pink", "Fakó hideg szürke"]
+}`;
+
+      const parts = [{ text: prompt }];
+
+      if (resolvedBase64 && resolvedBase64.startsWith('data:')) {
+        const p = resolvedBase64.split(';base64,');
+        const mimeType = p[0].replace('data:', '') || 'image/jpeg';
+        const base64Data = p[1];
+        parts.push({ inlineData: { mimeType, data: base64Data } });
+      }
+
+      return await callGeminiApi({ apiKey, contents: [{ parts }], temperature: 0.1 });
+    } catch (e) {
+      console.error('Color season analysis hiba:', e);
+      throw e;
+    }
+  }
+
+  throw new Error('Nincs beállítva Gemini API kulcs!');
 }
 
 /**

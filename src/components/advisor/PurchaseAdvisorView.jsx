@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { analyzeClothingImage, evaluatePrePurchaseItem } from '../../services/gemini';
+import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { optimizeImageForUpload } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
@@ -70,21 +70,17 @@ export default function PurchaseAdvisorView() {
     setIsAnalyzing(true);
     setAnalysisError(null);
     try {
-      // 1. Image & Text attribute extraction
-      const newItemAttributes = await analyzeClothingImage(imagePreview, webshopContext || {}, profile);
-      if (itemName) newItemAttributes.name = itemName;
-
-      // 2. 3-Outfit Rule & 3 Decision Pillars Test
-      const result = await evaluatePrePurchaseItem({
-        newItem: { ...newItemAttributes, imageUrl: imagePreview, price: itemPrice },
+      // Single unified fast 1-shot Gemini 3.7 evaluation & extraction
+      const result = await evaluateAndExtractPrePurchaseItem({
+        imageBase64OrUrl: imagePreview,
+        webshopContext: webshopContext || {},
+        itemName,
+        itemPrice,
         wardrobe,
         styleProfile: profile
       });
 
-      setEvaluationResult({
-        ...result,
-        extractedItem: { ...newItemAttributes, imageUrl: imagePreview }
-      });
+      setEvaluationResult(result);
 
       if (result.compatibilityScore >= 80) {
         try {

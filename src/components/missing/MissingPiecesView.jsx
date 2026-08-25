@@ -5,16 +5,23 @@ import { analyzeWardrobeGaps } from '../../services/gemini';
 
 export default function MissingPiecesView({ onTestInAdvisor }) {
   const { wardrobe, profile } = useAuth();
-  const [gaps, setGaps] = useState([]);
+  const [gaps, setGaps] = useState(() => {
+    const saved = localStorage.getItem('capsule_gaps_cache');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all'); // 'all', 'tavasz_nyar', 'osz_tel', 'replacement'
   const [wishlistIds, setWishlistIds] = useState(new Set());
 
-  const loadGaps = async () => {
+  const loadGaps = async (force = false) => {
+    if (!force && gaps.length > 0) return;
     setIsLoading(true);
     try {
       const results = await analyzeWardrobeGaps(wardrobe, profile);
-      setGaps(results || []);
+      if (results && results.length > 0) {
+        setGaps(results);
+        localStorage.setItem('capsule_gaps_cache', JSON.stringify(results));
+      }
     } catch (e) {
       console.error('Kapszula elemzési hiba:', e);
     } finally {
@@ -23,8 +30,10 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
   };
 
   useEffect(() => {
-    loadGaps();
-  }, [wardrobe.length]);
+    if (gaps.length === 0) {
+      loadGaps(true);
+    }
+  }, []);
 
   const handleToggleWishlist = (gapId) => {
     setWishlistIds(prev => {
