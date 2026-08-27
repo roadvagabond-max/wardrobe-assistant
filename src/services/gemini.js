@@ -7,10 +7,10 @@ const getGeminiApiKey = () => {
 
 export const isGeminiConfigured = () => Boolean(getGeminiApiKey());
 
-// Google Gemini official 2026 models in order of priority
+// Google Gemini official 2026 models in order of stability & speed
 const GEMINI_MODELS = [
-  'gemini-3.7-flash',
   'gemini-3.6-flash',
+  'gemini-3.7-flash',
   'gemini-3.1-flash-lite'
 ];
 
