@@ -106,7 +106,8 @@ async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens =
         }
       };
 
-      if (tools) {
+      // Google API rule: If tools (like googleSearch) are used, responseMimeType CANNOT be application/json
+      if (tools && tools.length > 0) {
         requestBody.tools = tools;
       } else {
         requestBody.generationConfig.responseMimeType = "application/json";
@@ -247,8 +248,11 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         parts.push({ inlineData: { mimeType, data: base64Data } });
       }
 
-      // Ensure valid JSON response mode
-      return await callGeminiApi({ apiKey, contents: [{ parts }] });
+      // Enable Google Search Grounding for webshop links and product codes (Native Web Grounding)
+      const hasWebInput = Boolean(webshopContext.rawInput || webshopContext.productCode || webshopContext.url);
+      const tools = (!resolvedBase64 && hasWebInput) ? [{ googleSearch: {} }] : null;
+
+      return await callGeminiApi({ apiKey, contents: [{ parts }], tools });
     } catch (err) {
       console.error('Gemini Vision & Text API hiba:', err);
       throw err;
@@ -360,7 +364,8 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         parts.push({ inlineData: { mimeType, data: base64Data } });
       }
 
-      const tools = webshopContext.productCode ? [{ googleSearch: {} }] : null;
+      const hasWebInput = Boolean(webshopContext.rawInput || webshopContext.productCode || webshopContext.url);
+      const tools = (!resolvedBase64 && hasWebInput) ? [{ googleSearch: {} }] : null;
       const parsed = await callGeminiApi({ apiKey, contents: [{ parts }], tools, temperature: 0.1 });
 
       const extractedItem = {

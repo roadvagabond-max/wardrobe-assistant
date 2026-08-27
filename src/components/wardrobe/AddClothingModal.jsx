@@ -56,6 +56,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
   const [availableImages, setAvailableImages] = useState([]);
   const [webshopUrl, setWebshopUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isFormReady, setIsFormReady] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
   const [customTagInput, setCustomTagInput] = useState('');
 
@@ -109,6 +110,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     setWebshopUrl('');
     setAnalysisError(null);
     setIsAnalyzing(false);
+    setIsFormReady(false);
     setCustomTagInput('');
     setFormData({
       name: '',
@@ -140,6 +142,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     if (!file) return;
 
     setSelectedFile(file);
+    setIsFormReady(true);
     try {
       setIsAnalyzing(true);
       // Fast client-side image compression & robust base64 conversion
@@ -159,6 +162,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     if (!webshopUrl.trim()) return;
 
     setIsAnalyzing(true);
+    setIsFormReady(true);
     setAnalysisError(null);
     try {
       const webshopData = await extractWebshopData(webshopUrl.trim());
@@ -234,6 +238,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       setAnalysisError('Az AI automatikus kitöltése nem fejeződött be, de a képet és a mezőket manuálisan is szerkesztheted és elmentheted.');
     } finally {
       setIsAnalyzing(false);
+      setIsFormReady(true);
     }
   };
 
@@ -303,7 +308,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
         </div>
 
         {/* Input Method Selector / Form */}
-        {!imagePreview ? (
+        {!isFormReady ? (
           <div className="space-y-6">
             
             {/* Mode Tabs */}
@@ -506,11 +511,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 <button
                   type="button"
                   onClick={() => {
+                    setIsFormReady(false);
                     setImagePreview(null);
                     setAvailableImages([]);
                   }}
                   className="absolute top-3 right-3 p-2 rounded-full bg-black/75 text-white hover:bg-black border border-white/10"
-                  title="Másik kép választása"
+                  title="Másik kép vagy link választása"
                 >
                   <X className="w-4 h-4" />
                 </button>
