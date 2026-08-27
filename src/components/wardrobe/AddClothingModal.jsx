@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus } from 'lucide-react';
+import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus, Heart, HelpCircle } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { ensureBase64Image } from '../../services/imageOptimizer';
@@ -460,12 +460,11 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                     src={imagePreview} 
                     alt="Preview" 
                     onError={() => {
-                      const nextAvailable = availableImages.find(img => img !== imagePreview);
-                      if (nextAvailable) {
-                        setImagePreview(nextAvailable);
-                      } else {
-                        setAnalysisError('A kép közvetlen betöltése nem sikerült a webshop védelme miatt. Kérlek fotózd le vagy másold be közvetlenül a kép linkjét!');
-                      }
+                      setAvailableImages(prev => {
+                        const remaining = prev.filter(img => img !== imagePreview);
+                        setImagePreview(remaining.length > 0 ? remaining[0] : null);
+                        return remaining;
+                      });
                     }}
                     className="max-h-full max-w-full object-contain rounded-xl shadow-lg transition-all" 
                   />

@@ -292,7 +292,12 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           {imagePreview && (
             <div className="space-y-4">
               <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
-                <img src={imagePreview} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl shadow-lg" />
+                <img 
+                  src={imagePreview} 
+                  alt="Preview" 
+                  onError={() => setImagePreview(null)}
+                  className="max-h-full max-w-full object-contain rounded-xl shadow-lg" 
+                />
                 <button
                   type="button"
                   onClick={() => setImagePreview(null)}
