@@ -452,9 +452,9 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
           /* Preview and AI Result Form */
           <form onSubmit={handleSave} className="space-y-5">
             
-            {/* 1. Proportional Image Preview (object-contain, uncropped) */}
+            {/* 1. Proportional Image Preview or Recognized Item Card */}
             <div className="space-y-2">
-              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
+              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-4 flex flex-col items-center justify-center">
                 {imagePreview ? (
                   <img 
                     src={imagePreview} 
@@ -469,9 +469,30 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                     className="max-h-full max-w-full object-contain rounded-xl shadow-lg transition-all" 
                   />
                 ) : (
-                  <div className="text-center p-4 text-[var(--text-muted)] text-xs">
-                    <AlertCircle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-                    <p>Nincs érvényes termékkép kiválasztva.</p>
+                  <div className="text-center p-4 space-y-2">
+                    <div 
+                      className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center border border-white/20 shadow-xl"
+                      style={{ backgroundColor: formData.colorHex || '#1e293b' }}
+                    >
+                      <span className="text-2xl">
+                        {formData.category === 'outerwear' ? '🧥' : formData.category === 'knitwear' ? '🧶' : formData.category === 'tops' ? '👔' : formData.category === 'bottoms' ? '👖' : formData.category === 'shoes' ? '👞' : '✨'}
+                      </span>
+                    </div>
+                    <span className="badge badge-gold text-[10px]">Webshopból Kinyert Termék</span>
+                    <h4 className="font-serif font-bold text-white text-sm sm:text-base max-w-md line-clamp-2">
+                      {formData.name || 'Új Ruhadarab'}
+                    </h4>
+                    <p className="text-xs text-[var(--accent-gold-light)] font-medium">
+                      {formData.brand || 'Next Direct'} • {formData.material || 'Természetes szálak'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5 mx-auto mt-2"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>Saját fotó csatolása (opcionális)</span>
+                    </button>
                   </div>
                 )}
                 

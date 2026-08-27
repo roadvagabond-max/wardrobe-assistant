@@ -289,23 +289,35 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           )}
 
           {/* Preview & Evaluation trigger */}
-          {imagePreview && (
+          {(imagePreview || webshopContext) && (
             <div className="space-y-4">
-              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
-                <img 
-                  src={imagePreview} 
-                  alt="Preview" 
-                  onError={() => setImagePreview(null)}
-                  className="max-h-full max-w-full object-contain rounded-xl shadow-lg" 
-                />
-                <button
-                  type="button"
-                  onClick={() => setImagePreview(null)}
-                  className="absolute top-3 right-3 p-2 rounded-full bg-black/80 text-white hover:bg-black border border-white/10"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-              </div>
+              {imagePreview ? (
+                <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    onError={() => setImagePreview(null)}
+                    className="max-h-full max-w-full object-contain rounded-xl shadow-lg" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImagePreview(null)}
+                    className="absolute top-3 right-3 p-2 rounded-full bg-black/80 text-white hover:bg-black border border-white/10"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-center space-y-2">
+                  <span className="badge badge-gold text-[11px]">Webshop Termék / SKU Felismerve</span>
+                  <h4 className="font-serif font-bold text-white text-base">
+                    {itemName || webshopContext?.title || webshopContext?.productCode || 'Kiszemelt Termék'}
+                  </h4>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    {webshopContext?.brand ? `Márka: ${webshopContext.brand}` : ''} {webshopContext?.productCode ? `• SKU: ${webshopContext.productCode}` : ''}
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

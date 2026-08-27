@@ -286,14 +286,16 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
         }));
 
       const webshopTextInfo = [
+        webshopContext.rawInput ? `WEBSHOP TERMÉKLINK / BEMENET: "${webshopContext.rawInput}"` : '',
+        webshopContext.url ? `URL: "${webshopContext.url}"` : '',
         webshopContext.title ? `CÉLTERMÉK: "${webshopContext.title}"` : '',
         webshopContext.brand ? `Márka: "${webshopContext.brand}"` : '',
-        webshopContext.productCode ? `Cikkszám: "${webshopContext.productCode}"` : '',
-        webshopContext.description ? `Leírás: "${webshopContext.description.slice(0, 300)}"` : ''
+        webshopContext.productCode ? `Cikkszám / Termékkód (SKU): "${webshopContext.productCode}"` : '',
+        webshopContext.description ? `Leírás: "${webshopContext.description}"` : ''
       ].filter(Boolean).join(' | ');
 
       const prompt = `Te egy világklasszis személyi stylist, szabászati és vásárlási döntéstámogató vagy.
-ELEMEZD A CSATOLT KÉPEN LÉVŐ KISZEMELT RUHÁT ÉS VÉGEZD EL A 3 DÖNTÉSI PILLÉR ÉRTÉKELÉST, KÜLÖNÖS TEKINTETTEL A SZABÁSRA (FIT) ÉS A TESTALKATHHOZ VALÓ ILLESZKEDÉSRE!
+ELEMEZD A MEGADOTT RUHADARABOT (FOTÓ VAGY WEBSHOP LINK / CIKKSZÁM ALAPJÁN A GOOGLE ÉS DIVAT-TUDÁSODAT HASZNÁLVA) ÉS VÉGEZD EL A 3 DÖNTÉSI PILLÉR ÉRTÉKELÉST, KÜLÖNÖS TEKINTETTEL A SZABÁSRA (FIT) ÉS A TESTALKATHHOZ VALÓ ILLESZKEDÉSRE!
 ${itemName ? `Megadott név: "${itemName}"` : ''} ${itemPrice ? `Ár: "${itemPrice}"` : ''} ${webshopTextInfo ? `Webshop info: ${webshopTextInfo}` : ''}
 Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: styleProfile.weight, body: styleProfile.bodyType, skin: styleProfile.skinTone, styles: styleProfile.preferredStyles, philosophy: styleProfile.stylePhilosophy })}
 Meglévő ruhatár (${compactWardrobe.length} elem a szabásokkal és méretekkel): ${JSON.stringify(compactWardrobe)}
