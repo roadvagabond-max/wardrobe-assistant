@@ -254,152 +254,50 @@ export function parseWebshopUrlOrCode(rawInput) {
 export const parseWebshopUrl = parseWebshopUrlOrCode;
 
 /**
- * Extracts product metadata, descriptions, and high-resolution images
- * Works seamlessly with full URLs and raw Product Codes (SKU)
+ * Universal Gemini-Native Webshop & SKU Extraction
+ * Directly extracts structured brand and product code metadata from any webshop link or SKU code.
+ * Eliminates all external scraping proxies (Microlink/Jina) to avoid falsified data, CORS errors, and timeouts.
  */
-export async function extractWebshopData(rawUrlOrCode) {
-  const cleanInput = (rawUrlOrCode || '').trim();
-  if (!cleanInput) throw new Error('Kérlek adj meg egy érvényes webshop linket vagy termékkódot (pl. Next AA6536)!');
+export async function extractWebshopData(rawInput = '') {
+  const cleanInput = (rawInput || '').trim();
+  if (!cleanInput) {
+    return {
+      imageUrl: '',
+      images: [],
+      title: '',
+      description: '',
+      brand: '',
+      productCode: '',
+      rawInput: '',
+      rawText: ''
+    };
+  }
 
-  // Case 1: Direct Image URL
+  // Case 1: Direct image URL (.jpg, .png, .webp)
   if (/\.(jpeg|jpg|png|webp|avif)($|\?)/i.test(cleanInput)) {
     return {
       imageUrl: cleanInput,
       images: [cleanInput],
       title: '',
       description: '',
-      brand: ''
+      brand: '',
+      productCode: '',
+      rawInput: cleanInput,
+      rawText: ''
     };
   }
 
-  // 1. Run smart URL & Product Code Parser
+  // Case 2: Parse URL or Product Code (Next, Zara, Reserved, H&M, Massimo Dutti, Mango, ASOS)
   const parsed = parseWebshopUrlOrCode(cleanInput);
 
-  // If candidate images exist (e.g. Next CDN patterns), check which one works live
-  let validatedImageUrl = parsed.imageUrl;
-  if (parsed.images && parsed.images.length > 0) {
-    try {
-      const workingUrl = await findFirstWorkingImageUrl(parsed.images, 1200); // 1.2s fast check
-      if (workingUrl) {
-        validatedImageUrl = workingUrl;
-      }
-    } catch (_) {}
-  }
-
-  let extractedData = {
-    imageUrl: validatedImageUrl || parsed.imageUrl || '',
-    images: parsed.images && parsed.images.length > 0 ? parsed.images : [],
+  return {
+    imageUrl: '',
+    images: [],
     title: parsed.title || '',
     description: '',
     brand: parsed.brand || '',
     productCode: parsed.productCode || '',
-    rawText: ''
+    rawInput: cleanInput,
+    rawText: `Márka: ${parsed.brand || 'Webshop'}, Cikkszám / Termékkód: ${parsed.productCode || cleanInput}, Eredeti link: ${cleanInput}`
   };
-
-  // FAST PATH: If direct product code or direct image is already known, return immediately without slow web scraping!
-  if (parsed.isDirectCode && (extractedData.productCode || extractedData.imageUrl)) {
-    extractedData.rawText = `Márka: ${extractedData.brand || 'Next Direct'}, Hivatalos Cikkszám / Termékkód (Product Code): ${extractedData.productCode}`;
-    return extractedData;
-  }
-
-  // If it's a URL, perform fast parallel metadata scraping with 1.8s timeout
-  const isUrl = cleanInput.startsWith('http://') || cleanInput.startsWith('https://') || cleanInput.includes('.com') || cleanInput.includes('.hu') || cleanInput.includes('.co.uk');
-  
-  if (isUrl) {
-    const fullUrl = cleanInput.startsWith('http') ? cleanInput : `https://${cleanInput}`;
-
-    const fetchWithTimeout = async (url, headers = {}, timeoutMs = 1800) => {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        const res = await fetch(url, { headers, signal: controller.signal });
-        clearTimeout(id);
-        return res;
-      } catch (e) {
-        clearTimeout(id);
-        return null;
-      }
-    };
-
-    // Run Microlink and Jina in parallel for maximum speed
-    const [microlinkRes, jinaRes] = await Promise.allSettled([
-      fetchWithTimeout(`https://api.microlink.io?url=${encodeURIComponent(fullUrl)}&meta=true`),
-      fetchWithTimeout(`https://r.jina.ai/${fullUrl}`, { 'Accept': 'application/json' })
-    ]);
-
-    // Process Microlink result
-    if (microlinkRes.status === 'fulfilled' && microlinkRes.value?.ok) {
-      try {
-        const json = await microlinkRes.value.json();
-        if (json.status === 'success' && json.data) {
-          const d = json.data;
-          const candidateTitle = d.title || '';
-          const candidateDesc = d.description || '';
-
-          if (!isBotBlockedOrError(candidateTitle) && !isBotBlockedOrError(candidateDesc)) {
-            if (!extractedData.title) extractedData.title = candidateTitle;
-            if (!extractedData.description) extractedData.description = candidateDesc;
-            if (!extractedData.brand && d.publisher) extractedData.brand = d.publisher;
-
-            const candidateImage = d.image?.url || '';
-            if (candidateImage && !isFaviconOrLogo(candidateImage)) {
-              if (!extractedData.images.includes(candidateImage)) {
-                extractedData.images.unshift(candidateImage);
-              }
-              if (!extractedData.imageUrl) extractedData.imageUrl = candidateImage;
-            }
-          }
-        }
-      } catch (_) {}
-    }
-
-    // Process Jina result
-    if (jinaRes.status === 'fulfilled' && jinaRes.value?.ok) {
-      try {
-        const jinaJson = await jinaRes.value.json();
-        if (jinaJson.data) {
-          const jd = jinaJson.data;
-          const jdTitle = jd.title || '';
-          const jdDesc = jd.description || '';
-          const jdContent = jd.content || '';
-
-          if (!isBotBlockedOrError(jdTitle) && !isBotBlockedOrError(jdContent)) {
-            if (!extractedData.title && jdTitle) extractedData.title = jdTitle;
-            if (!extractedData.description && jdDesc) extractedData.description = jdDesc;
-            extractedData.rawText = jdContent.slice(0, 1500);
-
-            const imgMatches = Array.from(jdContent.matchAll(/!\[.*?\]\((https?:\/\/[^\s\)]+)\)/g));
-            const foundUrls = imgMatches
-              .map(m => m[1])
-              .filter(u => !isFaviconOrLogo(u) && (u.includes('product') || u.includes('catalog') || u.includes('media') || u.includes('image') || /\.(jpe?g|png|webp)/i.test(u)));
-
-            for (const u of foundUrls) {
-              if (!extractedData.images.includes(u)) {
-                extractedData.images.push(u);
-              }
-            }
-
-            if (!extractedData.imageUrl && extractedData.images.length > 0) {
-              extractedData.imageUrl = extractedData.images[0];
-            }
-          }
-        }
-      } catch (_) {}
-    }
-  }
-
-  // Ensure primary image is chosen
-  if (!extractedData.imageUrl && extractedData.images.length > 0) {
-    extractedData.imageUrl = extractedData.images[0];
-  }
-
-  // If we have at least a product code or title, succeed!
-  if (extractedData.productCode || extractedData.title || extractedData.imageUrl) {
-    if (!extractedData.rawText && extractedData.productCode) {
-      extractedData.rawText = `Márka: ${extractedData.brand || 'Next Direct'}, Hivatalos Cikkszám / Termékkód (Product Code): ${extractedData.productCode}`;
-    }
-    return extractedData;
-  }
-
-  throw new Error('Nem sikerült kinyerni a termék adatait. Kérlek másold be a termékkódot (pl. Next AA6536) vagy töltsd fel a képet!');
 }

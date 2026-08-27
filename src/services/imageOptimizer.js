@@ -20,31 +20,14 @@ export async function ensureBase64Image(fileOrUrl, maxWidth = 640, maxHeight = 6
 
   // 3. If it's a remote HTTP/HTTPS URL
   if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('http')) {
-    // Try method A: Direct fetch / Proxy fetch as Blob
-    try {
-      let res = null;
-      try {
-        res = await fetch(fileOrUrl);
-      } catch (_) {
-        // Fallback to CORS proxy if direct fetch is blocked
-        res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(fileOrUrl)}`);
-      }
-
-      if (res && res.ok) {
-        const blob = await res.blob();
-        const base64 = await readFileAsDataUrl(blob);
-        return optimizeBase64String(base64, maxWidth, maxHeight, quality);
-      }
-    } catch (e) {
-      console.warn('Fetch to blob failed, trying canvas load:', e);
-    }
-
-    // Try method B: Image with crossOrigin
+    // Only attempt canvas load with timeout
     try {
       const base64FromCanvas = await new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(null), 800); // 800ms fast timeout
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
+          clearTimeout(timer);
           try {
             const canvas = document.createElement('canvas');
             canvas.width = Math.min(img.naturalWidth || img.width, maxWidth);
@@ -56,12 +39,17 @@ export async function ensureBase64Image(fileOrUrl, maxWidth = 640, maxHeight = 6
             resolve(null);
           }
         };
-        img.onerror = () => resolve(null);
+        img.onerror = () => {
+          clearTimeout(timer);
+          resolve(null);
+        };
         img.src = fileOrUrl;
       });
 
       if (base64FromCanvas) return base64FromCanvas;
     } catch (_) {}
+
+    return null;
   }
 
   return fileOrUrl;
