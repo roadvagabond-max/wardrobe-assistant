@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus, Tag, ShieldCheck, Heart } from 'lucide-react';
+import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
-import { optimizeImageForUpload } from '../../services/imageOptimizer';
+import { ensureBase64Image } from '../../services/imageOptimizer';
 import ColorPalettePicker from '../common/ColorPalettePicker';
 import { useAuth } from '../../context/AuthContext';
 
@@ -63,10 +63,11 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     name: '',
     category: 'tops',
     subCategory: 'shirt',
+    brand: '',
+    size: '',
     color: 'Sötétkék (Navy)',
     colorHex: '#1b2a4a',
     material: '',
-    brand: '',
     qualityScore: 9.0,
     season: ['tavasz', 'nyar', 'osz'],
     formality: 'Smart Casual',
@@ -113,10 +114,11 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       name: '',
       category: 'tops',
       subCategory: 'shirt',
+      brand: '',
+      size: '',
       color: 'Sötétkék (Navy)',
       colorHex: '#1b2a4a',
       material: '',
-      brand: '',
       qualityScore: 9.0,
       season: ['tavasz', 'nyar', 'osz'],
       formality: 'Smart Casual',
@@ -140,8 +142,8 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     setSelectedFile(file);
     try {
       setIsAnalyzing(true);
-      // Fast client-side image compression
-      const optimizedBase64 = await optimizeImageForUpload(file);
+      // Fast client-side image compression & robust base64 conversion
+      const optimizedBase64 = await ensureBase64Image(file);
       setImagePreview(optimizedBase64);
       setAvailableImages([optimizedBase64]);
       await triggerAIAnalysis(optimizedBase64);
@@ -162,13 +164,25 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       const webshopData = await extractWebshopData(webshopUrl.trim());
       const chosenImage = webshopData.imageUrl || (webshopData.images && webshopData.images[0]) || '';
       
-      setImagePreview(chosenImage);
+      // Convert remote webshop image to robust Base64 data so it never fails or goes blank
+      const base64Img = chosenImage ? await ensureBase64Image(chosenImage) : '';
+
+      setImagePreview(base64Img || chosenImage);
       setAvailableImages(webshopData.images || [chosenImage].filter(Boolean));
 
-      await triggerAIAnalysis(chosenImage, webshopData);
+      // Pre-set extracted metadata immediately
+      if (webshopData.title) {
+        setFormData(prev => ({
+          ...prev,
+          name: webshopData.title,
+          brand: webshopData.brand || prev.brand
+        }));
+      }
+
+      await triggerAIAnalysis(base64Img || chosenImage, webshopData);
     } catch (err) {
       console.error('Webshop link hiba:', err);
-      setAnalysisError(err.message || 'Nem sikerült kinyerni az adatokat a megadott webshop linkről. Próbáld közvetlen képcímmel vagy fotóval!');
+      setAnalysisError(err.message || 'Nem sikerült kinyerni az adatokat a megadott webshop linkről. Kérlek fotózd le vagy töltsd fel a képet!');
       setIsAnalyzing(false);
     }
   };
@@ -184,10 +198,11 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
           name: aiResult.name || webshopContext.title || prev.name || 'Új Ruhadarab',
           category: aiResult.category || prev.category,
           subCategory: aiResult.subCategory || prev.subCategory,
+          brand: aiResult.brand || webshopContext.brand || prev.brand,
+          size: aiResult.size || prev.size,
           color: aiResult.color || prev.color,
           colorHex: aiResult.colorHex || prev.colorHex,
           material: aiResult.material || webshopContext.description || prev.material,
-          brand: aiResult.brand || webshopContext.brand || prev.brand,
           qualityScore: aiResult.qualityScore || prev.qualityScore,
           season: aiResult.season || prev.season,
           formality: aiResult.formality || prev.formality,
@@ -203,8 +218,14 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
         }));
       }
     } catch (err) {
-      console.error('AI elemzési hiba:', err);
-      setAnalysisError(err.message || 'Ismeretlen hiba történt az AI elemzés során.');
+      console.warn('AI elemzési hiba/figyelmeztetés:', err);
+      // Ensure defaults stay intact even if AI fails
+      setFormData(prev => ({
+        ...prev,
+        name: prev.name || webshopContext.title || 'Új Ruhadarab',
+        brand: prev.brand || webshopContext.brand || ''
+      }));
+      setAnalysisError('Az AI automatikus kitöltése nem fejeződött be, de a képet és a mezőket manuálisan is szerkesztheted és elmentheted.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -230,8 +251,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     });
   };
 
-  const handleAddCustomTag = (e) => {
-    e.preventDefault();
+  const handleAddCustomTag = () => {
     const cleanTag = customTagInput.trim().replace(/^#/, '');
     if (cleanTag && !formData.tags.includes(cleanTag)) {
       setFormData(prev => ({
@@ -318,7 +338,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 }`}
               >
                 <LinkIcon className="w-4 h-4" />
-                <span>Webshop Link</span>
+                <span>Webshop Link / Cikkszám</span>
               </button>
             </div>
 
@@ -369,28 +389,31 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               </div>
             )}
 
-            {/* Mode 3: Webshop Link */}
+            {/* Mode 3: Webshop Link or Product Code */}
             {activeMode === 'link' && (
               <form onSubmit={handleLinkImport} className="space-y-3">
-                <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                  Webshop Termék URL (Zara, Next, Reserved, Massimo Dutti, H&M) vagy képcím:
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                    Webshop Terméklink VAGY Cikkszám / Termékkód (Next, Zara, Reserved stb.):
+                  </label>
+                  <span className="text-[10px] text-[var(--accent-gold)] font-medium">SKU Keresés Aktív</span>
+                </div>
                 <div className="flex gap-2">
                   <input
-                    type="url"
+                    type="text"
                     required
-                    placeholder="https://www.nextdirect.com/... vagy termékkép linkje"
+                    placeholder="pl. https://www.nextdirect.com/... VAGY csak cikkszám pl. AA6536"
                     value={webshopUrl}
                     onChange={(e) => {
                       setWebshopUrl(e.target.value);
                       if (analysisError) setAnalysisError(null);
                     }}
-                    className="custom-input"
+                    className="custom-input text-xs"
                   />
                   <button 
                     type="submit" 
-                    disabled={isAnalyzing}
-                    className="btn-gold whitespace-nowrap flex items-center gap-1.5"
+                    disabled={isAnalyzing || !webshopUrl.trim()}
+                    className="btn-gold px-5 text-xs whitespace-nowrap flex items-center gap-1.5 shrink-0"
                   >
                     {isAnalyzing ? (
                       <>
@@ -398,11 +421,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                         <span>Kinyerés...</span>
                       </>
                     ) : (
-                      <span>Kinyerés</span>
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Beolvasás</span>
+                      </>
                     )}
                   </button>
                 </div>
-
                 {/* Error Box in Link Mode */}
                 {analysisError && (
                   <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 animate-slide-up">
@@ -558,6 +583,35 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                     <option key={f} value={f}>{f}</option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            {/* 4. Brand & Size (Gyártmány & Méret) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Gyártó / Márka:
+                </label>
+                <input
+                  type="text"
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  className="custom-input text-xs"
+                  placeholder="pl. Massimo Dutti, Zara, Boglioli, Eton, Incotex"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  Méret (Címke szerint):
+                </label>
+                <input
+                  type="text"
+                  value={formData.size}
+                  onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                  className="custom-input text-xs font-mono"
+                  placeholder="pl. 50, M, L, 40 / 15.75, 32/32, 42.5"
+                />
               </div>
             </div>
 

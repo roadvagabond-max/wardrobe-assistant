@@ -25,6 +25,7 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [initialAnchorItem, setInitialAnchorItem] = useState(null);
+  const [advisorPrefill, setAdvisorPrefill] = useState(null);
 
   // Load weather initially
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function App() {
   }, []);
 
   const handleTestInAdvisor = (gapItem) => {
+    setAdvisorPrefill(gapItem);
     setActiveTab('advisor');
   };
 
@@ -75,7 +77,10 @@ export default function App() {
         )}
 
         {activeTab === 'advisor' && (
-          <PurchaseAdvisorView />
+          <PurchaseAdvisorView
+            prefillData={advisorPrefill}
+            onClearPrefill={() => setAdvisorPrefill(null)}
+          />
         )}
 
         {activeTab === 'missing' && (
@@ -98,7 +103,7 @@ export default function App() {
       />
 
       <ItemDetailModal
-        item={selectedItem}
+        item={selectedItem ? (wardrobe.find(w => w.id === selectedItem.id) || selectedItem) : null}
         onClose={() => setSelectedItem(null)}
         onPlanWithItem={handlePlanWithItem}
       />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Sparkles, ShoppingBag, ArrowRight, ExternalLink, ShieldAlert, Check, RefreshCw, Loader2, AlertTriangle, Layers, BookmarkPlus } from 'lucide-react';
+import { Sparkles, ArrowRight, ExternalLink, RefreshCw, Loader2, AlertTriangle, BookmarkPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeWardrobeGaps } from '../../services/gemini';
 
@@ -75,7 +75,7 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
 
         <button
           type="button"
-          onClick={loadGaps}
+          onClick={() => loadGaps(true)}
           disabled={isLoading}
           className="btn-secondary text-xs self-start sm:self-center flex items-center gap-1.5"
         >
@@ -136,6 +136,11 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
                       {gap.isReplacement && (
                         <span className="badge badge-rose text-[10px]">
                           ♻️ Megújítandó Darab
+                        </span>
+                      )}
+                      {gap.recommendedFit && (
+                        <span className="badge badge-gold text-[10px]">
+                          📐 {gap.recommendedFit}
                         </span>
                       )}
                       {gap.season && (

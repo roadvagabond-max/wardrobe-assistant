@@ -40,7 +40,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     if (initialAnchorItem && !anchorItems.some(a => a.id === initialAnchorItem.id)) {
       setAnchorItems(prev => [...prev, initialAnchorItem]);
     }
-  }, [initialAnchorItem]);
+  }, [initialAnchorItem, anchorItems]);
 
   // Load weather when city changes
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       setWeather(data);
     }
     loadCityWeather();
-  }, [selectedCity]);
+  }, [selectedCity, setWeather]);
 
   const saveEventToHistory = (evt) => {
     if (!evt || DEFAULT_EVENT_PRESETS.includes(evt)) return;
@@ -358,8 +358,15 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     ))}
                   </div>
 
-                  {/* Styling Notes & Weather match */}
+                  {/* Styling Notes, Cultural Dress Code Match & Weather */}
                   <div className="space-y-2 bg-black/30 p-3.5 rounded-xl border border-white/5 text-xs">
+                    {outfit.culturalFitReasoning && (
+                      <div className="flex items-start gap-2 text-amber-200/90 pb-2 border-b border-white/5">
+                        <span className="font-bold text-[var(--accent-gold)] shrink-0">🎯 Esemény Összhang:</span>
+                        <p className="leading-relaxed">{outfit.culturalFitReasoning}</p>
+                      </div>
+                    )}
+
                     <div className="flex items-start gap-2 text-[var(--text-secondary)]">
                       <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0 mt-0.5" />
                       <p><strong className="text-white">Stílustipp:</strong> {outfit.stylingNotes}</p>

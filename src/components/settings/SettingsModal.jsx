@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Key, Database, Sparkles, RotateCcw, Download, Check, ShieldCheck } from 'lucide-react';
+import { X, Key, Database, Sparkles, RotateCcw, Download, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { isFirebaseConfigured } from '../../services/firebase';
 import { isGeminiConfigured } from '../../services/gemini';

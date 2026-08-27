@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { User, Compass, Sparkles, Edit3, Check, Palette, Ruler, PieChart, Award, Heart, ShieldCheck, Camera, Upload, Loader2, Sparkle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { User, Compass, Sparkles, Edit3, Check, Palette, PieChart, Award, Camera, Upload, Loader2, Cloud, CloudOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeColorSeason } from '../../services/gemini';
-import { optimizeImageForUpload } from '../../services/imageOptimizer';
+import { ensureBase64Image } from '../../services/imageOptimizer';
 
 const ALL_STYLE_ARCHETYPES = [
   'Klasszikus & Időtlen',
@@ -15,7 +15,7 @@ const ALL_STYLE_ARCHETYPES = [
 ];
 
 export default function StyleDNAView() {
-  const { profile, updateProfile, wardrobe } = useAuth();
+  const { profile, updateProfile, wardrobe, currentUser, isDemoMode } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(profile);
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
@@ -23,6 +23,12 @@ export default function StyleDNAView() {
 
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const avatarInputRef = useRef(null);
+
+  // Sync formData whenever cloud profile updates
+  useEffect(() => {
+    setFormData(profile);
+  }, [profile]);
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -47,26 +53,38 @@ export default function StyleDNAView() {
 
     try {
       setIsAnalyzingPhoto(true);
-      const base64 = await optimizeImageForUpload(file);
+      // Optimize image specifically for profile/avatar size (512x512 compact JPEG)
+      const base64 = await ensureBase64Image(file, 512, 512, 0.8);
       
-      // Run AI Color Season Analysis
-      const result = await analyzeColorSeason(base64);
-      setColorSeasonResult(result);
+      // 1. Immediately save avatarUrl to profile and sync to cloud/webapp
+      const immediateUpdate = {
+        ...formData,
+        avatarUrl: base64
+      };
+      setFormData(immediateUpdate);
+      await updateProfile(immediateUpdate);
 
-      if (result) {
-        const updated = {
-          ...formData,
-          avatarUrl: base64,
-          skinTone: `${result.seasonName} - ${result.skinTone}`,
-          favoriteColors: result.recommendedPalette && result.recommendedPalette.length > 0
-            ? result.recommendedPalette
-            : formData.favoriteColors
-        };
-        setFormData(updated);
-        updateProfile(updated);
+      // 2. Run AI Color Season Analysis in background
+      try {
+        const result = await analyzeColorSeason(base64);
+        setColorSeasonResult(result);
+
+        if (result) {
+          const fullUpdate = {
+            ...immediateUpdate,
+            skinTone: `${result.seasonName} - ${result.skinTone}`,
+            favoriteColors: result.recommendedPalette && result.recommendedPalette.length > 0
+              ? result.recommendedPalette
+              : formData.favoriteColors
+          };
+          setFormData(fullUpdate);
+          await updateProfile(fullUpdate);
+        }
+      } catch (aiErr) {
+        console.warn('AI színtípus elemzés figyelmeztetés:', aiErr);
       }
     } catch (err) {
-      console.error('Színtípus elemzési hiba:', err);
+      console.error('Fotó feldolgozási hiba:', err);
     } finally {
       setIsAnalyzingPhoto(false);
     }
@@ -83,6 +101,73 @@ export default function StyleDNAView() {
   }, {});
 
   const replacementCount = wardrobe.filter(w => w.condition === 'Lecserélendő' || w.condition === 'Javításra vár').length;
+
+  // Dynamic Capsule Wardrobe Index calculation
+  const capsuleIndex = (() => {
+    if (wardrobe.length === 0) return 0;
+    const coreCategories = ['outerwear', 'tops', 'bottoms', 'shoes', 'knitwear'];
+    const coveredCategories = coreCategories.filter(cat => categoryCounts[cat] > 0).length;
+    const categoryCoverage = (coveredCategories / coreCategories.length) * 40;
+    const goodConditionRatio = wardrobe.filter(w => !w.condition?.includes('Lecserélendő') && !w.condition?.includes('Javításra')).length / wardrobe.length;
+    const conditionScore = goodConditionRatio * 30;
+    const sizeScore = Math.min(wardrobe.length / 10, 1) * 30;
+    return Math.round(categoryCoverage + conditionScore + sizeScore);
+  })();
+
+  // 📏 Brand Size Intelligence Aggregator
+  const brandSizeMatrix = React.useMemo(() => {
+    const map = {};
+    wardrobe.forEach(item => {
+      const brand = item.brand?.trim();
+      const size = item.size?.trim();
+      if (!brand && !size) return;
+
+      const brandKey = brand || 'Ismeretlen gyártó';
+      if (!map[brandKey]) {
+        map[brandKey] = {
+          brand: brandKey,
+          categories: {},
+          itemsCount: 0
+        };
+      }
+      map[brandKey].itemsCount++;
+      const catKey = item.category || 'other';
+      if (!map[brandKey].categories[catKey]) {
+        map[brandKey].categories[catKey] = [];
+      }
+      if (size && !map[brandKey].categories[catKey].includes(size)) {
+        map[brandKey].categories[catKey].push(size);
+      }
+    });
+    return Object.values(map).sort((a, b) => b.itemsCount - a.itemsCount);
+  }, [wardrobe]);
+
+  // 🏷️ Category Dominant Size Summary
+  const categorySizeSummary = React.useMemo(() => {
+    const cats = {
+      outerwear: { label: '🧥 Zakó & Kabát', sizes: {} },
+      tops: { label: '👔 Ingek & Felsők', sizes: {} },
+      knitwear: { label: '🧶 Kötöttáru', sizes: {} },
+      bottoms: { label: '👖 Nadrágok', sizes: {} },
+      shoes: { label: '👞 Cipők', sizes: {} }
+    };
+    wardrobe.forEach(item => {
+      const cat = item.category;
+      const size = item.size?.trim();
+      if (cats[cat] && size) {
+        cats[cat].sizes[size] = (cats[cat].sizes[size] || 0) + 1;
+      }
+    });
+    return Object.entries(cats).map(([key, data]) => {
+      const sortedSizes = Object.entries(data.sizes).sort((a, b) => b[1] - a[1]);
+      return {
+        key,
+        label: data.label,
+        dominantSize: sortedSizes[0]?.[0] || '—',
+        count: Object.values(data.sizes).reduce((a, b) => a + b, 0)
+      };
+    });
+  }, [wardrobe]);
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -312,23 +397,54 @@ export default function StyleDNAView() {
           {/* Main Style ID Card */}
           <div className="lg:col-span-2 glass-card p-6 sm:p-7 border-[var(--border-gold)] space-y-6">
             
-            <div className="flex items-center gap-4 pb-4 border-b border-white/10">
-              <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-[#d4af37] to-[#785908] flex items-center justify-center text-black font-bold text-2xl shadow-xl shadow-[#d4af37]/20 border border-[var(--border-gold)] shrink-0">
-                {profile.avatarUrl ? (
-                  <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span>{profile.name?.[0] || 'A'}</span>
-                )}
-              </div>
-              <div>
-                <h3 className="text-xl font-serif font-bold text-white">{profile.name}</h3>
-                <p className="text-xs text-[var(--accent-gold-light)] font-medium">{profile.title}</p>
-                <div className="flex items-center gap-2 mt-1 text-[11px] text-[var(--text-muted)] flex-wrap">
-                  <span>{profile.height}</span>
-                  {profile.weight && <span>• {profile.weight}</span>}
-                  <span>• {profile.bodyType}</span>
-                  <span>• {profile.skinTone}</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div className="flex items-center gap-4">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  ref={avatarInputRef} 
+                  onChange={handlePortraitFile} 
+                  className="hidden" 
+                />
+                <div 
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="relative w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-[#d4af37] to-[#785908] flex items-center justify-center text-black font-bold text-2xl shadow-xl shadow-[#d4af37]/20 border border-[var(--border-gold)] shrink-0 cursor-pointer group"
+                  title="Kattints a profilfotó cseréjéhez"
+                >
+                  {profile.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{profile.name?.[0] || 'A'}</span>
+                  )}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                    <Camera className="w-5 h-5" />
+                  </div>
                 </div>
+                <div>
+                  <h3 className="text-xl font-serif font-bold text-white">{profile.name}</h3>
+                  <p className="text-xs text-[var(--accent-gold-light)] font-medium">{profile.title}</p>
+                  <div className="flex items-center gap-2 mt-1 text-[11px] text-[var(--text-muted)] flex-wrap">
+                    <span>{profile.height}</span>
+                    {profile.weight && <span>• {profile.weight}</span>}
+                    <span>• {profile.bodyType}</span>
+                    <span>• {profile.skinTone}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cloud Sync Status Badge */}
+              <div className="self-start sm:self-center">
+                {currentUser ? (
+                  <span className="badge badge-emerald text-[10px] flex items-center gap-1.5 py-1 px-2.5">
+                    <Cloud className="w-3.5 h-3.5" />
+                    <span>Felhő szinkronizáció aktív</span>
+                  </span>
+                ) : (
+                  <span className="badge badge-subtle text-[10px] flex items-center gap-1.5 py-1 px-2.5 text-amber-300 border-amber-500/30">
+                    <CloudOff className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Helyi mód (Belépés a szinkronhoz)</span>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -389,7 +505,7 @@ export default function StyleDNAView() {
 
                 <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 text-xs">
                   <span className="text-[var(--text-secondary)]">Kapszula Ruhatár Index:</span>
-                  <span className="font-bold text-emerald-400 text-sm">92% (Magas variálhatóság)</span>
+                  <span className="font-bold text-emerald-400 text-sm">{capsuleIndex}% ({capsuleIndex >= 85 ? 'Magas variálhatóság' : capsuleIndex >= 60 ? 'Jó variálhatóság' : 'Fejlesztésre szorul'})</span>
                 </div>
 
                 {replacementCount > 0 && (
@@ -423,6 +539,80 @@ export default function StyleDNAView() {
 
         </div>
       )}
+
+      {/* 📏 BRAND SIZING INTELLIGENCE & FIT MATRIX */}
+      <div className="glass-card p-6 sm:p-7 border-[var(--border-gold)] space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="badge badge-gold text-[10px]">Méret Tudásbázis</span>
+              <span className="badge badge-emerald text-[10px]">Gyártói Illeszkedési Térkép</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
+              Gyártmány & Méretprofil Térkép
+            </h3>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              Az AI folyamatosan tanulja a ruhatáradból, hogy melyik márkánál pontosan milyen méret illik a testedre.
+            </p>
+          </div>
+        </div>
+
+        {/* 1. Category Quick Size Pills */}
+        <div className="space-y-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent-gold)] block">
+            Kategóriánkénti Domináns Méreteid:
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {categorySizeSummary.map((cat) => (
+              <div key={cat.key} className="bg-black/40 p-3 rounded-xl border border-white/5 space-y-1">
+                <span className="text-[11px] text-[var(--text-muted)] block truncate">{cat.label}</span>
+                <span className="font-mono font-bold text-base text-white block">{cat.dominantSize}</span>
+                <span className="text-[10px] text-[var(--text-muted)] block">{cat.count} db alapján</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 2. Brand Specific Sizing Table */}
+        <div className="space-y-2 pt-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent-gold)] block">
+            Márkák és Megfelelő Méretek a Gardróbodban:
+          </span>
+
+          {brandSizeMatrix.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {brandSizeMatrix.map((b, idx) => (
+                <div key={idx} className="bg-black/30 p-4 rounded-xl border border-white/5 space-y-2 hover:border-[var(--border-gold)] transition-colors">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-white font-serif">{b.brand}</span>
+                    <span className="text-[10px] text-[var(--accent-gold-light)] bg-[var(--accent-gold-glow)] px-2 py-0.5 rounded-full border border-[var(--border-gold)]">
+                      {b.itemsCount} db ruha
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 text-xs text-[var(--text-secondary)]">
+                    {Object.entries(b.categories).map(([cat, sizes]) => (
+                      <div key={cat} className="flex items-center justify-between text-[11px]">
+                        <span className="text-[var(--text-muted)] capitalize">
+                          {cat === 'outerwear' ? 'Zakó/Kabát' : cat === 'tops' ? 'Felső/Ing' : cat === 'bottoms' ? 'Nadrág' : cat === 'shoes' ? 'Cipő' : cat === 'knitwear' ? 'Kötött' : cat}:
+                        </span>
+                        <span className="font-mono font-bold text-white bg-white/5 px-2 py-0.5 rounded">
+                          {sizes.join(', ') || '—'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center p-6 bg-black/20 rounded-xl border border-white/5 text-xs text-[var(--text-muted)]">
+              Még nincs gyártó és méret rögzítve a gardróbodban. Tölts fel vagy módosíts ruhadarabokat méret megadásával!
+            </div>
+          )}
+        </div>
+
+      </div>
 
     </div>
   );

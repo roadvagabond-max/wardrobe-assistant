@@ -9,12 +9,12 @@ const getEnvOrLocal = (key, fallback = '') => {
 };
 
 export const firebaseConfig = {
-  apiKey: getEnvOrLocal('VITE_FIREBASE_API_KEY', 'AIzaSyAe0quT2U1GjgnxubsOFXVWtt7iigJ6tO8'),
-  authDomain: getEnvOrLocal('VITE_FIREBASE_AUTH_DOMAIN', 'wardrobe-assistant-48e01.firebaseapp.com'),
-  projectId: getEnvOrLocal('VITE_FIREBASE_PROJECT_ID', 'wardrobe-assistant-48e01'),
-  storageBucket: getEnvOrLocal('VITE_FIREBASE_STORAGE_BUCKET', 'wardrobe-assistant-48e01.firebasestorage.app'),
-  messagingSenderId: getEnvOrLocal('VITE_FIREBASE_MESSAGING_SENDER_ID', '804800324403'),
-  appId: getEnvOrLocal('VITE_FIREBASE_APP_ID', '1:804800324403:web:82232ade24245364ca1446')
+  apiKey: getEnvOrLocal('VITE_FIREBASE_API_KEY'),
+  authDomain: getEnvOrLocal('VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: getEnvOrLocal('VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: getEnvOrLocal('VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: getEnvOrLocal('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: getEnvOrLocal('VITE_FIREBASE_APP_ID')
 };
 
 export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);

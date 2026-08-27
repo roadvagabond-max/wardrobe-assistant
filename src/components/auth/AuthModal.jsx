@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, LogIn, LogOut, ShieldCheck, Sparkles, User, Key, Check, AlertCircle } from 'lucide-react';
+import { X, LogIn, LogOut, Sparkles, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { isFirebaseConfigured } from '../../services/firebase';
 

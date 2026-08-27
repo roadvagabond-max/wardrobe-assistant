@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { X, Trash2, Sparkles, Tag, ShieldCheck, Calendar, Layers, Compass, Lightbulb, Edit3, Check, Camera, Upload, Palette, Sparkle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Trash2, Sparkles, Tag, ShieldCheck, Calendar, Lightbulb, Edit3, Check, Camera, Upload } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { optimizeImageForUpload } from '../../services/imageOptimizer';
+import { ensureBase64Image } from '../../services/imageOptimizer';
 import ColorPalettePicker from '../common/ColorPalettePicker';
 
 const FORMALITY_LEVELS = [
@@ -37,19 +37,51 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
   const [editData, setEditData] = useState({
     name: item?.name || '',
     category: item?.category || 'tops',
+    subCategory: item?.subCategory || '',
     material: item?.material || '',
+    brand: item?.brand || '',
+    size: item?.size || '',
     color: item?.color || '',
     colorHex: item?.colorHex || '#ffffff',
     formality: item?.formality || 'Smart Casual',
     styleArchetype: item?.styleArchetype || 'Klasszikus & Időtlen',
     condition: item?.condition || 'Megkímélt / Kiváló',
+    qualityScore: item?.qualityScore || 9.0,
     season: item?.season || ['tavasz', 'osz'],
     stylingTip: item?.stylingTip || '',
     whenToWear: item?.whenToWear || '',
+    stylingAdvice: item?.stylingAdvice || '',
+    tags: item?.tags || [],
     imageUrl: item?.imageUrl || ''
   });
 
   const photoInputRef = useRef(null);
+
+  // Sync editData when item prop changes
+  useEffect(() => {
+    if (item) {
+      setEditData({
+        name: item.name || '',
+        category: item.category || 'tops',
+        subCategory: item.subCategory || '',
+        material: item.material || '',
+        brand: item.brand || '',
+        size: item.size || '',
+        color: item.color || '',
+        colorHex: item.colorHex || '#ffffff',
+        formality: item.formality || 'Smart Casual',
+        styleArchetype: item.styleArchetype || 'Klasszikus & Időtlen',
+        condition: item.condition || 'Megkímélt / Kiváló',
+        qualityScore: item.qualityScore || 9.0,
+        season: item.season || ['tavasz', 'osz'],
+        stylingTip: item.stylingTip || '',
+        whenToWear: item.whenToWear || '',
+        stylingAdvice: item.stylingAdvice || '',
+        tags: item.tags || [],
+        imageUrl: item.imageUrl || ''
+      });
+    }
+  }, [item]);
 
   if (!item) return null;
 
@@ -65,7 +97,7 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
     if (!file) return;
 
     try {
-      const optimized = await optimizeImageForUpload(file);
+      const optimized = await ensureBase64Image(file);
       setEditData(prev => ({ ...prev, imageUrl: optimized }));
     } catch (err) {
       console.error('Fotócsere hiba:', err);
@@ -84,7 +116,12 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
 
   const handleSaveEdit = (e) => {
     e.preventDefault();
-    updateItem(item.id, editData);
+    const fullUpdatedItem = {
+      ...item,
+      ...editData,
+      imageUrl: editData.imageUrl || item.imageUrl
+    };
+    updateItem(item.id, fullUpdatedItem);
     setIsEditing(false);
   };
 
@@ -212,6 +249,31 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
               </div>
             </div>
 
+            {/* Brand & Size */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Gyártó / Márka:</label>
+                <input
+                  type="text"
+                  value={editData.brand}
+                  onChange={(e) => setEditData({ ...editData, brand: e.target.value })}
+                  className="custom-input text-xs"
+                  placeholder="pl. Massimo Dutti, Zara"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Méret:</label>
+                <input
+                  type="text"
+                  value={editData.size}
+                  onChange={(e) => setEditData({ ...editData, size: e.target.value })}
+                  className="custom-input text-xs font-mono"
+                  placeholder="pl. 50, M, 32/32, 42.5"
+                />
+              </div>
+            </div>
+
             {/* Color & Material */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -321,6 +383,18 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
               </div>
               
               <div className="grid grid-cols-2 gap-3 text-xs bg-black/30 p-3.5 rounded-xl border border-white/5">
+                {(item.brand || item.size) && (
+                  <>
+                    <div>
+                      <span className="text-[var(--text-muted)] block mb-0.5">Gyártó / Márka:</span>
+                      <span className="font-semibold text-[var(--accent-gold-light)]">{item.brand || 'Nincs megadva'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[var(--text-muted)] block mb-0.5">Méret:</span>
+                      <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded inline-block">{item.size || 'Nincs megadva'}</span>
+                    </div>
+                  </>
+                )}
                 <div>
                   <span className="text-[var(--text-muted)] block mb-0.5">Anyag:</span>
                   <span className="font-medium text-white">{item.material || 'Természetes szálak'}</span>

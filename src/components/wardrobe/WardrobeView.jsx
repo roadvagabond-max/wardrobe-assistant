@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Sparkles, Tag, Shirt, Check, AlertCircle } from 'lucide-react';
+import { Plus, Search, Shirt } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function WardrobeView({ onAddNewItem, onSelectItem }) {
@@ -18,6 +18,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
     { id: 'bottoms', label: '👖 Nadrágok' },
     { id: 'shoes', label: '👞 Cipők' },
     { id: 'dresses', label: '👗 Ruhák' },
+    { id: 'skirts', label: '💃 Szoknyák' },
     { id: 'accessories', label: '⌚ Kiegészítők' }
   ];
 
@@ -50,15 +51,19 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
         matchCondition = item.condition && (item.condition.includes('Lecserélendő') || item.condition.includes('Javításra'));
       }
 
-      const matchSearch = !searchQuery || 
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.color.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.material?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.formality?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.styleArchetype?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.tags && item.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
-
-      return matchCategory && matchSeason && matchCondition && matchSearch;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = item.name?.toLowerCase().includes(q);
+        const matchMaterial = item.material?.toLowerCase().includes(q);
+        const matchColor = item.color?.toLowerCase().includes(q);
+        const matchBrand = item.brand?.toLowerCase().includes(q);
+        const matchSize = item.size?.toLowerCase().includes(q);
+        const matchStyle = item.styleArchetype?.toLowerCase().includes(q);
+        const matchTags = item.tags?.some(t => t.toLowerCase().includes(q));
+        return matchCategory && matchSeason && matchCondition && (matchName || matchMaterial || matchColor || matchBrand || matchSize || matchStyle || matchTags);
+      }
+      
+      return matchCategory && matchSeason && matchCondition;
     });
   }, [wardrobe, selectedCategory, selectedSeason, selectedCondition, searchQuery]);
 
@@ -188,7 +193,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
                   
                   {/* Category Badge */}
                   <span className="absolute top-2 left-2 badge badge-gold text-[10px] uppercase font-bold tracking-wider backdrop-blur-md">
-                    {item.category === 'outerwear' ? 'Zakó' : item.category === 'knitwear' ? 'Kötött' : item.category === 'tops' ? 'Felső' : item.category === 'bottoms' ? 'Nadrág' : item.category === 'shoes' ? 'Cipő' : item.category}
+                    {item.category === 'outerwear' ? 'Zakó' : item.category === 'knitwear' ? 'Kötött' : item.category === 'tops' ? 'Felső' : item.category === 'bottoms' ? 'Nadrág' : item.category === 'shoes' ? 'Cipő' : item.category === 'skirts' ? 'Szoknya' : item.category}
                   </span>
 
                   {/* Condition Badge */}
@@ -210,6 +215,18 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
                   <h3 className="font-serif font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent-gold)] transition-colors">
                     {item.name}
                   </h3>
+
+                  {/* Brand & Size Info */}
+                  {(item.brand || item.size) && (
+                    <div className="flex items-center justify-between text-[11px] text-[var(--accent-gold-light)] font-medium">
+                      <span className="truncate">{item.brand || ''}</span>
+                      {item.size && (
+                        <span className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-white text-[10px] shrink-0 font-bold">
+                          {item.size}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
                     <span className="truncate">{item.material || 'Természetes'}</span>

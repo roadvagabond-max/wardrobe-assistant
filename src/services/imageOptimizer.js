@@ -4,7 +4,7 @@
  * is converted to optimized Base64 JPEG so Gemini Vision can directly see the garment pixels.
  */
 
-export async function ensureBase64Image(fileOrUrl, maxWidth = 1024, maxHeight = 1024, quality = 0.85) {
+export async function ensureBase64Image(fileOrUrl, maxWidth = 640, maxHeight = 640, quality = 0.75) {
   if (!fileOrUrl) return null;
 
   // 1. If it's already a base64 Data URL, optimize it

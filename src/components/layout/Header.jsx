@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ShieldCheck, User, Settings, CloudSun, LogIn } from 'lucide-react';
+import { Sparkles, User, Settings, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Header({ onOpenSettings, onOpenAuth, weather }) {

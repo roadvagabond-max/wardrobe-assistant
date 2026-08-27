@@ -1,12 +1,12 @@
-import React, { useState, useRef } from 'react';
-import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, ShieldAlert } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { optimizeImageForUpload } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
 
-export default function PurchaseAdvisorView() {
+export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
   const { wardrobe, profile, addItem } = useAuth();
 
   const [activeTab, setActiveTab] = useState('camera'); // 'camera', 'upload', 'link'
@@ -22,6 +22,17 @@ export default function PurchaseAdvisorView() {
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+
+  // Handle prefill data from missing pieces view
+  useEffect(() => {
+    if (prefillData) {
+      setItemName(prefillData.title || prefillData.name || '');
+      setItemPrice(prefillData.estimatedPrice || '');
+      setEvaluationResult(null);
+      setAnalysisError(null);
+      setAddedToWardrobe(false);
+    }
+  }, [prefillData]);
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -112,8 +123,10 @@ export default function PurchaseAdvisorView() {
     setItemName('');
     setItemPrice('');
     setWebshopUrl('');
+    setWebshopContext(null);
     setAnalysisError(null);
     setAddedToWardrobe(false);
+    if (onClearPrefill) onClearPrefill();
   };
 
   return (
@@ -170,7 +183,7 @@ export default function PurchaseAdvisorView() {
                 }`}
               >
                 <LinkIcon className="w-4 h-4" />
-                <span>Webshop Link</span>
+                <span>Webshop Link / Cikkszám</span>
               </button>
             </div>
           )}
@@ -222,39 +235,48 @@ export default function PurchaseAdvisorView() {
             </div>
           )}
 
-          {/* Tab 3: Link */}
+          {/* Tab 3: Link or Product Code */}
           {activeTab === 'link' && !imagePreview && (
             <form onSubmit={handleLinkInput} className="space-y-3">
-              <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                Webshop termék oldalának linkje vagy közvetlen képcím:
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                  Webshop terméklink VAGY Cikkszám / Termékkód (Next, Zara, Reserved stb.):
+                </label>
+                <span className="text-[10px] text-[var(--accent-gold)] font-medium">SKU Keresés Aktív</span>
+              </div>
               <div className="flex gap-2">
                 <input
-                  type="url"
+                  type="text"
                   required
-                  placeholder="https://www.nextdirect.com/... vagy zara.com / reserved.com"
+                  placeholder="pl. https://www.nextdirect.com/... VAGY csak cikkszám pl. AA6536"
                   value={webshopUrl}
                   onChange={(e) => {
                     setWebshopUrl(e.target.value);
                     if (analysisError) setAnalysisError(null);
                   }}
-                  className="custom-input"
+                  className="custom-input text-xs"
                 />
                 <button 
                   type="submit" 
-                  disabled={isAnalyzing}
-                  className="btn-gold whitespace-nowrap flex items-center gap-1.5"
+                  disabled={isAnalyzing || !webshopUrl.trim()}
+                  className="btn-gold px-5 text-xs whitespace-nowrap flex items-center gap-1.5 shrink-0"
                 >
                   {isAnalyzing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Betöltés...</span>
+                      <span>Kinyerés...</span>
                     </>
                   ) : (
-                    <span>Betöltés</span>
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Betöltés</span>
+                    </>
                   )}
                 </button>
               </div>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                💡 <em>Tipp: Akár csak a ruha termékkódját is megadhatod (pl. <strong>AA6536</strong>, <strong>SU458397</strong>, <strong>512HR-09M</strong>), az AI megkeresi a képet és az adatokat a neten!</em>
+              </p>
             </form>
           )}
 
@@ -430,6 +452,25 @@ export default function PurchaseAdvisorView() {
               </div>
 
             </div>
+
+            {/* Fit & Silhouette Mismatch / Sizing Alert Box */}
+            {evaluationResult.fitMismatchWarning && (
+              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-black/40 border border-amber-500/30 text-xs space-y-2 animate-slide-up">
+                <div className="flex items-center gap-2 text-amber-300 font-bold">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Szabás & Testalkat Illeszkedési Elemzés (Fit Intelligence):</span>
+                </div>
+                <p className="text-[var(--text-secondary)] leading-relaxed">
+                  {evaluationResult.fitMismatchWarning}
+                </p>
+                {evaluationResult.sizingAdvice && (
+                  <div className="pt-2 border-t border-amber-500/20 text-[11px] text-amber-200 font-medium flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
+                    <span><strong>Méretválasztási javaslat:</strong> {evaluationResult.sizingAdvice}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Pros & Cons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">

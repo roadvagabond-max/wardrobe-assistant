@@ -7,21 +7,31 @@ const getGeminiApiKey = () => {
 
 export const isGeminiConfigured = () => Boolean(getGeminiApiKey());
 
-// Google Gemini official models in order of priority (starting with 3.7-flash and 3.6-flash)
+// Google Gemini official 2026 models in order of priority
 const GEMINI_MODELS = [
   'gemini-3.7-flash',
   'gemini-3.6-flash',
-  'gemini-3.1-flash-lite',
-  'gemini-2.5-flash'
+  'gemini-3.1-flash-lite'
 ];
 
+// In-memory cache of the fastest currently working model
+let activeFastModel = null;
+
 /**
- * Universal Gemini API caller with automatic multi-model fallback and JSON parser
+ * Universal Gemini API caller with fast-timeout fallback and JSON parser
  */
-async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens = 1200, temperature = 0.2 }) {
+async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens = 1000, temperature = 0.1 }) {
   let lastError = null;
 
-  for (const model of GEMINI_MODELS) {
+  // Prioritize previously successful model for ultra-fast zero-latency calls
+  const modelsToTry = activeFastModel
+    ? [activeFastModel, ...GEMINI_MODELS.filter(m => m !== activeFastModel)]
+    : GEMINI_MODELS;
+
+  for (const model of modelsToTry) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5500); // 5.5s timeout per attempt
+
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const requestBody = {
@@ -44,8 +54,11 @@ async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens =
           'Content-Type': 'application/json',
           'x-goog-api-key': apiKey
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -57,6 +70,8 @@ async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens =
             .replace(/^```\s*/i, '')
             .replace(/\s*```$/i, '')
             .trim();
+          
+          activeFastModel = model; // Cache this working fast model
           return JSON.parse(cleaned);
         }
       } else {
@@ -65,7 +80,8 @@ async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens =
         lastError = new Error(`Gemini API hiba (${response.status}): ${errBody.slice(0, 180)}`);
       }
     } catch (e) {
-      console.warn(`Hiba a(z) ${model} modellel:`, e);
+      clearTimeout(timeoutId);
+      console.warn(`Hiba vagy időtúllépés a(z) ${model} modellel:`, e.name === 'AbortError' ? 'Időtúllépés (>5.5s)' : e.message);
       lastError = e;
     }
   }
@@ -138,7 +154,8 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "color": "Valódi fő szín magyarul (pl. Sötétkék, Fekete, Fehér, Homokbézs, Olívazöld)",
   "colorHex": "#hex_színkód",
   "material": "Részletes anyag és szövés (pl. 100% Pima Pamut Pique)",
-  "brand": "Márkanév ha felismerhető",
+  "brand": "Márkanév / Gyártó ha felismerhető (pl. Massimo Dutti, Zara, Boglioli)",
+  "size": "Méretjelölés ha kivehető vagy webshopból kinyerhető (pl. 'M', 'L', '50', '32/32', '42.5')",
   "qualityScore": 9.2,
   "season": ["tavasz", "nyar", "osz", "tel"],
   "formality": "Smart Casual",
@@ -195,26 +212,33 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
           cat: w.category,
           col: w.color,
           form: w.formality,
+          fit: w.fit || '',
+          brand: w.brand || '',
+          size: w.size || '',
           cond: w.condition,
           style: w.styleArchetype
         }));
 
       const webshopTextInfo = [
         webshopContext.title ? `CÉLTERMÉK: "${webshopContext.title}"` : '',
+        webshopContext.brand ? `Márka: "${webshopContext.brand}"` : '',
         webshopContext.productCode ? `Cikkszám: "${webshopContext.productCode}"` : '',
         webshopContext.description ? `Leírás: "${webshopContext.description.slice(0, 300)}"` : ''
       ].filter(Boolean).join(' | ');
 
-      const prompt = `Te egy világklasszis személyi stylist és vásárlási döntéstámogató vagy.
-ELEMEZD A CSATOLT KÉPEN LÉVŐ KISZEMELT RUHÁT ÉS VÉGEZD EL A 3 DÖNTÉSI PILLÉR ÉRTÉKELÉST EGYETLEN MENETBEN!
+      const prompt = `Te egy világklasszis személyi stylist, szabászati és vásárlási döntéstámogató vagy.
+ELEMEZD A CSATOLT KÉPEN LÉVŐ KISZEMELT RUHÁT ÉS VÉGEZD EL A 3 DÖNTÉSI PILLÉR ÉRTÉKELÉST, KÜLÖNÖS TEKINTETTEL A SZABÁSRA (FIT) ÉS A TESTALKATHHOZ VALÓ ILLESZKEDÉSRE!
 ${itemName ? `Megadott név: "${itemName}"` : ''} ${itemPrice ? `Ár: "${itemPrice}"` : ''} ${webshopTextInfo ? `Webshop info: ${webshopTextInfo}` : ''}
-Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: styleProfile.weight, body: styleProfile.bodyType, skin: styleProfile.skinTone, styles: styleProfile.preferredStyles })}
-Meglévő ruhatár (${compactWardrobe.length} elem): ${JSON.stringify(compactWardrobe)}
+Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: styleProfile.weight, body: styleProfile.bodyType, skin: styleProfile.skinTone, styles: styleProfile.preferredStyles, philosophy: styleProfile.stylePhilosophy })}
+Meglévő ruhatár (${compactWardrobe.length} elem a szabásokkal és méretekkel): ${JSON.stringify(compactWardrobe)}
 
 3 DÖNTÉSI PILLÉR:
-1. Kombinálhatóság: Készíts 3 különböző outfitet a meglévő gardrób elemeivel (használd a pontos 'id'-kat a 'matchedItemIds' tömbben!).
-2. Változatosság & Duplikáció: Ha van már hasonló ruha, de az 'Kopott / Játszós' vagy 'Lecserélendő', KIFEJEZETTEN AJÁNLANI KELL a megvásárlást mint minőségi pótlást! Ha van szép állapotú hasonló, jelezd a duplikációt.
-3. Személyes Illeszkedés: Értékeld a testalkathoz, bőrtónushoz és stílushoz való passzolást.
+1. Kombinálhatóság: Készíts 3 különböző komplett outfitet a meglévő gardrób elemeivel (használd a pontos 'id'-kat a 'matchedItemIds' tömbben!).
+2. Változatosság & Duplikáció: Ha van már hasonló ruha, de az 'Kopott / Játszós' vagy 'Lecserélendő', KIFEJEZETTEN AJÁNLANI KELL a megvásárlást mint minőségi cserét! Ha van szép állapotú hasonló, jelezd a duplikációt.
+3. Személyes Illeszkedés & SZABÁSBELI ELTÉRÉS (Fit Analysis):
+   - NÉZD MEG, MILYEN SZABÁST HORD ÁLTALÁBAN A USER a ruhatárában (pl. Slim tailored, Tapered, Regular, Oversized)!
+   - Ha a user pl. Slim Fit zakókat hord, de ez a termék Regular Fit vagy Bővebb szabású, KIFEJEZETTEN HÍVD FEL RÁ A FIGYELMET a 'fitMismatchWarning' mezőben!
+   - Értékeld a testalkathoz (pl. V-alak, atlétikus, teltebb) és magassághoz való vizuális arányokat.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
@@ -225,6 +249,9 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
     "color": "Valódi fő szín magyarul (pl. Sötétkék, Homokbézs, Fekete)",
     "colorHex": "#hex",
     "material": "Anyagösszetétel",
+    "brand": "Márkanév / Gyártó ha felismerhető",
+    "size": "Méret ha webshopból vagy címkéből kivehető",
+    "fit": "Felismerhető szabás (pl. Slim Fit, Regular Fit, Relaxed, Oversized, Tapered, Contemporary)",
     "qualityScore": 9.2,
     "formality": "Smart Casual",
     "styleArchetype": "Old Money & Quiet Luxury",
@@ -239,7 +266,9 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "verdict": "Erősen Ajánlott" | "Érdemes Megfontolni" | "Gondold Át",
   "verdictSummary": "Részletes szakmai összefoglaló a vásárlási döntésről",
   "duplicationWarning": "Duplikáció vagy csere-javaslat",
-  "personalFitVerdict": "Személyes illeszkedés értékelése",
+  "personalFitVerdict": "Személyes illeszkedés értékelése a testalkat alapján",
+  "fitMismatchWarning": "SZABÁSBELI FIGYELMEZTETÉS: ha a termék szabása (pl. Regular) eltér a felhasználó ruhatárában domináló szabástól (pl. Slim) vagy a testalkatától, részletesen indokold meg! Ha nincs eltérés, írd le a tökéletes egyezést.",
+  "sizingAdvice": "Méretválasztási tanács a felhasználó márkái és testalkata alapján",
   "pros": ["3 konkrét előny"],
   "cons": ["1 megfontolandó szempont"],
   "outfits": [
@@ -348,8 +377,8 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 }
 
 /**
- * 3. AI Outfit Stylist: Szabadszöveges esemény, időjárás & Anchor Kulcsdarab támogatás
- * Generates 3 distinct personal style variations (Classic Sharp, Modern Relaxed, Statement Expressive)
+ * 3. AI Outfit Stylist: Kulturális, Geográfiai & Esemény-specifikus Stílusintelligencia
+ * Decodes subcultural norms, geography, dress codes, weather, and builds 3 authentic event variations.
  */
 export async function generateEventOutfits({ eventName, weather, wardrobe = [], styleProfile = {}, anchorItemIds = [] }) {
   const apiKey = getGeminiApiKey();
@@ -363,31 +392,44 @@ export async function generateEventOutfits({ eventName, weather, wardrobe = [], 
 
       const anchorItems = wardrobe.filter(w => anchorItemIds.includes(w.id));
 
-      const prompt = `Te egy mester személyi stylist és ruhatár-tervező vagy.
-Felhasználó által megadott esemény / alkalom leírás: "${eventName}"
-(Értelmezd a szövegben szereplő időpontot: pl. "holnap este", "hétvége", napszak, esemény típusa!)
-Időjárás: ${weather?.temperature}°C, ${weather?.condition} (${weather?.recommendation || ''})
-Felhasználó stílusprofilja: ${JSON.stringify(styleProfile)}
-${anchorItems.length > 0 ? `KÖTELEZŐ KULCSDARABOK (Anchor Items - MINDEN szettben KÖTELEZŐEN szerepelniük kell!): ${JSON.stringify(anchorItems.map(a => ({ id: a.id, name: a.name, category: a.category, color: a.color })))}` : ''}
+      const prompt = `Te egy világklasszis mester személyi stylist vagy, aki a személyre szabott, önazonos öltözködés nagymestere.
 
-A felhasználó ruhatára (${availableWardrobe.length} elem):
-${JSON.stringify(availableWardrobe.map(w => ({ id: w.id, name: w.name, category: w.category, color: w.color, formality: w.formality, condition: w.condition })))}
+A LEGELSŐ ÉS LEGFONTOSABB SZABÁLY: A FELHASZNÁLÓ EGYÉNI STÍLUS DNS-E AZ ALAP!
+Nem sablonos kliséket és jelmezeket készítünk az eseményre, hanem a FELHASZNÁLÓ SAJÁT SZEMÉLYES STÍLUSÁT ÉS EGYÉNISÉGÉT adaptáljuk intelligensen az eseményhez úgy, hogy 100%-ig önazonos és magabiztos maradjon!
 
-Készíts 3 KÜLÖNBÖZŐ KARAKTERŰ outfitet a felhasználó stílusában:
-1. SZETT: "Klasszikus & Kifinomult" (Időtlen, elegáns, biztos választás)
-2. SZETT: "Laza & Modern" (Smart Casual, kényelmes, trendi)
-3. SZETT: "Karakteres & Sprezzatura" (Kifejező, bátor textúrák vagy színek)
+FELHASZNÁLÓ STÍLUSPROFILJA ÉS SZEMÉLYES PREFERENCIÁI:
+- Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura'])}
+- Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
+- Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
+- Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
+
+ESEMÉNY / ALKALOM: "${eventName}"
+HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${weather?.temperature}°C, ${weather?.condition}
+${anchorItems.length > 0 ? `KÖTELEZŐ KULCSDARABOK (Anchor Items): ${JSON.stringify(anchorItems.map(a => ({ id: a.id, name: a.name, category: a.category, color: a.color })))}` : ''}
+
+Ruhatár (${availableWardrobe.length} elem):
+${JSON.stringify(availableWardrobe.map(w => ({ id: w.id, name: w.name, category: w.category, color: w.color, formality: w.formality, fit: w.fit || '', condition: w.condition, style: w.styleArchetype })))}
+
+STYLIST DÖNTÉSI LOGIKA (Személyes Stílus DNS + Esemény Harmónia):
+1. ÖNAZONOS STÍLUS-ADAPTÁCIÓ:
+   - Ha a felhasználó stílusa pl. az elegáns 'Quiet Luxury / Sprezzatura / Klasszikus', és egy lazább eseményre (pl. techno buli, nyári terasz, kerti party) megy:
+     Akkor a SAJÁT kifinomult, prémium stílusát fordítsd le az esemény nyelvére (pl. sötét árnyalatú, minőségi finomkötött pólóing, letisztult sötét nadrág, prémium bőr sneaker vagy kigombolt lezser ing), ahelyett hogy klisés vagy kényelmetlen darabokat adnál rá!
+   - Kerüld a merev túlöltözöttséget (pl. ne erőltess strukturált öltönyt táncos klubba), de őrizd meg a felhasználó igényességét és stíluskarakterét!
+
+2. 3 KÜLÖNBÖZŐ SZEMÉLYES HANGULAT AZ ESEMÉNYRE:
+   - Készíts 3 olyan szettet, amelyek mindegyike a felhasználó ízlésvilágából építkezik, de 3 különböző nüanszot / energiát képvisel (pl. 1. Kifinomult & Letisztult, 2. Karakteres & Laza, 3. Kényelmes & Modern).
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
 [
   {
     "id": "outfit-1",
     "title": "Kifejező szett elnevezés",
-    "styleArchetype": "Klasszikus & Kifinomult",
+    "styleArchetype": "A felhasználó személyes stílusához és az alkalomhoz illő stílusnév",
     "occasion": "${eventName}",
-    "matchScore": 96,
-    "stylingNotes": "Konkrét stylist tanács a darabok viseléséhez",
-    "weatherSuitability": "Hogyan felel meg a ${weather?.temperature || 20}°C-os időjárásnak és napszaknak",
+    "matchScore": 97,
+    "stylingNotes": "Személyre szabott stylist tanács a viseléshez és rétegzéshez",
+    "culturalFitReasoning": "Hogyan érvényesül a felhasználó személyes stílusa és az esemény összhangja ebben a szettben",
+    "weatherSuitability": "Időjárási és kényelmi megfelelés (${weather?.temperature || 20}°C)",
     "itemIds": ["id1", "id2", "id3"]
   }
 ]`;
@@ -399,10 +441,11 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
         return parsed.map((p, idx) => ({
           id: p.id || `outfit-${Date.now()}-${idx}`,
           title: p.title || `${idx + 1}. Stílusos Szett`,
-          styleArchetype: p.styleArchetype || (idx === 0 ? 'Klasszikus & Kifinomult' : idx === 1 ? 'Laza & Modern' : 'Karakteres & Sprezzatura'),
+          styleArchetype: p.styleArchetype || 'Eseményhez Hangolt',
           occasion: p.occasion || eventName,
-          matchScore: p.matchScore || 92 + (idx * 2) % 6,
+          matchScore: p.matchScore || 94 + (idx * 2) % 5,
           stylingNotes: p.stylingNotes || "Harmonikus összeállítás a gardróbodból.",
+          culturalFitReasoning: p.culturalFitReasoning || "Tökéletesen igazodik az esemény dress code-jához és atmoszférájához.",
           weatherSuitability: p.weatherSuitability || `Ideális a(z) ${weather?.temperature || 20}°C-os időjáráshoz.`,
           items: (p.itemIds || [])
             .map(id => wardrobe.find(w => w.id === id))
@@ -419,35 +462,58 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
 }
 
 /**
- * 4. Kapszula Ruhatár Elemzés: Dinamikus Gemini AI Gap Analysis & Lecserélendő Darabok Pótlása
+ * 4. Kapszula Ruhatár Elemzés: Dinamikus Gemini AI Gap Analysis & Intelligens Kulcsdarab Ajánló
  */
 export async function analyzeWardrobeGaps(wardrobe = [], profile = {}) {
   const apiKey = getGeminiApiKey();
 
   if (apiKey && wardrobe.length > 0) {
     try {
-      const itemsNeedingReplacement = wardrobe.filter(w => w.condition === 'Lecserélendő' || w.condition === 'Játszós / Kopott');
+      // Analyze current wardrobe pieces, their condition, category and fit
+      const compactItems = wardrobe.map(w => ({
+        id: w.id,
+        name: w.name,
+        category: w.category,
+        color: w.color,
+        formality: w.formality,
+        fit: w.fit || '',
+        brand: w.brand || '',
+        condition: w.condition
+      }));
 
-      const prompt = `Te egy mester kapszula ruhatár-tervező stylist vagy.
-Elemezd a felhasználó gardróbját (${wardrobe.length} elem) és stílusprofilját:
-Stílusprofil: ${JSON.stringify(profile)}
-Meglévő ruhatár: ${JSON.stringify(wardrobe.map(w => ({ id: w.id, name: w.name, category: w.category, color: w.color, formality: w.formality, condition: w.condition })))}
-${itemsNeedingReplacement.length > 0 ? `Lecserélendő / elhasználódott darabok a szekrényben: ${JSON.stringify(itemsNeedingReplacement.map(r => ({ name: r.name, category: r.category })))}` : ''}
+      // Count items per category and identify potential replacements
+      const replacementCandidates = wardrobe.filter(w => w.condition === 'Lecserélendő' || w.condition === 'Játszós / Kopott');
 
-Határozz meg 4-6 STRATÉGIAI HIÁNYZÓ KULCSDARABOT (Capsule Gaps), amelyek beszerzésével ugrásszerűen megnő a variálhatóság! Ha van lecserélendő darab, azt prioritásként emeld be mint megújítandó kulcselem!
+      const prompt = `Te egy mester kapszula ruhatár-tervező és sartorial stylist vagy.
+Elemezd a felhasználó gardróbját (${wardrobe.length} elem), testalkatát és stílusprofilját:
+Stílusprofil: ${JSON.stringify({ height: profile.height, weight: profile.weight, body: profile.bodyType, preferredStyles: profile.preferredStyles, philosophy: profile.stylePhilosophy })}
+Meglévő ruhatár elemek: ${JSON.stringify(compactItems)}
+${replacementCandidates.length > 0 ? `Elhasználódott / játszós darabok a szekrényben: ${JSON.stringify(replacementCandidates.map(r => ({ name: r.name, category: r.category, color: r.color })))}` : ''}
+
+FONTOS SZABÁLYOK AZ AJÁNLÁSOKHOZ:
+
+1. SZABÁS (FIT) BEÉPÍTÉSE:
+   - Vizsgáld meg, milyen szabású darabokat hord a felhasználó (pl. Slim tailored, Slim fit, Tapered, Regular)!
+   - Ha a felhasználó Slim Fit / karcsúsított szabású ruhákat hord vagy atlétikus testalkatú, akkor az ajánlott darabok megnevezésébe (title) és KIFEJEZETTEN a keresési kulcsszavakba (searchKeywords) is ÉPÍTSD BE a szabást (pl. 'Slim Fit Olasz Gyapjú Zakó', searchKeywords: 'slim fit navy blue wool blazer férfi zakó')!
+
+2. TELÍTETTSÉG & INTELLIGENS CSERE SZABÁLY (Redundancy & Smart Replacement):
+   - Ha egy adott típusból / kiegészítőből (pl. fonott öv, fehér bőr sneaker, sötétkék pólóing stb.) a ruhatárban MÁR VAN 2 VAGY TÖBB szép, 'Megkímélt / Kiváló' vagy 'Vadonatúj' állapotú darab, akkor MÉG HA VAN IS egy 'Játszós / Kopott' darab belőle, NEM SZABAD annak lecserélését / pótlását ajánlani!
+   - Csak akkor ajánlj cserét ('isReplacement': true), ha az adott KULCSFONTOSSÁGÚ darabból nincs másik jó állapotú alternatíva a ruhatárban, és hiánya blokkolja a szettek építését!
+   - Mindig a VALÓDI KAPSZULA HIÁNYOKRA fókuszálj, amelyek új kombinációs hidakat és outfit variációkat hoznak létre.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
 [
   {
     "id": "gap-1",
-    "title": "Pontos terméknév (pl. 'Tengerkék Finomkötött Merino Pólóing')",
+    "title": "Pontos terméknév a szabással együtt (pl. 'Slim Fit Sötétkék Olasz Gyapjú Zakó')",
+    "recommendedFit": "pl. Slim tailored / Karcsúsított szabás",
     "impact": "+8 Új Outfit Variáció",
-    "estimatedPrice": "25 000 - 45 000 Ft",
-    "category": "knitwear" | "outerwear" | "tops" | "bottoms" | "shoes" | "accessories",
+    "estimatedPrice": "35 000 - 65 000 Ft",
+    "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "accessories",
     "season": "Tavasz / Nyár" | "Ősz / Tél" | "Egész évben",
-    "reason": "Részletes szakmai indoklás, miért elengedhetetlen a ruhatárhoz",
-    "isReplacement": true | false,
-    "searchKeywords": "keresési kulcsszavak webshophoz"
+    "reason": "Részletes szakmai indoklás, miért ez a kulcsdarab hiányzik a ruhatárból és hogyan kombinálható a meglévő darabokkal",
+    "isReplacement": false,
+    "searchKeywords": "konkrét keresési kulcsszavak webshophoz szabással és anyaggal (pl. slim fit navy tailored wool blazer ferfi)"
   }
 ]`;
 
@@ -465,40 +531,44 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
   return [
     {
       id: 'gap-blazer',
-      title: 'Sötétkék Strukturált Gyapjú Zakó',
+      title: 'Slim Fit Sötétkék Strukturált Gyapjú Zakó',
+      recommendedFit: 'Slim tailored',
       impact: '+7 Új Outfit Variáció',
       estimatedPrice: '38 000 - 68 000 Ft',
       category: 'outerwear',
       season: 'Egész évben',
-      reason: 'A smart casual és business megjelenés abszolút alappillére, ami bármely nadrággal azonnal emeli a megjelenést.',
+      reason: 'A smart casual és üzleti megjelenés abszolút sarokköve: karcsúsított szabása határozott vállat és arányos sziluettet ad.',
       isReplacement: false,
-      searchKeywords: 'navy blue tailored wool blazer férfi zakó'
+      searchKeywords: 'slim fit navy blue tailored wool blazer férfi zakó'
     },
     {
       id: 'gap-knit-polo',
-      title: 'Tengerkék vagy Homokszínű Finomkötött Pólóing',
+      title: 'Slim Fit Tengerkék Finomkötött Merino Pólóing',
+      recommendedFit: 'Tailored fit',
       impact: '+6 Új Outfit Variáció',
       estimatedPrice: '18 000 - 32 000 Ft',
       category: 'knitwear',
       season: 'Tavasz / Nyár',
-      reason: 'A tökéletes híd a lezser póló és a formális ing között, zakó alá és önmagában is elegáns.',
+      reason: 'A tökéletes híd a lezser póló és a formális ing között, zakó alá simuló szabással.',
       isReplacement: false,
-      searchKeywords: 'knitted polo shirt finomkötött galléros póló'
+      searchKeywords: 'slim fit knitted merino polo shirt férfi finomkötött galléros póló'
     },
     {
       id: 'gap-white-shirt',
-      title: 'Prémium Fehér Oxford Pamuting',
+      title: 'Contemporary Fit Fehér Oxford Pamuting',
+      recommendedFit: 'Contemporary / Slim',
       impact: '+8 Új Outfit Variáció',
       estimatedPrice: '16 000 - 30 000 Ft',
       category: 'tops',
       season: 'Egész évben',
-      reason: 'A leguniverzálisabb felsőruházat a reggeli meetingektől az esti vacsorákig.',
+      reason: 'A leguniverzálisabb felsőruházat, ami minden zakóval és nadrággal azonnal működik.',
       isReplacement: false,
-      searchKeywords: 'white 100% cotton oxford shirt pamuting'
+      searchKeywords: 'slim fit white 100% cotton oxford shirt pamuting'
     },
     {
       id: 'gap-leather-loafers',
-      title: 'Barna Bőr Penny Loafer vagy Suede Mokaszin',
+      title: 'Barna Bőr Penny Loafer Cipő',
+      recommendedFit: 'True to size / Classic last',
       impact: '+5 Új Outfit Variáció',
       estimatedPrice: '32 000 - 58 000 Ft',
       category: 'shoes',
