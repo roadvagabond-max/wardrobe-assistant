@@ -94,7 +94,7 @@ async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens =
 
   for (const model of modelsToTry) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8500); // 8.5s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
 
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;

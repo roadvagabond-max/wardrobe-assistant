@@ -125,18 +125,7 @@ export function parseWebshopUrlOrCode(rawInput) {
       parsed.brand = 'Next Direct';
       parsed.productCode = codeUpper;
       parsed.title = `Next Termék (#${hyphenCode || codeUpper})`;
-      
-      const nextCandidateImages = [
-        hyphenCode ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${hyphenCode}.jpg` : '',
-        hyphenCode ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${hyphenCode}.jpg` : '',
-        `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${codeUpper}.jpg`,
-        `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${codeUpper}.jpg`,
-        `https://xcdn.next.co.uk/common/items/default/default/itemimages/altitemshot/315x472/${codeLower}.jpg`,
-        `https://xcdn.next.co.uk/common/items/default/default/itemimages/search/224x336/${codeLower}.jpg`,
-        `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${codeUpper}s.jpg`
-      ].filter(Boolean);
-
-      parsed.images = nextCandidateImages;
+      parsed.images = [];
       parsed.imageUrl = '';
       return parsed;
     }
@@ -146,6 +135,8 @@ export function parseWebshopUrlOrCode(rawInput) {
       parsed.brand = 'Reserved';
       parsed.productCode = clean.toUpperCase();
       parsed.title = `Reserved Termék (#${parsed.productCode})`;
+      parsed.images = [];
+      parsed.imageUrl = '';
       return parsed;
     }
 
@@ -153,11 +144,15 @@ export function parseWebshopUrlOrCode(rawInput) {
     if (/^[0-9]{7,11}$/.test(clean)) {
       parsed.productCode = clean;
       parsed.title = `Termék (#${clean})`;
+      parsed.images = [];
+      parsed.imageUrl = '';
       return parsed;
     }
 
     parsed.productCode = clean;
     parsed.title = `Termékkód: ${clean}`;
+    parsed.images = [];
+    parsed.imageUrl = '';
     return parsed;
   }
 
@@ -180,9 +175,7 @@ export function parseWebshopUrlOrCode(rawInput) {
       const styleCandidate = secondLastSeg.replace(/[^a-zA-Z0-9]/g, '');
 
       const codeUpper = codeCandidate.toUpperCase();
-      const codeLower = codeCandidate.toLowerCase();
       const styleUpper = styleCandidate.toUpperCase();
-      const styleLower = styleCandidate.toLowerCase();
 
       let hyphenCode = '';
       if (/^[A-Z][0-9]{5}$/.test(codeUpper)) {
@@ -192,16 +185,7 @@ export function parseWebshopUrlOrCode(rawInput) {
       if (codeUpper || styleUpper) {
         parsed.productCode = codeUpper || styleUpper;
         parsed.title = `Next Termék (#${hyphenCode || codeUpper || styleUpper})`;
-        
-        parsed.images = [
-          hyphenCode ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${hyphenCode}.jpg` : '',
-          hyphenCode ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${hyphenCode}.jpg` : '',
-          `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${codeUpper}.jpg`,
-          `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${codeUpper}.jpg`,
-          `https://xcdn.next.co.uk/common/items/default/default/itemimages/altitemshot/315x472/${codeLower}.jpg`,
-          styleUpper ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${styleUpper}.jpg` : '',
-          styleLower ? `https://xcdn.next.co.uk/common/items/default/default/itemimages/altitemshot/315x472/${styleLower}.jpg` : ''
-        ].filter(Boolean);
+        parsed.images = [];
         parsed.imageUrl = '';
       }
     }
