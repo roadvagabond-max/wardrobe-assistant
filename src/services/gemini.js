@@ -247,10 +247,8 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         parts.push({ inlineData: { mimeType, data: base64Data } });
       }
 
-      // Enable live Google Search Grounding if productCode is present
-      const tools = webshopContext.productCode ? [{ googleSearch: {} }] : null;
-
-      return await callGeminiApi({ apiKey, contents: [{ parts }], tools });
+      // Ensure valid JSON response mode
+      return await callGeminiApi({ apiKey, contents: [{ parts }] });
     } catch (err) {
       console.error('Gemini Vision & Text API hiba:', err);
       throw err;
