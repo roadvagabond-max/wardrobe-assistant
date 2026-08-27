@@ -165,16 +165,18 @@ export async function analyzeClothingImage(imageBase64OrUrl, webshopContext = {}
 
   if (apiKey) {
     try {
-      // Ensure image is converted to Base64 so Gemini Vision API receives the actual pixels
-      const resolvedBase64 = await ensureBase64Image(imageBase64OrUrl);
+      // Ensure image is converted to Base64 if available
+      const resolvedBase64 = imageBase64OrUrl ? await ensureBase64Image(imageBase64OrUrl) : null;
 
       // Build context from webshop text
       const webshopTextInfo = [
-        webshopContext.title ? `CÉLTERMÉK HIVATALOS NEVE: "${webshopContext.title}"` : '',
+        webshopContext.rawInput ? `WEBSHOP TERMÉKLINK VAGY BEMENET: "${webshopContext.rawInput}"` : '',
+        webshopContext.url ? `URL: "${webshopContext.url}"` : '',
+        webshopContext.title ? `CÉLTERMÉK MEGNEVEZÉSE: "${webshopContext.title}"` : '',
         webshopContext.brand ? `Márka / Gyártó: "${webshopContext.brand}"` : '',
         webshopContext.productCode ? `Cikkszám / Termékkód (SKU): "${webshopContext.productCode}"` : '',
-        webshopContext.description ? `Hivatalos Leírás és Anyagösszetétel: "${webshopContext.description}"` : '',
-        webshopContext.rawText ? `Oldal további részletei: "${webshopContext.rawText.slice(0, 800)}"` : ''
+        webshopContext.description ? `Hivatalos Leírás: "${webshopContext.description}"` : '',
+        webshopContext.rawText ? `További részletek: "${webshopContext.rawText.slice(0, 800)}"` : ''
       ].filter(Boolean).join('\n');
 
       const userProfileInfo = userProfile && Object.keys(userProfile).length > 0 ? `
@@ -188,17 +190,16 @@ Preferált stílusok: ${JSON.stringify(userProfile.preferredStyles || [])}
 Kedvenc színek: ${JSON.stringify(userProfile.favoriteColors || [])}
 ` : '';
 
-      const targetFocusInstruction = `FONTOS: A csatolt fotó a vizsgált céltermék valós fotója. A fotó pixelei (sziluett, gallér, ujjak, szabás, textúra, valódi szín) az abszolút elsődleges forrás a darab azonosításához!
-- Ha a fotón póló, ing vagy pulóver látható, a kategória KÖTELEZŐEN 'tops' vagy 'knitwear' (soha ne téveszd össze nadrággal)!
-- Ha a fotón nadrág vagy farmer látható, a kategória 'bottoms'.
-- Ha zakó vagy kabát, a kategória 'outerwear'.
-- A valódi színt közvetlenül a fotón látható árnyalatból állapítsd meg!`;
+      const targetFocusInstruction = `FONTOS:
+- Ha csatolva van valós fotó, a fotó pixelei az elsődlegesek.
+- Ha webshop terméklink vagy termékkód van megadva (pl. Next Direct, Zara, Reserved, H&M, Massimo Dutti), a Google és divat-tudásbázisod alapján azonosítsd a konkrét terméket, annak pontos anyagát, színét, kategóriáját és szabását!`;
 
       const prompt = `Te egy világklasszis professzionális személyi stylist, divattanácsadó és ruhatár-tervező vagy.
-Elemezd a csatolt képen látható ruhadarabot részletesen és szakértő szemmel!
+Elemezd a megadott ruhadarabot / webshop terméket részletesen és szakértő szemmel!
 
 ${targetFocusInstruction}
-${webshopTextInfo ? `\n--- HIVATALOS WEBSHOP ADATOK ---\n${webshopTextInfo}\n` : ''}
+${webshopTextInfo ? `\n--- WEBSHOP TERMÉKADATOK ÉS LINK ---\n${webshopTextInfo}\n` : ''}
+${userProfileInfo}`;fo ? `\n--- HIVATALOS WEBSHOP ADATOK ---\n${webshopTextInfo}\n` : ''}
 ${userProfileInfo}
 
 SZABÁLYOK:
