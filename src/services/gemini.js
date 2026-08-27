@@ -199,7 +199,6 @@ Elemezd a megadott ruhadarabot / webshop terméket részletesen és szakértő s
 
 ${targetFocusInstruction}
 ${webshopTextInfo ? `\n--- WEBSHOP TERMÉKADATOK ÉS LINK ---\n${webshopTextInfo}\n` : ''}
-${userProfileInfo}`;fo ? `\n--- HIVATALOS WEBSHOP ADATOK ---\n${webshopTextInfo}\n` : ''}
 ${userProfileInfo}
 
 SZABÁLYOK:
