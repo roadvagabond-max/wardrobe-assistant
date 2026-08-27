@@ -15,7 +15,7 @@ import { fetchCurrentWeather } from './services/weather';
 import { useAuth } from './context/AuthContext';
 
 export default function App() {
-  const { addItem } = useAuth();
+  const { wardrobe, addItem } = useAuth();
   const [activeTab, setActiveTab] = useState('wardrobe');
   const [weather, setWeather] = useState(null);
 
