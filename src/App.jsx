@@ -103,7 +103,7 @@ export default function App() {
       />
 
       <ItemDetailModal
-        item={selectedItem ? (wardrobe.find(w => w.id === selectedItem.id) || selectedItem) : null}
+        item={selectedItem ? ((wardrobe || []).find(w => w?.id === selectedItem?.id) || selectedItem) : null}
         onClose={() => setSelectedItem(null)}
         onPlanWithItem={handlePlanWithItem}
       />

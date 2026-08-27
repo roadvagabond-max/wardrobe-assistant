@@ -135,7 +135,7 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
             <span className="badge badge-gold">
               {item.formality || 'Smart Casual'}
             </span>
-            {item.condition && (
+            {item.condition && typeof item.condition === 'string' && (
               <span className={`badge ${
                 item.condition.includes('Lecserélendő') || item.condition.includes('Javításra')
                   ? 'badge-rose'
@@ -445,7 +445,7 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
                   Szezonalitás:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {item.season?.map((s, idx) => (
+                  {(Array.isArray(item.season) ? item.season : [item.season].filter(Boolean)).map((s, idx) => (
                     <span key={idx} className="badge badge-subtle capitalize text-[11px]">
                       {s === 'tavasz' ? '🌸 Tavasz' : s === 'nyar' ? '☀️ Nyár' : s === 'osz' ? '🍂 Ősz' : '❄️ Tél'}
                     </span>
@@ -454,13 +454,13 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
               </div>
 
               {/* Tags */}
-              {item.tags && item.tags.length > 0 && (
+              {item.tags && (
                 <div>
                   <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider block mb-1.5 font-bold">
                     Címkék:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {item.tags.map((tag, idx) => (
+                    {(Array.isArray(item.tags) ? item.tags : [item.tags].filter(Boolean)).map((tag, idx) => (
                       <span key={idx} className="badge badge-gold text-[10px]">
                         #{tag}
                       </span>
