@@ -212,8 +212,11 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     try {
       const aiResult = await analyzeClothingImage(imgSource, webshopContext, profile);
       if (aiResult) {
-        // Auto-assign high quality packshot image if none was provided from photo
-        if (!imgSource) {
+        // Intelligent image assignment: Grounded Google Search image -> Smart category packshot
+        if (aiResult.imageUrl && typeof aiResult.imageUrl === 'string' && aiResult.imageUrl.startsWith('http')) {
+          setImagePreview(aiResult.imageUrl);
+          setAvailableImages([aiResult.imageUrl]);
+        } else if (!imgSource) {
           const autoImg = getSmartGarmentImage(aiResult.category, aiResult.color, aiResult.subCategory);
           setImagePreview(autoImg);
           setAvailableImages([autoImg]);

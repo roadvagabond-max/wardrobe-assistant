@@ -235,6 +235,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "bodyFitAdvice": "Hogyan áll a szabás a felhasználó testalkatán",
   "stylingAdvice": "Karakteres, sokoldalú darab.",
   "personalMatchScore": 95,
+  "imageUrl": "Ha a Google Keresési találatokban találsz közvetlen termékfotó URL-t, add meg, különben hagyd üresen",
   "tags": ["alapdarab", "pamut", "nyári"]
 }`;
 

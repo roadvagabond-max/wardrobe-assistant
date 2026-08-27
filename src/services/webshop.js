@@ -125,8 +125,8 @@ export function parseWebshopUrlOrCode(rawInput) {
       parsed.brand = 'Next Direct';
       parsed.productCode = codeUpper;
       parsed.title = `Next Termék (#${hyphenCode || codeUpper})`;
-      parsed.imageUrl = `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${codeUpper}.jpg`;
-      parsed.images = [parsed.imageUrl];
+      parsed.imageUrl = '';
+      parsed.images = [];
       return parsed;
     }
 
@@ -185,8 +185,8 @@ export function parseWebshopUrlOrCode(rawInput) {
       if (codeUpper || styleUpper) {
         parsed.productCode = codeUpper || styleUpper;
         parsed.title = `Next Termék (#${hyphenCode || codeUpper || styleUpper})`;
-        parsed.imageUrl = `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${codeUpper || styleUpper}.jpg`;
-        parsed.images = [parsed.imageUrl];
+        parsed.imageUrl = '';
+        parsed.images = [];
       }
     }
 
