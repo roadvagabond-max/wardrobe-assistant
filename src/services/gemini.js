@@ -18,9 +18,73 @@ const GEMINI_MODELS = [
 let activeFastModel = null;
 
 /**
- * Universal Gemini API caller with fast-timeout fallback and JSON parser
+ * Robust, self-healing JSON parser for AI outputs
+ * Handles markdown backticks, trailing commas, unclosed brackets, and truncated JSON arrays.
  */
-async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens = 1000, temperature = 0.1 }) {
+function safeParseJson(rawText) {
+  if (!rawText || typeof rawText !== 'string') return null;
+
+  // 1. Remove markdown fences
+  let clean = rawText
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  // Try direct parse first
+  try {
+    return JSON.parse(clean);
+  } catch (_) {}
+
+  // 2. Extract JSON structure via regex
+  const jsonMatch = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch (_) {
+      clean = jsonMatch[0];
+    }
+  }
+
+  // 3. Attempt Self-Healing for Truncated JSON (e.g. cut off near end of token limit)
+  try {
+    // If it started as an array
+    if (clean.trim().startsWith('[')) {
+      // Find last completely closed object '}'
+      const lastClosedObjIndex = clean.lastIndexOf('}');
+      if (lastClosedObjIndex !== -1) {
+        const repairedArray = clean.slice(0, lastClosedObjIndex + 1) + ']';
+        return JSON.parse(repairedArray);
+      }
+    }
+
+    // If it started as an object
+    if (clean.trim().startsWith('{')) {
+      let openBrackets = (clean.match(/\{/g) || []).length;
+      let closeBrackets = (clean.match(/\}/g) || []).length;
+      let repairedObj = clean;
+      
+      // Close open string quotes if odd count
+      const quoteCount = (repairedObj.match(/"/g) || []).length;
+      if (quoteCount % 2 !== 0) repairedObj += '"';
+
+      while (openBrackets > closeBrackets) {
+        repairedObj += '}';
+        closeBrackets++;
+      }
+      return JSON.parse(repairedObj);
+    }
+  } catch (healErr) {
+    console.warn('JSON self-healing nem sikerült:', healErr);
+  }
+
+  throw new Error(`Nem sikerült érvényes JSON-t olvasni az AI válaszból.`);
+}
+
+/**
+ * Universal Gemini API caller with fast-timeout fallback and robust JSON parsing
+ */
+async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens = 2500, temperature = 0.15 }) {
   let lastError = null;
 
   // Prioritize previously successful model for ultra-fast zero-latency calls
@@ -30,7 +94,7 @@ async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens =
 
   for (const model of modelsToTry) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5500); // 5.5s timeout per attempt
+    const timeoutId = setTimeout(() => controller.abort(), 8500); // 8.5s timeout
 
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -64,24 +128,27 @@ async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens =
         const data = await response.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (rawText) {
-          const jsonMatch = rawText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-          const cleaned = jsonMatch ? jsonMatch[0] : rawText
-            .replace(/^```json\s*/i, '')
-            .replace(/^```\s*/i, '')
-            .replace(/\s*```$/i, '')
-            .trim();
-          
-          activeFastModel = model; // Cache this working fast model
-          return JSON.parse(cleaned);
+          const parsed = safeParseJson(rawText);
+          if (parsed) {
+            activeFastModel = model; // Cache this working model
+            return parsed;
+          }
         }
       } else {
         const errBody = await response.text();
         console.warn(`Gemini (${model}) státusz: ${response.status}`, errBody);
+        
+        // If 503 or 429, invalidate activeFastModel cache so next call doesn't hit it first
+        if (response.status === 503 || response.status === 429) {
+          activeFastModel = null;
+        }
+
         lastError = new Error(`Gemini API hiba (${response.status}): ${errBody.slice(0, 180)}`);
       }
     } catch (e) {
       clearTimeout(timeoutId);
-      console.warn(`Hiba vagy időtúllépés a(z) ${model} modellel:`, e.name === 'AbortError' ? 'Időtúllépés (>5.5s)' : e.message);
+      console.warn(`Hiba vagy időtúllépés a(z) ${model} modellel:`, e.name === 'AbortError' ? 'Időtúllépés (>8.5s)' : e.message);
+      activeFastModel = null;
       lastError = e;
     }
   }
