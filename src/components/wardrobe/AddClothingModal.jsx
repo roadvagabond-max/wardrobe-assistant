@@ -169,17 +169,10 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       const webshopData = await extractWebshopData(webshopUrl.trim());
       const chosenImage = webshopData.imageUrl || (webshopData.images && webshopData.images[0]) || '';
       
-      let base64Img = '';
       if (chosenImage) {
-        try {
-          base64Img = await ensureBase64Image(chosenImage);
-        } catch (_) {
-          console.warn('CDN kép nem volt konvertálható Base64-re:', chosenImage);
-        }
+        setImagePreview(chosenImage);
+        setAvailableImages([chosenImage]);
       }
-
-      setImagePreview(base64Img || chosenImage || null);
-      setAvailableImages((webshopData.images || [chosenImage]).filter(Boolean));
 
       // Pre-set extracted metadata immediately
       if (webshopData.title) {
@@ -190,7 +183,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
         }));
       }
 
-      await triggerAIAnalysis(base64Img || chosenImage || null, webshopData);
+      await triggerAIAnalysis(null, webshopData);
     } catch (err) {
       console.error('Webshop link hiba:', err);
       setAnalysisError(err.message || 'Nem sikerült minden adatot kinyerni. A terméket fotóval vagy kézi kitöltéssel is rögzítheted!');
