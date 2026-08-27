@@ -2,7 +2,7 @@
 import { ensureBase64Image } from './imageOptimizer';
 
 const getGeminiApiKey = () => {
-  return import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || '';
+  return import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || 'AQ.Ab8RN6KI92lORSWUYkyTduRjayE_470SGe4rkmFWdAT5a29NsA';
 };
 
 export const isGeminiConfigured = () => Boolean(getGeminiApiKey());
