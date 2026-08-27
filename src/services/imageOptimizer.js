@@ -98,3 +98,73 @@ function optimizeBase64String(dataUrl, maxWidth, maxHeight, quality) {
 }
 
 export const optimizeImageForUpload = ensureBase64Image;
+
+/**
+ * Intelligent Fallback & Default Garment Photography Engine
+ * Provides authentic, high-resolution sartorial packshots matching the garment category and color tone.
+ */
+export function getSmartGarmentImage(category = 'outerwear', colorName = 'bézs', subCategory = '') {
+  const normColor = (colorName || '').toLowerCase();
+  const normCat = (category || '').toLowerCase();
+
+  const CATALOG = {
+    outerwear: {
+      sand: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=640&q=80',
+      beige: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=640&q=80',
+      navy: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=640&q=80',
+      blue: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=640&q=80',
+      black: 'https://images.unsplash.com/photo-1555069519-127aadedf1ee?w=640&q=80',
+      grey: 'https://images.unsplash.com/photo-1598808503746-f34c53b9323e?w=640&q=80',
+      brown: 'https://images.unsplash.com/photo-1548883354-7622d03aca27?w=640&q=80',
+      default: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=640&q=80'
+    },
+    tops: {
+      white: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=640&q=80',
+      blue: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=640&q=80',
+      navy: 'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=640&q=80',
+      black: 'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=640&q=80',
+      beige: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=640&q=80',
+      default: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=640&q=80'
+    },
+    knitwear: {
+      grey: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=640&q=80',
+      black: 'https://images.unsplash.com/photo-1620799139834-6b8f844fbe61?w=640&q=80',
+      beige: 'https://images.unsplash.com/photo-1584273143981-41c073dfe8f8?w=640&q=80',
+      navy: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=640&q=80',
+      default: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=640&q=80'
+    },
+    bottoms: {
+      sand: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80',
+      beige: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80',
+      navy: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=640&q=80',
+      blue: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=640&q=80',
+      grey: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=640&q=80',
+      black: 'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?w=640&q=80',
+      default: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80'
+    },
+    shoes: {
+      brown: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=640&q=80',
+      black: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=640&q=80',
+      white: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=640&q=80',
+      default: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=640&q=80'
+    },
+    accessories: {
+      brown: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=640&q=80',
+      black: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=640&q=80',
+      default: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=640&q=80'
+    }
+  };
+
+  const catDict = CATALOG[normCat] || CATALOG.outerwear;
+
+  if (normColor.includes('homok') || normColor.includes('sand')) return catDict.sand || catDict.beige || catDict.default;
+  if (normColor.includes('bézs') || normColor.includes('beige') || normColor.includes('krém') || normColor.includes('ecru')) return catDict.beige || catDict.default;
+  if (normColor.includes('navy') || normColor.includes('sötétkék')) return catDict.navy || catDict.blue || catDict.default;
+  if (normColor.includes('kék') || normColor.includes('blue')) return catDict.blue || catDict.navy || catDict.default;
+  if (normColor.includes('fekete') || normColor.includes('black')) return catDict.black || catDict.default;
+  if (normColor.includes('szürke') || normColor.includes('grey') || normColor.includes('gray')) return catDict.grey || catDict.default;
+  if (normColor.includes('fehér') || normColor.includes('white')) return catDict.white || catDict.default;
+  if (normColor.includes('barna') || normColor.includes('brown')) return catDict.brown || catDict.default;
+
+  return catDict.default;
+}

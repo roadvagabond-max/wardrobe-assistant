@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus, Heart, HelpCircle } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
-import { ensureBase64Image } from '../../services/imageOptimizer';
+import { ensureBase64Image, getSmartGarmentImage } from '../../services/imageOptimizer';
 import ColorPalettePicker from '../common/ColorPalettePicker';
 import { useAuth } from '../../context/AuthContext';
 
@@ -85,6 +85,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
+  const attachPhotoInputRef = useRef(null);
   const stylingTipRef = useRef(null);
   const whenToWearRef = useRef(null);
 
@@ -197,12 +198,34 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     }
   };
 
+  const handleAttachPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsAnalyzing(true);
+      const optimized = await ensureBase64Image(file);
+      setImagePreview(optimized);
+      setAvailableImages([optimized]);
+    } catch (err) {
+      console.error('Fotó csatolási hiba:', err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const triggerAIAnalysis = async (imgSource, webshopContext = {}) => {
     setIsAnalyzing(true);
     setAnalysisError(null);
     try {
       const aiResult = await analyzeClothingImage(imgSource, webshopContext, profile);
       if (aiResult) {
+        // Auto-assign high quality packshot image if none was provided from photo
+        if (!imgSource) {
+          const autoImg = getSmartGarmentImage(aiResult.category, aiResult.color, aiResult.subCategory);
+          setImagePreview(autoImg);
+          setAvailableImages([autoImg]);
+        }
+
         setFormData(prev => ({
           ...prev,
           name: aiResult.name || webshopContext.title || prev.name || 'Új Ruhadarab',
@@ -456,23 +479,41 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
         ) : (
           /* Preview and AI Result Form */
           <form onSubmit={handleSave} className="space-y-5">
+            <input 
+              type="file" 
+              accept="image/*" 
+              ref={attachPhotoInputRef} 
+              onChange={handleAttachPhoto} 
+              className="hidden" 
+            />
             
             {/* 1. Proportional Image Preview or Recognized Item Card */}
             <div className="space-y-2">
               <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-4 flex flex-col items-center justify-center">
                 {imagePreview ? (
-                  <img 
-                    src={imagePreview} 
-                    alt="Preview" 
-                    onError={() => {
-                      setAvailableImages(prev => {
-                        const remaining = prev.filter(img => img !== imagePreview);
-                        setImagePreview(remaining.length > 0 ? remaining[0] : null);
-                        return remaining;
-                      });
-                    }}
-                    className="max-h-full max-w-full object-contain rounded-xl shadow-lg transition-all" 
-                  />
+                  <>
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      onError={() => {
+                        setAvailableImages(prev => {
+                          const remaining = prev.filter(img => img !== imagePreview);
+                          setImagePreview(remaining.length > 0 ? remaining[0] : null);
+                          return remaining;
+                        });
+                      }}
+                      className="max-h-full max-w-full object-contain rounded-xl shadow-lg transition-all" 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => attachPhotoInputRef.current?.click()}
+                      className="absolute bottom-3 right-3 btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5 bg-black/80 backdrop-blur-md hover:bg-black border border-white/20 shadow-lg"
+                      title="Saját fotó készítése vagy feltöltése"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                      <span>Saját fotó csatolása</span>
+                    </button>
+                  </>
                 ) : (
                   <div className="text-center p-4 space-y-2">
                     <div 
@@ -492,7 +533,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                     </p>
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => attachPhotoInputRef.current?.click()}
                       className="btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5 mx-auto mt-2"
                     >
                       <Camera className="w-3.5 h-3.5" />

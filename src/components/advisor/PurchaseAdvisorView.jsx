@@ -3,7 +3,7 @@ import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
-import { optimizeImageForUpload } from '../../services/imageOptimizer';
+import { optimizeImageForUpload, getSmartGarmentImage } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
 
 export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
@@ -90,6 +90,14 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
         wardrobe,
         styleProfile: profile
       });
+
+      if (result?.item) {
+        if (!imagePreview) {
+          const autoImg = getSmartGarmentImage(result.item.category, result.item.color, result.item.subCategory);
+          setImagePreview(autoImg);
+          result.item.imageUrl = autoImg;
+        }
+      }
 
       setEvaluationResult(result);
 
