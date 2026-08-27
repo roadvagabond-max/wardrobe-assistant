@@ -46,7 +46,7 @@ function isBotBlockedOrError(text = '') {
 /**
  * Helper to test which candidate CDN image loads successfully in browser
  */
-export function findFirstWorkingImageUrl(candidateUrls = [], timeoutMs = 2500) {
+export function findFirstWorkingImageUrl(candidateUrls = [], timeoutMs = 1500) {
   if (!candidateUrls || candidateUrls.length === 0) return Promise.resolve(null);
 
   const validUrls = candidateUrls.filter(Boolean).filter(u => !isFaviconOrLogo(u));
@@ -59,14 +59,14 @@ export function findFirstWorkingImageUrl(candidateUrls = [], timeoutMs = 2500) {
     const timer = setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        resolve(validUrls[0] || null);
+        resolve(null); // Resolve null if none loaded in time
       }
     }, timeoutMs);
 
     validUrls.forEach((url) => {
       const img = new Image();
       img.onload = () => {
-        if (!resolved && img.naturalWidth > 50 && img.naturalHeight > 50) {
+        if (!resolved && img.naturalWidth > 40 && img.naturalHeight > 40) {
           resolved = true;
           clearTimeout(timer);
           resolve(url);
@@ -77,7 +77,7 @@ export function findFirstWorkingImageUrl(candidateUrls = [], timeoutMs = 2500) {
         if (pendingCount <= 0 && !resolved) {
           resolved = true;
           clearTimeout(timer);
-          resolve(validUrls[0] || null);
+          resolve(null); // All failed, resolve null instead of a broken 404 URL
         }
       };
       img.src = url;
@@ -104,27 +104,40 @@ export function parseWebshopUrlOrCode(rawInput) {
 
   const isUrl = input.startsWith('http://') || input.startsWith('https://') || input.includes('.com') || input.includes('.hu') || input.includes('.co.uk');
 
-  // Case A: RAW PRODUCT CODE / SKU INPUT (e.g. "AA6536", "SU458397", "Next AA6536", "512HR-09M", "01887411")
+  // Case A: RAW PRODUCT CODE / SKU INPUT (e.g. "AA6536", "SU458397", "Y05725", "Y05-725", "512HR-09M")
   if (!isUrl) {
     parsed.isDirectCode = true;
     const clean = input.replace(/^(next|zara|reserved|h&m|hm|massimo)\s+/i, '').trim();
 
-    // 1. Next Direct Pattern (e.g. "AA6536", "SU458397", "U38123", "123-456", "123456")
-    if (/^([a-zA-Z]{1,3}[0-9]{3,7}|[0-9]{3,4}-?[0-9]{3,4})$/i.test(clean) || /next/i.test(input)) {
+    // 1. Next Direct Pattern (e.g. "AA6536", "Y05725", "Y05-725", "SU458397", "123456")
+    if (/^([a-zA-Z]{1,3}[0-9]{3,7}|[a-zA-Z]{1,2}[0-9]{2}-?[0-9]{3,4}|[0-9]{3,4}-?[0-9]{3,4})$/i.test(clean) || /next/i.test(input)) {
       const codeUpper = clean.toUpperCase().replace(/[^A-Z0-9]/g, '');
       const codeLower = codeUpper.toLowerCase();
+      
+      // Handle hyphenated pattern (e.g. Y05-725)
+      let hyphenCode = '';
+      if (/^[A-Z][0-9]{5}$/.test(codeUpper)) {
+        hyphenCode = `${codeUpper.slice(0, 3)}-${codeUpper.slice(3)}`;
+      } else if (clean.includes('-')) {
+        hyphenCode = clean.toUpperCase();
+      }
+
       parsed.brand = 'Next Direct';
       parsed.productCode = codeUpper;
-      parsed.title = `Next Termék (#${codeUpper})`;
-      parsed.images = [
+      parsed.title = `Next Termék (#${hyphenCode || codeUpper})`;
+      
+      const nextCandidateImages = [
+        hyphenCode ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${hyphenCode}.jpg` : '',
+        hyphenCode ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${hyphenCode}.jpg` : '',
         `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${codeUpper}.jpg`,
         `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${codeUpper}.jpg`,
         `https://xcdn.next.co.uk/common/items/default/default/itemimages/altitemshot/315x472/${codeLower}.jpg`,
         `https://xcdn.next.co.uk/common/items/default/default/itemimages/search/224x336/${codeLower}.jpg`,
-        `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${codeUpper}s.jpg`,
-        `https://xcdn.next.co.uk/common/items/default/default/itemimages/altitemshot/315x472/${codeLower}s.jpg`
-      ];
-      parsed.imageUrl = parsed.images[0];
+        `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${codeUpper}s.jpg`
+      ].filter(Boolean);
+
+      parsed.images = nextCandidateImages;
+      parsed.imageUrl = '';
       return parsed;
     }
 
@@ -148,7 +161,7 @@ export function parseWebshopUrlOrCode(rawInput) {
     return parsed;
   }
 
-  // Case B: FULL WEB URL INPUT
+  // Case B: FULL WEB URL INPUT (e.g. https://www.nextdirect.com/hu/en/style/su770039/y05725)
   try {
     const fullUrl = input.startsWith('http') ? input : `https://${input}`;
     const urlObj = new URL(fullUrl);
@@ -171,21 +184,25 @@ export function parseWebshopUrlOrCode(rawInput) {
       const styleUpper = styleCandidate.toUpperCase();
       const styleLower = styleCandidate.toLowerCase();
 
-      if (codeUpper) {
-        parsed.productCode = codeUpper;
-        parsed.title = `Next Termék (#${codeUpper})`;
+      let hyphenCode = '';
+      if (/^[A-Z][0-9]{5}$/.test(codeUpper)) {
+        hyphenCode = `${codeUpper.slice(0, 3)}-${codeUpper.slice(3)}`;
+      }
+
+      if (codeUpper || styleUpper) {
+        parsed.productCode = codeUpper || styleUpper;
+        parsed.title = `Next Termék (#${hyphenCode || codeUpper || styleUpper})`;
         
         parsed.images = [
+          hyphenCode ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${hyphenCode}.jpg` : '',
+          hyphenCode ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${hyphenCode}.jpg` : '',
           `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${codeUpper}.jpg`,
           `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/Search/224x336/${codeUpper}.jpg`,
           `https://xcdn.next.co.uk/common/items/default/default/itemimages/altitemshot/315x472/${codeLower}.jpg`,
-          `https://xcdn.next.co.uk/common/items/default/default/itemimages/search/224x336/${codeLower}.jpg`,
-          `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${codeUpper}s.jpg`,
-          `https://xcdn.next.co.uk/common/items/default/default/itemimages/altitemshot/315x472/${codeLower}s.jpg`,
           styleUpper ? `https://xcdn.next.co.uk/COMMON/Items/Default/Default/ItemImages/AltItemShot/315x472/${styleUpper}.jpg` : '',
           styleLower ? `https://xcdn.next.co.uk/common/items/default/default/itemimages/altitemshot/315x472/${styleLower}.jpg` : ''
         ].filter(Boolean);
-        parsed.imageUrl = parsed.images[0];
+        parsed.imageUrl = '';
       }
     }
 
