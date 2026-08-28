@@ -212,9 +212,12 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
     >
-      <div className="relative glass-card max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 border-[var(--border-gold)] space-y-5 my-auto animate-scale-up">
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg bg-[#0e121a] border border-[var(--border-gold)] rounded-2xl shadow-2xl p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto animate-scale-up"
+      >
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-white/10">

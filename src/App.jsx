@@ -102,11 +102,13 @@ export default function App() {
         onAddClothing={(item) => addItem(item)}
       />
 
-      <ItemDetailModal
-        item={selectedItem ? ((wardrobe || []).find(w => w?.id === selectedItem?.id) || selectedItem) : null}
-        onClose={() => setSelectedItem(null)}
-        onPlanWithItem={handlePlanWithItem}
-      />
+      {selectedItem && (
+        <ItemDetailModal
+          item={(wardrobe || []).find(w => w?.id === selectedItem?.id) || selectedItem}
+          onClose={() => setSelectedItem(null)}
+          onPlanWithItem={handlePlanWithItem}
+        />
+      )}
 
       <AuthModal
         isOpen={isAuthModalOpen}
