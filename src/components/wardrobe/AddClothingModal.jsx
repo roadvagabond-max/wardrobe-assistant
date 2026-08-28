@@ -300,7 +300,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
         }));
       }
 
-      await triggerAIAnalysis(null, webshopData);
+      await triggerAIAnalysis(chosenImage || null, webshopData);
     } catch (err) {
       console.error('Webshop link hiba:', err);
       setAnalysisError(err.message || 'Nem sikerült minden adatot kinyerni. A terméket fotóval vagy kézi kitöltéssel is rögzítheted!');

@@ -109,24 +109,37 @@ export function parseWebshopUrlOrCode(rawInput) {
     parsed.isDirectCode = true;
     const clean = input.replace(/^(next|zara|reserved|h&m|hm|massimo)\s+/i, '').trim();
 
-    // 1. Next Direct Pattern (e.g. "AA6536", "Y05725", "Y05-725", "SU458397", "123456")
+    // 1. Next Direct Pattern (e.g. "AA1939", "AA1-939", "AA6536", "Y05725", "Y05-725", "SU458397", "123456")
     if (/^([a-zA-Z]{1,3}[0-9]{3,7}|[a-zA-Z]{1,2}[0-9]{2}-?[0-9]{3,4}|[0-9]{3,4}-?[0-9]{3,4})$/i.test(clean) || /next/i.test(input)) {
       const codeUpper = clean.toUpperCase().replace(/[^A-Z0-9]/g, '');
-      const codeLower = codeUpper.toLowerCase();
       
-      // Handle hyphenated pattern (e.g. Y05-725)
+      // Handle hyphenated pattern (e.g. AA1-939, Y05-725)
       let hyphenCode = '';
-      if (/^[A-Z][0-9]{5}$/.test(codeUpper)) {
+      if (/^[A-Z]{1,2}[0-9]{4,6}$/.test(codeUpper)) {
         hyphenCode = `${codeUpper.slice(0, 3)}-${codeUpper.slice(3)}`;
       } else if (clean.includes('-')) {
         hyphenCode = clean.toUpperCase();
       }
 
+      const finalCode = hyphenCode || codeUpper;
       parsed.brand = 'Next Direct';
-      parsed.productCode = codeUpper;
-      parsed.title = `Next Termék (#${hyphenCode || codeUpper})`;
+      parsed.productCode = finalCode;
+      parsed.title = `Next Termék (#${finalCode})`;
+      
+      const candidateImages = [
+        `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${codeUpper}s.jpg`,
+        `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${codeUpper}.jpg`,
+        `https://xcdn.next.co.uk/common/items/alt/default/itemimages/3_4Ratio/product/large/${codeUpper}s.jpg`,
+        `https://xcdn.next.co.uk/common/items/alt/default/itemimages/3_4Ratio/product/large/${codeUpper}.jpg`
+      ];
+      if (hyphenCode) {
+        candidateImages.push(
+          `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${hyphenCode}s.jpg`,
+          `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${hyphenCode}.jpg`
+        );
+      }
+      parsed.images = candidateImages;
       parsed.imageUrl = '';
-      parsed.images = [];
       return parsed;
     }
 
@@ -156,15 +169,15 @@ export function parseWebshopUrlOrCode(rawInput) {
     return parsed;
   }
 
-  // Case B: FULL WEB URL INPUT (e.g. https://www.nextdirect.com/hu/en/style/su770039/y05725)
+  // Case B: FULL WEB URL INPUT (e.g. https://www.next.de/en/style/su415329/aa1939, https://www.nextdirect.com/hu/en/style/su770039/y05725)
   try {
     const fullUrl = input.startsWith('http') ? input : `https://${input}`;
     const urlObj = new URL(fullUrl);
     const host = urlObj.hostname.toLowerCase();
     const pathname = urlObj.pathname;
 
-    // 1. Next Direct / Next UK / Next Hungary
-    if (host.includes('nextdirect') || host.includes('next.co.uk') || host.includes('next.hu')) {
+    // 1. Next Direct / Next UK / Next Germany / Next Hungary / All Next domains
+    if (/next(direct)?\.(com|co\.uk|de|hu|at|fr|it|es|pl|lu|ie|ch|nl|eu)/i.test(host) || host.includes('next.')) {
       parsed.brand = 'Next Direct';
       const segments = pathname.split('/').filter(Boolean);
       
@@ -178,15 +191,38 @@ export function parseWebshopUrlOrCode(rawInput) {
       const styleUpper = styleCandidate.toUpperCase();
 
       let hyphenCode = '';
-      if (/^[A-Z][0-9]{5}$/.test(codeUpper)) {
+      if (/^[A-Z]{1,2}[0-9]{4,6}$/.test(codeUpper)) {
         hyphenCode = `${codeUpper.slice(0, 3)}-${codeUpper.slice(3)}`;
       }
 
+      const finalCode = hyphenCode || codeUpper || styleUpper;
       if (codeUpper || styleUpper) {
-        parsed.productCode = codeUpper || styleUpper;
-        parsed.title = `Next Termék (#${hyphenCode || codeUpper || styleUpper})`;
+        parsed.productCode = finalCode;
+        parsed.title = `Next Termék (#${finalCode})`;
+        
+        const candidateImages = [];
+        if (codeUpper) {
+          candidateImages.push(
+            `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${codeUpper}s.jpg`,
+            `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${codeUpper}.jpg`,
+            `https://xcdn.next.co.uk/common/items/alt/default/itemimages/3_4Ratio/product/large/${codeUpper}s.jpg`,
+            `https://xcdn.next.co.uk/common/items/alt/default/itemimages/3_4Ratio/product/large/${codeUpper}.jpg`
+          );
+        }
+        if (hyphenCode) {
+          candidateImages.push(
+            `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${hyphenCode}s.jpg`,
+            `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${hyphenCode}.jpg`
+          );
+        }
+        if (styleUpper) {
+          candidateImages.push(
+            `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${styleUpper}s.jpg`,
+            `https://xcdn.next.co.uk/common/items/default/default/itemimages/3_4Ratio/product/large/${styleUpper}.jpg`
+          );
+        }
+        parsed.images = candidateImages;
         parsed.imageUrl = '';
-        parsed.images = [];
       }
     }
 
@@ -362,14 +398,24 @@ export async function extractWebshopData(rawInput = '') {
   const parsed = parseWebshopUrlOrCode(cleanInput);
   const normalizedBrand = normalizeBrandName(parsed.brand);
 
+  let verifiedImageUrl = parsed.imageUrl || '';
+  if (!verifiedImageUrl && parsed.images && parsed.images.length > 0) {
+    try {
+      const working = await findFirstWorkingImageUrl(parsed.images, 1200);
+      if (working) {
+        verifiedImageUrl = working;
+      }
+    } catch (_) {}
+  }
+
   return {
-    imageUrl: parsed.imageUrl || '',
+    imageUrl: verifiedImageUrl,
     images: parsed.images || [],
     title: parsed.title || '',
     description: '',
     brand: normalizedBrand || parsed.brand || '',
     productCode: parsed.productCode || '',
     rawInput: cleanInput,
-    rawText: `Márka: ${normalizedBrand || parsed.brand || 'Webshop'}, Cikkszám / Termékkód: ${parsed.productCode || cleanInput}, Eredeti link: ${cleanInput}`
+    rawText: `Márka: ${normalizedBrand || parsed.brand || 'Webshop'}, Cikkszám / Termékkód (SKU): ${parsed.productCode || cleanInput}, Eredeti link: ${cleanInput}`
   };
 }

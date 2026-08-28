@@ -47,15 +47,26 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
     styleArchetype: item?.styleArchetype || 'Klasszikus & Időtlen',
     condition: item?.condition || 'Megkímélt / Kiváló',
     qualityScore: item?.qualityScore || 9.0,
-    season: item?.season || ['tavasz', 'osz'],
+    season: Array.isArray(item?.season) ? item.season : [item?.season].filter(Boolean).length > 0 ? [item.season] : ['tavasz', 'osz'],
     stylingTip: item?.stylingTip || '',
     whenToWear: item?.whenToWear || '',
     stylingAdvice: item?.stylingAdvice || '',
-    tags: item?.tags || [],
+    tags: Array.isArray(item?.tags) ? item.tags : [item?.tags].filter(Boolean),
     imageUrl: item?.imageUrl || ''
   });
 
   const photoInputRef = useRef(null);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   // Sync editData when item prop changes
   useEffect(() => {
@@ -73,11 +84,11 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
         styleArchetype: item.styleArchetype || 'Klasszikus & Időtlen',
         condition: item.condition || 'Megkímélt / Kiváló',
         qualityScore: item.qualityScore || 9.0,
-        season: item.season || ['tavasz', 'osz'],
+        season: Array.isArray(item.season) ? item.season : [item.season].filter(Boolean).length > 0 ? [item.season] : ['tavasz', 'osz'],
         stylingTip: item.stylingTip || '',
         whenToWear: item.whenToWear || '',
         stylingAdvice: item.stylingAdvice || '',
-        tags: item.tags || [],
+        tags: Array.isArray(item.tags) ? item.tags : [item.tags].filter(Boolean),
         imageUrl: item.imageUrl || ''
       });
     }
@@ -106,10 +117,11 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
 
   const handleSeasonToggle = (s) => {
     setEditData(prev => {
-      const exists = prev.season.includes(s);
+      const seasonArr = Array.isArray(prev.season) ? prev.season : [prev.season].filter(Boolean);
+      const exists = seasonArr.includes(s);
       return {
         ...prev,
-        season: exists ? prev.season.filter(x => x !== s) : [...prev.season, s]
+        season: exists ? seasonArr.filter(x => x !== s) : [...seasonArr, s]
       };
     });
   };
@@ -196,7 +208,12 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+    <div 
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+    >
       <div className="relative glass-card max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 border-[var(--border-gold)] space-y-5 my-auto animate-scale-up">
         
         {/* Header */}
@@ -446,7 +463,20 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
           <>
             {/* Large Image (Uncropped, Proportional) */}
             <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
-              <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain rounded-lg shadow-md" />
+              {item.imageUrl ? (
+                <img 
+                  src={item.imageUrl} 
+                  alt={item.name || 'Ruhadarab'} 
+                  loading="lazy" 
+                  decoding="async" 
+                  className="max-h-full max-w-full object-contain rounded-lg shadow-md" 
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-white/40">
+                  <Tag className="w-12 h-12 text-[var(--accent-gold)]/40" />
+                  <span className="text-xs text-[var(--text-muted)]">Nincs előnézeti fotó</span>
+                </div>
+              )}
               {item.qualityScore && (
                 <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/85 backdrop-blur-md border border-[var(--border-gold)] text-xs font-bold text-amber-300 flex items-center gap-1.5 shadow-lg">
                   <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
