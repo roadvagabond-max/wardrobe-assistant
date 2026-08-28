@@ -210,9 +210,12 @@ Preferált stílusok: ${JSON.stringify(userProfile.preferredStyles || [])}
 Kedvenc színek: ${JSON.stringify(userProfile.favoriteColors || [])}
 ` : '';
 
-      const targetFocusInstruction = `FONTOS:
-- Ha csatolva van valós fotó, a fotó pixelei az elsődlegesek.
-- Ha webshop terméklink vagy termékkód van megadva (pl. Next Direct, Zara, Reserved, H&M, Massimo Dutti), a Google és divat-tudásbázisod alapján azonosítsd a konkrét terméket, annak pontos anyagát, színét, kategóriáját és szabását!`;
+      const targetFocusInstruction = `SZIGORÚ ANTI-HALLUCINÁCIÓS SZABÁLYOK:
+1. Ha van csatolva valós fotó, a fotó vizuális adatai (szín, anyag, típus) 100%-ban meghatározóak.
+2. Ha nincs fotó, de meg van adva ismert márka és hivatalos cikkszám (pl. Next Direct #AA1-939 / SU415329, Zara, Reserved), pontosan azonosítsd a terméket a valós leírása alapján.
+3. HA NINCS FOTÓ ÉS A WEBSHOP LINK/BEMENET ALAPJÁN A TERMÉK NEM AZONOSÍTHATÓ BIZTOSAN:
+   - SOHA NE TALÁLJ KI KITALÁLT RUHADARABOT (NE hallucinálj fantom ruhát vagy kitalált színt)!
+   - Állítsd be a JSON-ben: "isUnknown": true, "name": "Ismeretlen Termék (Kérlek csatolj fotót vagy add meg kézzel)", "stylingAdvice": "A megadott link alapján a termék nem volt automatikusan beazonosítható. Kérlek illessz be egy fotót (Ctrl+V) vagy válassz kategóriát kézzel!"`;
 
       const prompt = `Te egy világklasszis professzionális személyi stylist, divattanácsadó és ruhatár-tervező vagy.
 Elemezd a megadott ruhadarabot / webshop terméket részletesen és szakértő szemmel!
@@ -341,6 +344,12 @@ FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI:
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
 
 Meglévő ruhatár (${compactWardrobe.length} elem a szabásokkal és méretekkel): ${JSON.stringify(compactWardrobe)}
+
+SZIGORÚ ANTI-HALLUCINÁCIÓS SZABÁLYOK:
+1. Ha a kép vagy az ismert márka & SKU (pl. Next #AA1-939, Zara, Reserved) alapján a termék 100%-ban egyértelmű, elemezd a valós darabot.
+2. HA NINCS FOTÓ ÉS A WEBSHOP BEMENET ALAPJÁN A RUHA NEM AZONOSÍTHATÓ BIZTOSAN:
+   - SOHA NE TALÁLJ KI KITALÁLT RUHÁT VAGY FANTOM SZETTEKET!
+   - Állítsd be: "isUnknown": true, "verdict": "Kép vagy adat szükséges", "summaryReasoning": "A megadott link vagy bemenet alapján nem sikerült automatikusan beazonosítani a konkrét ruhadarabot. Kérlek illeszd be a termék fotóját a vágólapról (Ctrl+V) vagy add meg a nevét és kategóriáját a megbízható döntéstámogatáshoz!", "fitMismatchWarning": "⚠️ A termék vizuális adatai nem állnak rendelkezésre a megbízható értékeléshez."
 
 3 DÖNTÉSI PILLÉR, EGYÉNI SZABÁLYOK & RÉTEGEZÉSI INTELLIGENCIA:
 1. Kombinálhatóság & KÖTELEZŐ RÉTEGEZÉS:

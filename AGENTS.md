@@ -62,6 +62,7 @@ sequenceDiagram
 
     App->>AI: analyzeClothingImage(base64Image, webshopContext, userProfile)
     AI-->>App: Strukturált JSON (Kategória, Anyag, Szín, Márka, Méret, Szabás, Stílustippek)
+    Note over AI,App: Szigorú Anti-Hallucináció: ha nincs fotó és nem azonosítható a link, nem talál ki fantomruhát
     App->>User: Form előtöltése és szerkesztési lehetőség
     User->>App: Mentés gomb
     App->>DB: setDoc(users/{uid}/wardrobe/{id}, itemData)
@@ -71,14 +72,16 @@ sequenceDiagram
 
 ### 🛍️ Workflow 2: Vásárlás Előtti 3-Outfit Döntéstámogatás & Szabás-ellenőrzés
 1. **Input:** A felhasználó fotót készít a próbafülkében, vagy beilleszt egy webshop linket / termékkódot.
-2. **Szabás & Testalkat vizsgálat (Fit Mismatch Intelligence):**
+2. **Szigorú Anti-Hallucinációs Garancia:**
+   - Ha a link alapján vagy a fotó hiányában a termék nem azonosítható 100%-os bizonyossággal, az AI **szigorúan tilos, hogy fantom ruhát találjon ki**. Helyette jelzi az azonosítás hiányát (`isUnknown: true`), és megkéri a felhasználót a valós kép vagy név megadására.
+3. **Szabás & Testalkat vizsgálat (Fit Mismatch Intelligence):**
    - Az AI összeveti a termék szabását (pl. Regular Fit) a ruhatárban lévő darabok domináns szabásával (pl. Slim Tailored) és a felhasználó testalkatával.
    - Ha eltérést észlel, kiemelt figyelmeztetést generál (`fitMismatchWarning`), és konkrét méretválasztási javaslatot ad (`sizingAdvice`).
-3. **3 Döntési Pillér Szintézise:**
+4. **3 Döntési Pillér Szintézise:**
    - **1. Pillér:** 3 komplett outfit generálása a meglévő gardrób elemeivel kombinálva.
    - **2. Pillér:** Duplikáció vs Csere vizsgálat (ha van kopott hasonló darab, kifejezetten ajánlja cserére).
    - **3. Pillér:** Bőrtónus és testalkat harmónia ellenőrzése.
-4. **Hozzáadás:** Egyetlen kattintással átemelhető a ruhatárba (`handleAddToWardrobe`).
+5. **Hozzáadás:** Egyetlen kattintással átemelhető a ruhatárba (`handleAddToWardrobe`).
 
 ---
 

@@ -195,7 +195,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
       });
 
       if (result?.item) {
-        if (!imagePreview) {
+        if (!imagePreview && !result?.isUnknown) {
           const autoImg = getSmartGarmentImage(result.item.category, result.item.color, result.item.subCategory);
           setImagePreview(autoImg);
           result.item.imageUrl = autoImg;
