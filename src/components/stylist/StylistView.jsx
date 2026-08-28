@@ -411,7 +411,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
       {/* Modal for selecting Anchor / Key Items */}
       {showAnchorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md">
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAnchorModal(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md"
+        >
           <div className="glass-card max-w-lg w-full max-h-[85vh] overflow-y-auto p-5 border-[var(--border-gold)] space-y-4 animate-scale-up">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="font-serif font-bold text-white text-lg">Válassz Kötelező Kulcsdarabot:</h3>

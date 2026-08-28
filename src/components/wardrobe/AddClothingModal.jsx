@@ -104,9 +104,15 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     }
   }, [formData.whenToWear, imagePreview]);
 
-  // Global window paste listener when modal is open
+  // Global window paste & escape listener when modal is open
   useEffect(() => {
     if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
 
     const handleWindowPaste = (e) => {
       const target = e.target;
@@ -121,8 +127,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       }
     };
 
+    window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('paste', handleWindowPaste);
-    return () => window.removeEventListener('paste', handleWindowPaste);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('paste', handleWindowPaste);
+    };
   }, [isOpen, formData.name, formData.brand]);
 
   const handleClose = () => {
@@ -415,7 +425,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
     onAddClothing({
       ...formData,
-      imageUrl: imagePreview || 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=800&q=80'
+      imageUrl: imagePreview || getSmartGarmentImage(formData.category, formData.color, formData.subCategory)
     });
 
     handleClose();
@@ -424,7 +434,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+    <div 
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
+    >
       <div className="relative w-full max-w-2xl bg-[#0b0e14] border border-[var(--border-gold)] rounded-2xl shadow-2xl p-5 sm:p-7 space-y-6 my-auto animate-scale-up max-h-[90vh] overflow-y-auto">
         
         {/* Header */}

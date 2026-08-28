@@ -693,7 +693,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
   }
 
   // Fallback ha nincs API kapcsolat
-  return [
+  const fallbackGaps = [
     {
       id: 'gap-blazer',
       title: 'Slim Fit Sötétkék Strukturált Gyapjú Zakó',
@@ -743,4 +743,10 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
       searchKeywords: 'brown leather penny loafers férfi félcipő'
     }
   ];
+
+  const rulesLower = (Array.isArray(profile?.customStylingRules) ? profile.customStylingRules.join(' ') : '').toLowerCase();
+  return fallbackGaps.filter(g => {
+    if ((rulesLower.includes('pólóing') || rulesLower.includes('polo')) && g.id === 'gap-knit-polo') return false;
+    return true;
+  });
 }
