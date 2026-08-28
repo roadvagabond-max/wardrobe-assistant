@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, ArrowRight, ExternalLink, RefreshCw, Loader2, AlertTriangle, BookmarkPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeWardrobeGaps } from '../../services/gemini';
@@ -12,6 +12,9 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all'); // 'all', 'tavasz_nyar', 'osz_tel', 'replacement'
   const [wishlistIds, setWishlistIds] = useState(new Set());
+
+  const rulesKey = (profile?.customStylingRules || []).join(';;');
+  const prevRulesKeyRef = useRef(rulesKey);
 
   const loadGaps = async (force = false) => {
     if (!force && gaps.length > 0) return;
@@ -34,6 +37,17 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
       loadGaps(true);
     }
   }, []);
+
+  // Invalidate and reload when custom styling rules change in profile
+  useEffect(() => {
+    if (prevRulesKeyRef.current !== rulesKey) {
+      prevRulesKeyRef.current = rulesKey;
+      try {
+        localStorage.removeItem('capsule_gaps_cache');
+      } catch (_) {}
+      loadGaps(true);
+    }
+  }, [rulesKey]);
 
   const handleToggleWishlist = (gapId) => {
     setWishlistIds(prev => {

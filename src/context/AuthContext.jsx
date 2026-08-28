@@ -224,6 +224,9 @@ export function AuthProvider({ children }) {
   // Update Profile
   const updateProfile = async (newProfile) => {
     setProfile(newProfile);
+    try {
+      localStorage.removeItem('capsule_gaps_cache');
+    } catch (_) {}
     if (currentUser && db && isFirebaseConfigured) {
       try {
         await setDoc(doc(db, 'users', currentUser.uid), {
