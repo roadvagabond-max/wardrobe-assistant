@@ -351,7 +351,7 @@ SZIGORÚ ANTI-HALLUCINÁCIÓS SZABÁLYOK:
    - SOHA NE TALÁLJ KI KITALÁLT RUHÁT VAGY FANTOM SZETTEKET!
    - Állítsd be: "isUnknown": true, "verdict": "Kép vagy adat szükséges", "summaryReasoning": "A megadott link vagy bemenet alapján nem sikerült automatikusan beazonosítani a konkrét ruhadarabot. Kérlek illeszd be a termék fotóját a vágólapról (Ctrl+V) vagy add meg a nevét és kategóriáját a megbízható döntéstámogatáshoz!", "fitMismatchWarning": "⚠️ A termék vizuális adatai nem állnak rendelkezésre a megbízható értékeléshez."
 
-3 DÖNTÉSI PILLÉR, EGYÉNI SZABÁLYOK & RÉTEGEZÉSI INTELLIGENCIA:
+3 DÖNTÉSI PILLÉR, EGYÉNI SZABÁLYOK, ANYAGMINŐSÉG & RÉTEGEZÉSI INTELLIGENCIA:
 1. Kombinálhatóság & KÖTELEZŐ RÉTEGEZÉS:
    - Készíts 3 különböző komplett outfitet a meglévő gardrób elemeivel (használd a pontos 'id'-kat a 'matchedItemIds' tömbben!).
    - RÉTEGEZÉSI SZABÁLY: Ha a kiszemelt darab pulóver ('knitwear') vagy zakó ('outerwear'), a szettekben KÖTELEZŐ egy bázis inget vagy prémium pólót ('tops') alárendelni! SOHA ne legyen pulóver vagy zakó csupasz felsőtestre bázis felső nélkül!
@@ -360,6 +360,15 @@ SZIGORÚ ANTI-HALLUCINÁCIÓS SZABÁLYOK:
    - SZABÁSVISSZAJELZÉS: Nézd meg, milyen szabást hord a user (pl. Slim tailored vs Regular). Ha eltér, figyelmeztess a 'fitMismatchWarning' mezőben!
    - EGYÉNI SZABÁLYSÉRTÉS: Vizsgáld meg, hogy a kiszemelt darab ütközik-e a felhasználó bármelyik egyéni stílusszabályával (pl. ha a szabály 'Nem szeretem a pólóingeket' és ez egy pólóing / polo felső; vagy ha 'Csak természetes anyagok' és ez poliészter; vagy ha kerül bizonyos színt/szabást)!
    - Ha szabálysértést észlelsz, a 'fitMismatchWarning' mezőben KIFEJEZETTEN ÉS KIEMELTEN ÍRD MEG A FIGYELMEZTETÉST (pl. '⚠️ Személyes stílusszabály ütközés: A stílusprofilodban rögzítetted, hogy nem szereted a pólóingeket, ez a darab pedig egy pólóing!'), és a döntést állítsd 'Gondold Át' vagy 'Kerülendő' státuszra!
+4. 🧶 ANYAGÖSSZETÉTEL & MŰSZÁL / TERMÉSZETES ANYAG AUDIT (Kiemelten Fontos!):
+   - A felhasználó ruhatára és stílusfilozófiája a PRÉMIUM TERMÉSZETES ANYAGOKRA épül (100% gyapjú, kasmír, len, egyiptomi pamut, selyem, valódi bőr).
+   - HA A KISZEMELT DARAB JELENTŐS RÉSZBEN VAGY TELJESEN GYENGE / NEM LÉLEGZŐ MŰSZÁLBÓL KÉSZÜLT (pl. 100% poliészter, akril, poliamid/nylon, műbőr/PU, poliészter kötöttáru/zakó):
+     * KÖTELEZŐ kiemelt figyelmeztetést generálni a 'fabricWarning' mezőben (pl. '⚠️ Anyagösszetétel Figyelmeztetés: Ez a darab olcsó, nem lélegző műszálas anyagból (100% poliészter / akril) készült! Nem illeszkedik a természetes prémium anyagokhoz (gyapjú/pamut/len) szokott ruhatáradhoz, hajlamos a bolyhosodásra és izzasztó lehet.').
+     * Állítsd be: 'isSynthetic': true, 'fabricScore': 3-5 (alacsony).
+     * Csökkentsd a minőségi pontszámot ('qualityScore': max 4.5 - 6.0) és a 'compatibilityScore'-t!
+     * Ha 100% poliészter/akril felsőruházatról vagy zakóról van szó, a 'verdict'-et állítsd 'Gondold Át' vagy 'Kerülendő' státuszra!
+   - HA A TERMÉK 100% TERMÉSZETES PRÉMIUM ANYAG:
+     * Állítsd be: 'isSynthetic': false, 'fabricScore': 9.5, 'fabricWarning': null vagy elismerő értékelés (pl. '🌿 Kiváló minőségű 100% természetes szál').
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
@@ -369,7 +378,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
     "subCategory": "blazer" | "knitwear" | "shirt" | "t-shirt" | "polo" | "trousers" | "jeans" | "loafers" | "sneakers" | "dress" | "coat" | "other",
     "color": "Valódi fő szín magyarul (pl. Sötétkék, Homokbézs, Fekete)",
     "colorHex": "#hex",
-    "material": "Anyagösszetétel",
+    "material": "Valós vagy kinyert anyagösszetétel (pl. 100% Gyapjú / 100% Poliészter / 70% Pamut 30% Len)",
     "brand": "${webshopBrand || 'Márkanév / Gyártó ha felismerhető'}",
     "size": "Méret ha webshopból vagy címkéből kivehető",
     "fit": "Felismerhető szabás (pl. Slim Fit, Regular Fit, Relaxed, Oversized, Tapered, Contemporary)",
@@ -385,9 +394,12 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   },
   "compatibilityScore": 94,
   "verdict": "Erősen Ajánlott" | "Érdemes Megfontolni" | "Gondold Át",
-  "verdictSummary": "Részletes szakmai összefoglaló a vásárlási döntésről és az egyéni szabályokról",
+  "verdictSummary": "Részletes szakmai összefoglaló a vásárlási döntésről, az anyagösszetételről és az egyéni szabályokról",
   "duplicationWarning": "Duplikáció vagy csere-javaslat",
   "fitMismatchWarning": "Szabásbeli eltérés VAGY személyes stílusszabály ütközés (pl. '⚠️ Személyes szabály ütközés: Nem szereted a pólóingeket!')",
+  "fabricWarning": "Kiemelt figyelmeztetés ha műszálas/poliészter, vagy elismerés ha tiszta természetes anyag",
+  "fabricScore": 9.5,
+  "isSynthetic": false,
   "sizingAdvice": "Méretválasztási tanács a meglévő márkáid és testalkatod alapján",
   "outfits": [
     {

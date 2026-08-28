@@ -77,11 +77,14 @@ sequenceDiagram
 3. **Szabás & Testalkat vizsgálat (Fit Mismatch Intelligence):**
    - Az AI összeveti a termék szabását (pl. Regular Fit) a ruhatárban lévő darabok domináns szabásával (pl. Slim Tailored) és a felhasználó testalkatával.
    - Ha eltérést észlel, kiemelt figyelmeztetést generál (`fitMismatchWarning`), és konkrét méretválasztási javaslatot ad (`sizingAdvice`).
-4. **3 Döntési Pillér Szintézise:**
-   - **1. Pillér:** 3 komplett outfit generálása a meglévő gardrób elemeivel kombinálva.
+4. **Anyagösszetétel & Műszál Auditor (Fabric & Synthetic Intelligence):**
+   - A meglévő prémium természetes gardrób (gyapjú, kasmír, pamut, len, selyem, bőr) és stílusprofil alapján szigorúan ellenőrzi az anyagösszetételt.
+   - Ha a termék gyenge, nem lélegző műszálból (100% poliészter, akril, műbőr/PU) készült, kiemelt figyelmeztetést generál (`fabricWarning`), alacsonyabb minőségi pontszámot ad (`fabricScore`, `qualityScore`), és a döntést 'Gondold Át' vagy 'Kerülendő' státuszra állítja.
+5. **3 Döntési Pillér Szintézise:**
+   - **1. Pillér:** 3 komplett outfit generálása a meglévő gardrób elemeivel kombinálva (kötelező bázisrétegezéssel).
    - **2. Pillér:** Duplikáció vs Csere vizsgálat (ha van kopott hasonló darab, kifejezetten ajánlja cserére).
    - **3. Pillér:** Bőrtónus és testalkat harmónia ellenőrzése.
-5. **Hozzáadás:** Egyetlen kattintással átemelhető a ruhatárba (`handleAddToWardrobe`).
+6. **Hozzáadás:** Egyetlen kattintással átemelhető a ruhatárba (`handleAddToWardrobe`).
 
 ---
 

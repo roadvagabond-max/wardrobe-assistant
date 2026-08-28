@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard } from 'lucide-react';
+import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard, Feather, ShieldAlert, Layers } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
@@ -673,6 +673,42 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                     <span><strong>Méretválasztási javaslat:</strong> {evaluationResult.sizingAdvice}</span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Fabric & Material Intelligence (Műszál / Anyagösszetétel Figyelmeztetés) */}
+            {evaluationResult.fabricWarning && (
+              <div className={`p-4 rounded-xl border text-xs space-y-2 animate-slide-up ${
+                evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                  ? 'bg-gradient-to-r from-rose-500/15 via-rose-950/20 to-black/40 border-rose-500/40 text-rose-200'
+                  : 'bg-gradient-to-r from-emerald-500/15 via-emerald-950/20 to-black/40 border-emerald-500/40 text-emerald-200'
+              }`}>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className={`flex items-center gap-2 font-bold ${
+                    evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                      ? 'text-rose-300'
+                      : 'text-emerald-300'
+                  }`}>
+                    {evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7) ? (
+                      <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+                    ) : (
+                      <Feather className="w-4 h-4 text-emerald-400 shrink-0" />
+                    )}
+                    <span>Anyagösszetétel & Anyagminőség Elemzés (Fabric Intelligence):</span>
+                  </div>
+                  {evaluationResult.item?.material && (
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                      evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                        ? 'bg-rose-500/20 border-rose-500/30 text-rose-300'
+                        : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
+                    }`}>
+                      {evaluationResult.item.material}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[var(--text-secondary)] leading-relaxed">
+                  {evaluationResult.fabricWarning}
+                </p>
               </div>
             )}
 
