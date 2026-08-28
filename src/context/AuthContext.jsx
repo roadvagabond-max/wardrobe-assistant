@@ -27,9 +27,16 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Sync to local storage
+  // Debounced non-blocking sync to local storage
   useEffect(() => {
-    localStorage.setItem('wardrobe_items', JSON.stringify(wardrobe));
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem('wardrobe_items', JSON.stringify(wardrobe));
+      } catch (err) {
+        console.warn('LocalStorage wardrobe_items mentési hiba:', err);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
   }, [wardrobe]);
 
   useEffect(() => {
@@ -40,20 +47,19 @@ export function AuthProvider({ children }) {
     localStorage.setItem('saved_outfits', JSON.stringify(savedOutfits));
   }, [savedOutfits]);
 
-  // 🧹 Smart Background Image Optimizer for existing large images
+  // 🧹 High-Performance Background Image Optimizer (Compresses bloated images to ~25-35KB)
   const optimizationDoneRef = useRef(false);
   useEffect(() => {
-    if (optimizationDoneRef.current || wardrobe.length === 0) return;
-    optimizationDoneRef.current = true;
+    if (wardrobe.length === 0) return;
 
     const optimizeOversizedImages = async () => {
       let hasUpdates = false;
       const optimizedItems = await Promise.all(
         wardrobe.map(async (item) => {
-          // If image is a large Base64 string (> 150KB), compress it
-          if (item.imageUrl && typeof item.imageUrl === 'string' && item.imageUrl.startsWith('data:') && item.imageUrl.length > 150000) {
+          // If image is a large Base64 string (> 60KB), compress it
+          if (item.imageUrl && typeof item.imageUrl === 'string' && item.imageUrl.startsWith('data:') && item.imageUrl.length > 60000) {
             try {
-              const compressed = await ensureBase64Image(item.imageUrl, 640, 640, 0.75);
+              const compressed = await ensureBase64Image(item.imageUrl, 520, 520, 0.72);
               if (compressed && compressed.length < item.imageUrl.length) {
                 hasUpdates = true;
                 return { ...item, imageUrl: compressed };
@@ -66,13 +72,13 @@ export function AuthProvider({ children }) {
 
       if (hasUpdates) {
         setWardrobe(optimizedItems);
-        // Also update Firestore in background if logged in
+        // Batch update Firestore in background if logged in
         if (currentUser && db && isFirebaseConfigured) {
-          for (const itm of optimizedItems) {
-            try {
-              await setDoc(doc(db, 'users', currentUser.uid, 'wardrobe', itm.id), itm, { merge: true });
-            } catch (_) {}
-          }
+          Promise.all(
+            optimizedItems.map(itm => 
+              setDoc(doc(db, 'users', currentUser.uid, 'wardrobe', itm.id), itm, { merge: true }).catch(() => {})
+            )
+          );
         }
       }
     };
@@ -81,9 +87,9 @@ export function AuthProvider({ children }) {
     if ('requestIdleCallback' in window) {
       window.requestIdleCallback(() => optimizeOversizedImages());
     } else {
-      setTimeout(optimizeOversizedImages, 2000);
+      setTimeout(optimizeOversizedImages, 1500);
     }
-  }, [wardrobe.length, currentUser]);
+  }, [wardrobe.length]);
 
   // Listen to Firebase Auth state & Real-time Firestore Cloud Sync
   useEffect(() => {

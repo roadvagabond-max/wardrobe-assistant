@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Compass, Sparkles, Edit3, Check, Palette, PieChart, Award, Camera, Upload, Loader2, Cloud, CloudOff } from 'lucide-react';
+import { User, Compass, Sparkles, Edit3, Check, Palette, PieChart, Award, Camera, Upload, Loader2, Cloud, CloudOff, Layers, Link as LinkIcon, Plus, X, Trash2, Sliders, BookOpen, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeColorSeason } from '../../services/gemini';
 import { ensureBase64Image } from '../../services/imageOptimizer';
+import { normalizeBrandName } from '../../services/webshop';
+import { INITIAL_USER_PROFILE } from '../../data/mockWardrobe';
 
 const ALL_STYLE_ARCHETYPES = [
   'Klasszikus & Időtlen',
@@ -20,6 +22,7 @@ export default function StyleDNAView() {
   const [formData, setFormData] = useState(profile);
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
   const [colorSeasonResult, setColorSeasonResult] = useState(null);
+  const [newRuleInput, setNewRuleInput] = useState('');
 
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -29,6 +32,37 @@ export default function StyleDNAView() {
   useEffect(() => {
     setFormData(profile);
   }, [profile]);
+
+  const currentRules = Array.isArray(profile.customStylingRules) 
+    ? profile.customStylingRules 
+    : (INITIAL_USER_PROFILE.customStylingRules || []);
+
+  const handleAddRule = async (ruleToAdd) => {
+    const text = (ruleToAdd || newRuleInput).trim();
+    if (!text) return;
+    if (currentRules.includes(text)) {
+      setNewRuleInput('');
+      return;
+    }
+    const updatedRules = [...currentRules, text];
+    const updatedProfile = {
+      ...profile,
+      customStylingRules: updatedRules
+    };
+    setFormData(updatedProfile);
+    await updateProfile(updatedProfile);
+    setNewRuleInput('');
+  };
+
+  const handleRemoveRule = async (indexToRemove) => {
+    const updatedRules = currentRules.filter((_, idx) => idx !== indexToRemove);
+    const updatedProfile = {
+      ...profile,
+      customStylingRules: updatedRules
+    };
+    setFormData(updatedProfile);
+    await updateProfile(updatedProfile);
+  };
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -114,23 +148,30 @@ export default function StyleDNAView() {
     return Math.round(categoryCoverage + conditionScore + sizeScore);
   })();
 
-  // 📏 Brand Size Intelligence Aggregator
+  // 📏 Brand Size Intelligence Aggregator (Consolidates aliases like reserved.com, next(nova fides), zara man)
   const brandSizeMatrix = React.useMemo(() => {
     const map = {};
     wardrobe.forEach(item => {
-      const brand = item.brand?.trim();
+      const rawBrand = item.brand?.trim();
       const size = item.size?.trim();
-      if (!brand && !size) return;
+      if (!rawBrand && !size) return;
 
-      const brandKey = brand || 'Ismeretlen gyártó';
+      const normalizedBrand = normalizeBrandName(rawBrand) || 'Ismeretlen gyártó';
+      const brandKey = normalizedBrand;
+
       if (!map[brandKey]) {
         map[brandKey] = {
           brand: brandKey,
           categories: {},
-          itemsCount: 0
+          itemsCount: 0,
+          rawAliases: new Set()
         };
       }
       map[brandKey].itemsCount++;
+      if (rawBrand && rawBrand.toLowerCase() !== normalizedBrand.toLowerCase()) {
+        map[brandKey].rawAliases.add(rawBrand);
+      }
+
       const catKey = item.category || 'other';
       if (!map[brandKey].categories[catKey]) {
         map[brandKey].categories[catKey] = [];
@@ -139,7 +180,13 @@ export default function StyleDNAView() {
         map[brandKey].categories[catKey].push(size);
       }
     });
-    return Object.values(map).sort((a, b) => b.itemsCount - a.itemsCount);
+
+    return Object.values(map)
+      .map(b => ({
+        ...b,
+        rawAliasesList: Array.from(b.rawAliases || [])
+      }))
+      .sort((a, b) => b.itemsCount - a.itemsCount);
   }, [wardrobe]);
 
   // 🏷️ Category Dominant Size Summary
@@ -540,6 +587,132 @@ export default function StyleDNAView() {
         </div>
       )}
 
+      {/* 🧠 SZEMÉLYES AI STYLIST TANÍTÁSA & EGYÉNI SZABÁLYOK */}
+      <div className="glass-card p-6 sm:p-7 border-[var(--border-gold)] space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="badge badge-gold text-[10px]">AI Betanítás & Preferenciák</span>
+              <span className="badge badge-emerald text-[10px]">
+                {currentRules.length} aktív stílusszabály
+              </span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
+              Személyes AI Stylist Tanítása & Egyéni Szabályok
+            </h3>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              Tanítsd meg az AI-nak a saját szabályaidat és tiltásaidat szabad szöveggel (pl. <em>"Nem szeretem a pólóingeket"</em>, <em>"Csak természetes anyagok"</em>). A Stylist szettajánló, a Kapszula hiányelemző és a Vásárlási döntéstámogató azonnal és szigorúan alkalmazza őket!
+            </p>
+          </div>
+        </div>
+
+        {/* Input bar to add custom free-form rule */}
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAddRule();
+          }}
+          className="flex gap-2"
+        >
+          <input
+            type="text"
+            value={newRuleInput}
+            onChange={(e) => setNewRuleInput(e.target.value)}
+            placeholder="pl. Nem szeretem a pólóingeket VAGY Csak rejtett gombolású ingeket hordok..."
+            className="custom-input text-xs sm:text-sm flex-1"
+          />
+          <button
+            type="submit"
+            disabled={!newRuleInput.trim()}
+            className="btn-gold px-4 text-xs sm:text-sm flex items-center gap-1.5 shrink-0 shadow"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Szabály Mentése</span>
+          </button>
+        </form>
+
+        {/* Quick Suggestion Chips */}
+        <div className="space-y-1.5">
+          <span className="text-[11px] font-semibold text-[var(--accent-gold)] uppercase tracking-wider block">
+            Gyakori tanítási javaslatok (Kattints a hozzáadáshoz):
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              'Nem szeretem a pólóingeket',
+              'Csak 100% természetes anyagok (gyapjú, len, pamut, selyem, kasmír, bőr)',
+              'Kerülöm a túl szűk / skinny szabásokat, a slim tailored sziluettet részesítem előnyben',
+              'Zakóhoz és elegáns szettekhez nem hordok kereknyakú pólót',
+              'Kerülöm a műszálas poliésztert és akrilt',
+              'Zakóhoz és öltönyhöz csak velúrt vagy minőségi bőrcipőt hordok',
+              'Fekete felsőrészek helyett a sötétkéket, teveszínt és antracitot preferálom'
+            ].map((preset, pIdx) => {
+              const isAdded = currentRules.includes(preset);
+              return (
+                <button
+                  key={pIdx}
+                  type="button"
+                  onClick={() => !isAdded && handleAddRule(preset)}
+                  disabled={isAdded}
+                  className={`text-[11px] py-1 px-2.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+                    isAdded
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 cursor-default opacity-80'
+                      : 'bg-white/5 border-white/10 text-[var(--text-secondary)] hover:border-[var(--border-gold)] hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {isAdded ? <Check className="w-3 h-3 text-emerald-400" /> : <Plus className="w-3 h-3 text-[var(--accent-gold)]" />}
+                  <span>{preset}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Active Rules List */}
+        <div className="space-y-2 pt-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-white block">
+            Betanított Aktív Szabályaid:
+          </span>
+
+          {currentRules.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {currentRules.map((rule, idx) => (
+                <div 
+                  key={idx} 
+                  className="bg-black/40 border border-white/10 hover:border-[var(--border-gold)]/60 rounded-xl p-3 flex items-start justify-between gap-2.5 transition-all group shadow-sm"
+                >
+                  <div className="flex items-start gap-2 min-w-0">
+                    <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0 mt-0.5" />
+                    <span className="text-xs text-white leading-relaxed font-medium">
+                      {rule}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveRule(idx)}
+                    className="text-[var(--text-muted)] hover:text-rose-400 p-1 rounded hover:bg-white/5 transition-colors shrink-0"
+                    title="Szabály törlése"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-black/20 border border-white/5 text-center text-xs text-[var(--text-muted)]">
+              Még nincs egyéni szabályod rögzítve. Írj be saját preferenciákat vagy válassz a fenti javaslatokból!
+            </div>
+          )}
+        </div>
+
+        {/* Info notice */}
+        <div className="p-3 rounded-xl bg-[var(--accent-gold-glow)]/40 border border-[var(--border-gold)]/40 text-[11px] text-[var(--accent-gold-light)] flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
+          <span>
+            <strong>Valós idejű szinkron:</strong> A szabályok mentés után azonnal beépülnek az esemény-stylist, a kapszula-gap és a vásárlási döntéstámogató motorba.
+          </span>
+        </div>
+      </div>
+
       {/* 📏 BRAND SIZING INTELLIGENCE & FIT MATRIX */}
       <div className="glass-card p-6 sm:p-7 border-[var(--border-gold)] space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10">
@@ -583,9 +756,19 @@ export default function StyleDNAView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {brandSizeMatrix.map((b, idx) => (
                 <div key={idx} className="bg-black/30 p-4 rounded-xl border border-white/5 space-y-2 hover:border-[var(--border-gold)] transition-colors">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-white font-serif">{b.brand}</span>
-                    <span className="text-[10px] text-[var(--accent-gold-light)] bg-[var(--accent-gold-glow)] px-2 py-0.5 rounded-full border border-[var(--border-gold)]">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="font-bold text-sm text-white font-serif block truncate">{b.brand}</span>
+                      {b.rawAliasesList && b.rawAliasesList.length > 0 && (
+                        <div className="flex items-center gap-1 mt-0.5 text-[10px] text-[var(--accent-gold-light)]/80" title={`Összefűzött márkanevek: ${b.rawAliasesList.join(', ')}`}>
+                          <Layers className="w-2.5 h-2.5 text-[var(--accent-gold)] shrink-0" />
+                          <span className="truncate max-w-[150px]">
+                            {b.rawAliasesList.join(', ')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-[var(--accent-gold-light)] bg-[var(--accent-gold-glow)] px-2 py-0.5 rounded-full border border-[var(--border-gold)] shrink-0">
                       {b.itemsCount} db ruha
                     </span>
                   </div>

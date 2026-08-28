@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus, Heart, HelpCircle } from 'lucide-react';
+import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus, Heart, HelpCircle, Clipboard } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { ensureBase64Image, getSmartGarmentImage } from '../../services/imageOptimizer';
@@ -50,7 +50,7 @@ const STYLE_TAG_SUGGESTIONS = [
 export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
   const { profile } = useAuth();
 
-  const [activeMode, setActiveMode] = useState('camera'); // 'camera', 'upload', 'link'
+  const [activeMode, setActiveMode] = useState('camera'); // 'camera', 'upload', 'link', 'clipboard'
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [availableImages, setAvailableImages] = useState([]);
@@ -104,6 +104,27 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     }
   }, [formData.whenToWear, imagePreview]);
 
+  // Global window paste listener when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleWindowPaste = (e) => {
+      const target = e.target;
+      const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+      const hasImageFile = Array.from(e.clipboardData?.items || []).some(item => item.type && item.type.startsWith('image/'));
+
+      if (!isInput || hasImageFile) {
+        const handled = handlePastedData(e.clipboardData?.items, e.clipboardData?.getData('text'));
+        if (handled && hasImageFile) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleWindowPaste);
+    return () => window.removeEventListener('paste', handleWindowPaste);
+  }, [isOpen, formData.name, formData.brand]);
+
   const handleClose = () => {
     setSelectedFile(null);
     setImagePreview(null);
@@ -136,6 +157,102 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       tags: ['alapdarab', 'elegáns']
     });
     onClose();
+  };
+
+  // High-performance clipboard processor (Handles direct image blobs and image URLs)
+  const handlePastedData = async (items, textData) => {
+    // 1. Check for binary image blob in clipboard (e.g. Right click -> Copy Image)
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) {
+            setIsAnalyzing(true);
+            setIsFormReady(true);
+            setAnalysisError(null);
+            try {
+              const optimized = await ensureBase64Image(file);
+              setImagePreview(optimized);
+              setAvailableImages(prev => [optimized, ...prev.filter(x => x !== optimized)]);
+              await triggerAIAnalysis(optimized, { title: formData.name, brand: formData.brand });
+            } catch (err) {
+              console.error('Vágólap kép hiba:', err);
+              setAnalysisError('A vágólapon lévő kép optimalizálása nem sikerült.');
+            } finally {
+              setIsAnalyzing(false);
+            }
+            return true;
+          }
+        }
+      }
+    }
+
+    // 2. Check for direct image URL in clipboard text
+    const cleanText = (textData || '').trim();
+    if (cleanText && (cleanText.startsWith('http://') || cleanText.startsWith('https://') || cleanText.startsWith('data:image/'))) {
+      if (/\.(jpeg|jpg|png|webp|avif)($|\?)/i.test(cleanText) || cleanText.includes('images') || cleanText.includes('cdn') || cleanText.includes('static') || cleanText.startsWith('data:image/')) {
+        setIsAnalyzing(true);
+        setIsFormReady(true);
+        setAnalysisError(null);
+        try {
+          const optimized = await ensureBase64Image(cleanText);
+          const finalImg = optimized || cleanText;
+          setImagePreview(finalImg);
+          setAvailableImages(prev => [finalImg, ...prev.filter(x => x !== finalImg)]);
+          await triggerAIAnalysis(finalImg, { title: formData.name, brand: formData.brand });
+        } catch (err) {
+          console.error('Vágólap link hiba:', err);
+        } finally {
+          setIsAnalyzing(false);
+        }
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const handleClipboardButtonClick = async () => {
+    try {
+      setIsAnalyzing(true);
+      setAnalysisError(null);
+
+      // Try reading binary image from clipboard API
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          const imageType = item.types.find(type => type.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const optimized = await ensureBase64Image(blob);
+            setImagePreview(optimized);
+            setAvailableImages(prev => [optimized, ...prev.filter(x => x !== optimized)]);
+            setIsFormReady(true);
+            await triggerAIAnalysis(optimized, { title: formData.name, brand: formData.brand });
+            setIsAnalyzing(false);
+            return;
+          }
+        }
+      }
+      
+      // Fallback: Try reading image URL text
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          const handled = await handlePastedData(null, text);
+          if (handled) {
+            setIsAnalyzing(false);
+            return;
+          }
+        }
+      }
+
+      setIsAnalyzing(false);
+      setAnalysisError('Nem található kép a vágólapon. Kattints jobb gombbal a webshop fotóra ➔ "Kép másolása", majd nyomj Ctrl+V-t!');
+    } catch (err) {
+      console.warn('Vágólap olvasási engedély/hiba:', err);
+      setIsAnalyzing(false);
+      setAnalysisError('Kattints az ablakra és nyomj Ctrl + V-t a billentyűzeten a másolt kép beillesztéséhez!');
+    }
   };
 
   const handleFileChange = async (e) => {
@@ -331,44 +448,57 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
           <div className="space-y-6">
             
             {/* Mode Tabs */}
-            <div className="grid grid-cols-3 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
               <button
                 type="button"
                 onClick={() => setActiveMode('camera')}
-                className={`py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                className={`py-2.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
                   activeMode === 'camera' 
                     ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
                     : 'text-[var(--text-secondary)] hover:text-white'
                 }`}
               >
                 <Camera className="w-4 h-4" />
-                <span>Fotó Készítése</span>
+                <span>Fotózás</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveMode('clipboard')}
+                className={`py-2.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+                  activeMode === 'clipboard' 
+                    ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
+                    : 'text-[var(--text-secondary)] hover:text-white'
+                }`}
+              >
+                <Clipboard className="w-4 h-4" />
+                <span>Vágólap (Ctrl+V)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveMode('upload')}
-                className={`py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                className={`py-2.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
                   activeMode === 'upload' 
                     ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
                     : 'text-[var(--text-secondary)] hover:text-white'
                 }`}
               >
                 <Upload className="w-4 h-4" />
-                <span>Kép Feltöltése</span>
+                <span>Feltöltés</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveMode('link')}
-                className={`py-2.5 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-2 transition-all ${
+                className={`py-2.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
                   activeMode === 'link' 
                     ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
                     : 'text-[var(--text-secondary)] hover:text-white'
                 }`}
               >
                 <LinkIcon className="w-4 h-4" />
-                <span>Webshop Link / Cikkszám</span>
+                <span>Webshop Link</span>
               </button>
             </div>
 
@@ -396,7 +526,30 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               </div>
             )}
 
-            {/* Mode 2: Upload */}
+            {/* Mode 2: Clipboard Paste */}
+            {activeMode === 'clipboard' && (
+              <div 
+                onClick={handleClipboardButtonClick}
+                className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3 bg-[var(--accent-gold-glow)] group"
+              >
+                <div className="w-14 h-14 rounded-full bg-[var(--accent-gold)]/20 flex items-center justify-center text-[var(--accent-gold)] group-hover:scale-110 transition-transform">
+                  <Clipboard className="w-7 h-7" />
+                </div>
+                <div className="space-y-1 max-w-sm">
+                  <p className="text-sm font-semibold text-white">
+                    Kattints ide a vágólap beillesztéséhez
+                  </p>
+                  <p className="text-xs text-[var(--accent-gold-light)] font-medium">
+                    Vagy egyszerűen nyomj <kbd className="px-1.5 py-0.5 rounded bg-black border border-white/20 text-white font-mono text-[11px]">Ctrl + V</kbd>-t bárhol az ablakban!
+                  </p>
+                  <p className="text-[11px] text-[var(--text-muted)] pt-1">
+                    Jobb klikk a webshop ruhafotóra ➔ <em>"Kép másolása"</em> vagy <em>"Képhivatkozás másolása"</em>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Mode 3: Upload */}
             {activeMode === 'upload' && (
               <div 
                 onClick={() => fileInputRef.current?.click()}
@@ -419,7 +572,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               </div>
             )}
 
-            {/* Mode 3: Webshop Link or Product Code */}
+            {/* Mode 4: Webshop Link or Product Code */}
             {activeMode === 'link' && (
               <form onSubmit={handleLinkImport} className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -460,12 +613,22 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 </div>
                 {/* Error Box in Link Mode */}
                 {analysisError && (
-                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 animate-slide-up">
-                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-semibold block mb-0.5">Sikertelen linkkinyerés:</span>
-                      <span>{analysisError}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 animate-slide-up">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-semibold block mb-0.5">Nem sikerült a webes kép beolvasása:</span>
+                        <span>{analysisError}</span>
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={handleClipboardButtonClick}
+                      className="btn-gold py-1.5 px-3 text-[11px] shrink-0 flex items-center gap-1.5 justify-center self-end sm:self-auto shadow"
+                    >
+                      <Clipboard className="w-3.5 h-3.5" />
+                      <span>Kép Beillesztése (Ctrl+V)</span>
+                    </button>
                   </div>
                 )}
               </form>
@@ -500,15 +663,26 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                       }}
                       className="max-h-full max-w-full object-contain rounded-xl shadow-lg transition-all" 
                     />
-                    <button
-                      type="button"
-                      onClick={() => attachPhotoInputRef.current?.click()}
-                      className="absolute bottom-3 right-3 btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5 bg-black/80 backdrop-blur-md hover:bg-black border border-white/20 shadow-lg"
-                      title="Saját fotó készítése vagy feltöltése"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                      <span>Saját fotó csatolása</span>
-                    </button>
+                    <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleClipboardButtonClick}
+                        className="btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5 bg-black/80 backdrop-blur-md hover:bg-black border border-white/20 shadow-lg text-[var(--accent-gold)]"
+                        title="Kép beillesztése vágólapról (Ctrl+V)"
+                      >
+                        <Clipboard className="w-3.5 h-3.5" />
+                        <span>Vágólap (Ctrl+V)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => attachPhotoInputRef.current?.click()}
+                        className="btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5 bg-black/80 backdrop-blur-md hover:bg-black border border-white/20 shadow-lg"
+                        title="Saját fotó készítése vagy feltöltése"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                        <span>Saját fotó</span>
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <div className="text-center p-4 space-y-2">
@@ -527,21 +701,33 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                     <p className="text-xs text-[var(--accent-gold-light)] font-medium">
                       {formData.brand || 'Next Direct'} • {formData.material || 'Természetes szálak'}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => attachPhotoInputRef.current?.click()}
-                      className="btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5 mx-auto mt-2"
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                      <span>Saját fotó csatolása (opcionális)</span>
-                    </button>
+                    
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleClipboardButtonClick}
+                        className="btn-gold py-1.5 px-3 text-[11px] flex items-center gap-1.5 shadow-lg"
+                      >
+                        <Clipboard className="w-3.5 h-3.5" />
+                        <span>Kép Beillesztése Vágólapról (Ctrl+V)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => attachPhotoInputRef.current?.click()}
+                        className="btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>Saját fotó</span>
+                      </button>
+                    </div>
                   </div>
                 )}
                 
                 {isAnalyzing && (
                   <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white rounded-2xl">
+                    <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin" />"absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white rounded-2xl">
                     <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin" />
-                    <p className="text-xs font-medium tracking-wide">Gemini 3.7 Flash AI elemzi a terméket...</p>
+                    <p className="text-xs font-medium tracking-wide">Gemini 3.5 Flash AI villámgyorsan elemzi a terméket...</p>
                   </div>
                 )}
 

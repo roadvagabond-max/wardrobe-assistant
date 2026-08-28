@@ -151,6 +151,16 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         <p className="text-sm text-[var(--text-secondary)] mt-1">
           Személyre szabott szettek az eseményre, időjárásra, napszakra és a gardróbod darabjaira hangolva.
         </p>
+        {profile.customStylingRules && profile.customStylingRules.length > 0 && (
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            <span className="text-[10px] text-[var(--accent-gold-light)] bg-[var(--accent-gold-glow)] px-2.5 py-1 rounded-lg border border-[var(--border-gold)]/40 flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-[var(--accent-gold)] shrink-0" />
+              <span className="truncate max-w-xl">
+                <strong>Egyéni stílusszabályok aktívak ({profile.customStylingRules.length}):</strong> {profile.customStylingRules.join(' • ')}
+              </span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Control Panel Card */}
@@ -205,7 +215,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
             <div className="flex flex-wrap gap-2">
               {anchorItems.map(item => (
                 <div key={item.id} className="flex items-center gap-2 p-2 rounded-xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-xs">
-                  <img src={item.imageUrl} alt={item.name} className="w-7 h-7 rounded-lg object-contain bg-black" />
+                  <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="w-7 h-7 rounded-lg object-contain bg-black" />
                   <span className="font-semibold text-white truncate max-w-[180px]">{item.name}</span>
                   <button
                     type="button"
@@ -344,12 +354,15 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     </div>
                   </div>
 
-                  {/* Visual Items Showcase Row (Uncropped / proportional flat-lay) */}
+                  {/* Visual Items Showcase Row (Uncropped / proportional flat-lay with Layer Badges) */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-2 p-2 rounded-xl bg-black/40 border border-white/5">
                     {outfit.items?.map((item, iIdx) => (
-                      <div key={iIdx} className="space-y-1 group">
+                      <div key={iIdx} className="space-y-1 group relative">
                         <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] border border-white/10 p-1 flex items-center justify-center relative">
-                          <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
+                          <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
+                          <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
+                            {item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : item.category === 'outerwear' ? '🧥 Külső' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Réteg'}
+                          </span>
                         </div>
                         <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5">
                           {item.name}
@@ -358,12 +371,23 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     ))}
                   </div>
 
-                  {/* Styling Notes, Cultural Dress Code Match & Weather */}
-                  <div className="space-y-2 bg-black/30 p-3.5 rounded-xl border border-white/5 text-xs">
+                  {/* Styling Notes, Layering & Thermal Advice, Cultural Dress Code Match & Weather */}
+                  <div className="space-y-2.5 bg-black/30 p-3.5 rounded-xl border border-white/5 text-xs">
                     {outfit.culturalFitReasoning && (
                       <div className="flex items-start gap-2 text-amber-200/90 pb-2 border-b border-white/5">
                         <span className="font-bold text-[var(--accent-gold)] shrink-0">🎯 Esemény Összhang:</span>
                         <p className="leading-relaxed">{outfit.culturalFitReasoning}</p>
+                      </div>
+                    )}
+
+                    {/* Layering & Temperature Advice */}
+                    {outfit.layeringAdvice && (
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-200/90">
+                        <Layers className="w-3.5 h-3.5 text-sky-400 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold text-sky-300 block mb-0.5 text-[11px]">Rétegezés & Hőmérsékleti Dinamika:</span>
+                          <p className="leading-relaxed text-[11px]">{outfit.layeringAdvice}</p>
+                        </div>
                       </div>
                     )}
 
@@ -415,7 +439,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     }`}
                   >
                     <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center mb-1.5">
-                      <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain" />
+                      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain" />
                     </div>
                     <p className="text-[11px] font-medium text-white line-clamp-1">{item.name}</p>
                     <span className="text-[9px] text-[var(--text-muted)] block">{item.category}</span>

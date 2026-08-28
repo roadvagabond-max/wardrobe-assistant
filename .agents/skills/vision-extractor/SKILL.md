@@ -11,4 +11,5 @@ Ez a skill felelős a fotózott, feltöltött vagy webshopból behúzott ruhadar
 1. **Képméretezés:** Minden képet max. 640×640 pixelre és 0.75 JPEG minőségre tömörít a hálózati késleltetés minimalizálásáért (~35-50 KB).
 2. **Anyag- és Színfelismerés:** A fotó pixelei alapján pontosan azonosítja a textúrát (pique, len, gyapjú, selyem, denim, bőr) és a valódi színt.
 3. **SKU & Webshop Engine:** Next Direct, Zara, Reserved, Massimo Dutti, H&M termékkódok (SKU) felismerése és a közvetlen nagyfelbontású CDN képek betöltése.
-4. **Modell-architektúra:** Hivatalos Gemini 3.x modellek (`gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.1-flash-lite`).
+4. **Modell-architektúra:** Hivatalos Gemini 3.x modellek (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.7-flash`, `gemini-3.6-flash`), ahol az adatkinyerést és a webshop SKU/link feloldást a dedikált ultra-gyors Flash-Lite modellek vezérlik.
+5. **Vágólap Másolás-Beillesztés (Clipboard Paste / Ctrl+V):** Támogatja a webshop termékfotók közvetlen vágólapról történő beillesztését (akár bináris kép Blobként, akár hivatkozási URL-ként), letöltés és fájlmentés nélkül.

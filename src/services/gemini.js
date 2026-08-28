@@ -1,5 +1,6 @@
 // Advanced Google Gemini Vision & Fashion Stylist Intelligence Engine
 import { ensureBase64Image } from './imageOptimizer';
+import { normalizeBrandName } from './webshop';
 
 const getGeminiApiKey = () => {
   return import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || 'AQ.Ab8RN6KI92lORSWUYkyTduRjayE_470SGe4rkmFWdAT5a29NsA';
@@ -8,11 +9,21 @@ const getGeminiApiKey = () => {
 export const isGeminiConfigured = () => Boolean(getGeminiApiKey());
 
 // Google Gemini official 2026 models in order of stability & speed
-const GEMINI_MODELS = [
-  'gemini-3.6-flash',
+export const FAST_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
   'gemini-3.7-flash',
+  'gemini-3.6-flash'
+];
+
+export const REASONING_MODELS = [
+  'gemini-3.7-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.6-flash',
   'gemini-3.1-flash-lite'
 ];
+
+const GEMINI_MODELS = FAST_MODELS;
 
 // In-memory cache of the fastest currently working model
 let activeFastModel = null;
@@ -84,17 +95,25 @@ function safeParseJson(rawText) {
 /**
  * Universal Gemini API caller with fast-timeout fallback and robust JSON parsing
  */
-async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens = 2500, temperature = 0.15 }) {
+async function callGeminiApi({ 
+  apiKey, 
+  contents, 
+  tools = null, 
+  maxOutputTokens = 2500, 
+  temperature = 0.15,
+  preferredModels = FAST_MODELS,
+  timeoutMs = 5500
+}) {
   let lastError = null;
 
-  // Prioritize previously successful model for ultra-fast zero-latency calls
-  const modelsToTry = activeFastModel
-    ? [activeFastModel, ...GEMINI_MODELS.filter(m => m !== activeFastModel)]
-    : GEMINI_MODELS;
+  // Prioritize previously successful model if it exists in preferred list for zero-latency calls
+  const modelsToTry = activeFastModel && preferredModels.includes(activeFastModel)
+    ? [activeFastModel, ...preferredModels.filter(m => m !== activeFastModel)]
+    : preferredModels;
 
   for (const model of modelsToTry) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -148,7 +167,7 @@ async function callGeminiApi({ apiKey, contents, tools = null, maxOutputTokens =
       }
     } catch (e) {
       clearTimeout(timeoutId);
-      console.warn(`Hiba vagy időtúllépés a(z) ${model} modellel:`, e.name === 'AbortError' ? 'Időtúllépés (>8.5s)' : e.message);
+      console.warn(`Hiba vagy időtúllépés a(z) ${model} modellel:`, e.name === 'AbortError' ? `Időtúllépés (>${(timeoutMs/1000).toFixed(1)}s)` : e.message);
       activeFastModel = null;
       lastError = e;
     }
@@ -253,7 +272,17 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
       const hasWebInput = Boolean(webshopContext.rawInput || webshopContext.productCode || webshopContext.url);
       const tools = (!resolvedBase64 && hasWebInput) ? [{ googleSearch: {} }] : null;
 
-      return await callGeminiApi({ apiKey, contents: [{ parts }], tools });
+      const result = await callGeminiApi({ 
+        apiKey, 
+        contents: [{ parts }], 
+        tools, 
+        preferredModels: FAST_MODELS, 
+        timeoutMs: 5000 
+      });
+      if (result && result.brand) {
+        result.brand = normalizeBrandName(result.brand) || result.brand;
+      }
+      return result;
     } catch (err) {
       console.error('Gemini Vision & Text API hiba:', err);
       throw err;
@@ -273,7 +302,7 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
     try {
       const resolvedBase64 = await ensureBase64Image(imageBase64OrUrl);
       
-      // Lean, compact representation of wardrobe for ultra-low token transfer
+      // Lean, compact representation of wardrobe for ultra-low token transfer with normalized brands
       const compactWardrobe = wardrobe
         .filter(w => w.condition !== 'Javításra vár')
         .map(w => ({
@@ -283,34 +312,35 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
           col: w.color,
           form: w.formality,
           fit: w.fit || '',
-          brand: w.brand || '',
+          brand: normalizeBrandName(w.brand) || w.brand || '',
           size: w.size || '',
           cond: w.condition,
           style: w.styleArchetype
         }));
 
+      const webshopBrand = normalizeBrandName(webshopContext.brand) || webshopContext.brand || '';
       const webshopTextInfo = [
         webshopContext.rawInput ? `WEBSHOP TERMÉKLINK / BEMENET: "${webshopContext.rawInput}"` : '',
         webshopContext.url ? `URL: "${webshopContext.url}"` : '',
         webshopContext.title ? `CÉLTERMÉK: "${webshopContext.title}"` : '',
-        webshopContext.brand ? `Márka: "${webshopContext.brand}"` : '',
+        webshopBrand ? `Márka: "${webshopBrand}"` : '',
         webshopContext.productCode ? `Cikkszám / Termékkód (SKU): "${webshopContext.productCode}"` : '',
         webshopContext.description ? `Leírás: "${webshopContext.description}"` : ''
       ].filter(Boolean).join(' | ');
 
-      const prompt = `Te egy világklasszis személyi stylist, szabászati és vásárlási döntéstámogató vagy.
-ELEMEZD A MEGADOTT RUHADARABOT (FOTÓ VAGY WEBSHOP LINK / CIKKSZÁM ALAPJÁN A GOOGLE ÉS DIVAT-TUDÁSODAT HASZNÁLVA) ÉS VÉGEZD EL A 3 DÖNTÉSI PILLÉR ÉRTÉKELÉST, KÜLÖNÖS TEKINTETTEL A SZABÁSRA (FIT) ÉS A TESTALKATHHOZ VALÓ ILLESZKEDÉSRE!
-${itemName ? `Megadott név: "${itemName}"` : ''} ${itemPrice ? `Ár: "${itemPrice}"` : ''} ${webshopTextInfo ? `Webshop info: ${webshopTextInfo}` : ''}
+      const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
+        ? styleProfile.customStylingRules
 Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: styleProfile.weight, body: styleProfile.bodyType, skin: styleProfile.skinTone, styles: styleProfile.preferredStyles, philosophy: styleProfile.stylePhilosophy })}
-Meglévő ruhatár (${compactWardrobe.length} elem a szabásokkal és méretekkel): ${JSON.stringify(compactWardrobe)}
 
-3 DÖNTÉSI PILLÉR:
-1. Kombinálhatóság: Készíts 3 különböző komplett outfitet a meglévő gardrób elemeivel (használd a pontos 'id'-kat a 'matchedItemIds' tömbben!).
+3 DÖNTÉSI PILLÉR, EGYÉNI SZABÁLYOK & RÉTEGEZÉSI INTELLIGENCIA:
+1. Kombinálhatóság & KÖTELEZŐ RÉTEGEZÉS:
+   - Készíts 3 különböző komplett outfitet a meglévő gardrób elemeivel (használd a pontos 'id'-kat a 'matchedItemIds' tömbben!).
+   - RÉTEGEZÉSI SZABÁLY: Ha a kiszemelt darab pulóver ('knitwear') vagy zakó ('outerwear'), a szettekben KÖTELEZŐ egy bázis inget vagy prémium pólót ('tops') alárendelni! SOHA ne legyen pulóver vagy zakó csupasz felsőtestre bázis felső nélkül!
 2. Változatosság & Duplikáció: Ha van már hasonló ruha, de az 'Kopott / Játszós' vagy 'Lecserélendő', KIFEJEZETTEN AJÁNLANI KELL a megvásárlást mint minőségi cserét! Ha van szép állapotú hasonló, jelezd a duplikációt.
-3. Személyes Illeszkedés & SZABÁSBELI ELTÉRÉS (Fit Analysis):
-   - NÉZD MEG, MILYEN SZABÁST HORD ÁLTALÁBAN A USER a ruhatárában (pl. Slim tailored, Tapered, Regular, Oversized)!
-   - Ha a user pl. Slim Fit zakókat hord, de ez a termék Regular Fit vagy Bővebb szabású, KIFEJEZETTEN HÍVD FEL RÁ A FIGYELMET a 'fitMismatchWarning' mezőben!
-   - Értékeld a testalkathoz (pl. V-alak, atlétikus, teltebb) és magassághoz való vizuális arányokat.
+3. Személyes Illeszkedés & SZABÁSBELI / EGYÉNI SZABÁLYSÉRTÉS ELLENŐRZÉSE:
+   - SZABÁSVISSZAJELZÉS: Nézd meg, milyen szabást hord a user (pl. Slim tailored vs Regular). Ha eltér, figyelmeztess a 'fitMismatchWarning' mezőben!
+   - EGYÉNI SZABÁLYSÉRTÉS: Vizsgáld meg, hogy a kiszemelt darab ütközik-e a felhasználó bármelyik egyéni stílusszabályával (pl. ha a szabály 'Nem szeretem a pólóingeket' és ez egy pólóing / polo felső; vagy ha 'Csak természetes anyagok' és ez poliészter; vagy ha kerül bizonyos színt/szabást)!
+   - Ha szabálysértést észlelsz, a 'fitMismatchWarning' mezőben KIFEJEZETTEN ÉS KIEMELTEN ÍRD MEG A FIGYELMEZTETÉST (pl. '⚠️ Személyes stílusszabály ütközés: A stílusprofilodban rögzítetted, hogy nem szereted a pólóingeket, ez a darab pedig egy pólóing!'), és a döntést állítsd 'Gondold Át' vagy 'Kerülendő' státuszra!
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
@@ -321,37 +351,31 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
     "color": "Valódi fő szín magyarul (pl. Sötétkék, Homokbézs, Fekete)",
     "colorHex": "#hex",
     "material": "Anyagösszetétel",
-    "brand": "Márkanév / Gyártó ha felismerhető",
+    "brand": "${webshopBrand || 'Márkanév / Gyártó ha felismerhető'}",
     "size": "Méret ha webshopból vagy címkéből kivehető",
     "fit": "Felismerhető szabás (pl. Slim Fit, Regular Fit, Relaxed, Oversized, Tapered, Contemporary)",
     "qualityScore": 9.2,
     "formality": "Smart Casual",
     "styleArchetype": "Old Money & Quiet Luxury",
     "condition": "Vadonatúj / Kifogástalan",
-    "stylingTip": "Mivel hordd",
+    "stylingTip": "Mivel hordd és hogyan rétegezd",
     "whenToWear": "Mikor hordd",
     "colorHarmony": "Színharmónia indoklás",
-    "bodyFitAdvice": "Szabás és testalkat indoklás",
+    "bodyFitAdvice": "Szabás, egyéni stílusszabályok és testalkat indoklás",
     "tags": ["alapdarab"]
   },
   "compatibilityScore": 94,
   "verdict": "Erősen Ajánlott" | "Érdemes Megfontolni" | "Gondold Át",
-  "verdictSummary": "Részletes szakmai összefoglaló a vásárlási döntésről",
+  "verdictSummary": "Részletes szakmai összefoglaló a vásárlási döntésről és az egyéni szabályokról",
   "duplicationWarning": "Duplikáció vagy csere-javaslat",
-  "personalFitVerdict": "Személyes illeszkedés értékelése a testalkat alapján",
-  "fitMismatchWarning": "SZABÁSBELI FIGYELMEZTETÉS: ha a termék szabása (pl. Regular) eltér a felhasználó ruhatárában domináló szabástól (pl. Slim) vagy a testalkatától, részletesen indokold meg! Ha nincs eltérés, írd le a tökéletes egyezést.",
-  "sizingAdvice": "Méretválasztási tanács a felhasználó márkái és testalkata alapján",
-  "pros": ["3 konkrét előny"],
-  "cons": ["1 megfontolandó szempont"],
+  "fitMismatchWarning": "Szabásbeli eltérés VAGY személyes stílusszabály ütközés (pl. '⚠️ Személyes szabály ütközés: Nem szereted a pólóingeket!')",
+  "sizingAdvice": "Méretválasztási tanács a meglévő márkáid és testalkatod alapján",
   "outfits": [
     {
-      "id": "eval-1",
-      "title": "1. Szett Címe",
-      "occasion": "Munka / Tárgyalás",
-      "styleType": "Klasszikus & Kifinomult",
-      "matchScore": 96,
-      "stylingTip": "Stílustipp",
-      "matchedItemIds": ["létező ID-k a fenti gardróbból"]
+      "title": "Szett 1 Neve",
+      "occasion": "Alkalom",
+      "matchedItemIds": ["id1", "id2"],
+      "whyItWorks": "Miért harmonizál a meglévő ruhatárral és a rétegekkel"
     }
   ]
 }`;
@@ -367,11 +391,19 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 
       const hasWebInput = Boolean(webshopContext.rawInput || webshopContext.productCode || webshopContext.url);
       const tools = (!resolvedBase64 && hasWebInput) ? [{ googleSearch: {} }] : null;
-      const parsed = await callGeminiApi({ apiKey, contents: [{ parts }], tools, temperature: 0.1 });
+      const parsed = await callGeminiApi({ 
+        apiKey, 
+        contents: [{ parts }], 
+        tools, 
+        temperature: 0.1,
+        preferredModels: FAST_MODELS,
+        timeoutMs: 6500
+      });
 
       const extractedItem = {
         ...(parsed.item || {}),
         name: itemName || parsed.item?.name || 'Új Ruhadarab',
+        brand: normalizeBrandName(parsed.item?.brand) || parsed.item?.brand || '',
         imageUrl: imageBase64OrUrl,
         price: itemPrice
       };
@@ -391,12 +423,12 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         extractedItem
       };
     } catch (e) {
-      console.error('Gemini unified purchase check hiba:', e);
+      console.error('Hiba az egyfázisú értékelésben:', e);
       throw e;
     }
   }
 
-  throw new Error('Nincs beállítva Gemini API kulcs! Kérlek add meg a Beállításokban.');
+  throw new Error('Nincs beállítva Gemini API kulcs!');
 }
 
 /**
@@ -439,7 +471,13 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         parts.push({ inlineData: { mimeType, data: base64Data } });
       }
 
-      return await callGeminiApi({ apiKey, contents: [{ parts }], temperature: 0.1 });
+      return await callGeminiApi({ 
+        apiKey, 
+        contents: [{ parts }], 
+        temperature: 0.1,
+        preferredModels: FAST_MODELS,
+        timeoutMs: 5000
+      });
     } catch (e) {
       console.error('Color season analysis hiba:', e);
       throw e;
@@ -450,31 +488,32 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 }
 
 /**
- * 3. AI Outfit Stylist: Kulturális, Geográfiai & Esemény-specifikus Stílusintelligencia
- * Decodes subcultural norms, geography, dress codes, weather, and builds 3 authentic event variations.
+ * 3. Esemény- és Dress Code Hangolt AI Stylist (StylistView)
  */
-export async function generateEventOutfits({ eventName, weather, wardrobe = [], styleProfile = {}, anchorItemIds = [] }) {
+export async function generateEventOutfits({ eventName, weather, anchorItemIds = [], wardrobe = [], styleProfile = {} }) {
   const apiKey = getGeminiApiKey();
 
   if (apiKey && wardrobe.length > 0) {
     try {
-      // Filter out items in "Javításra vár" or "Lecserélendő" unless anchor
-      const availableWardrobe = wardrobe.filter(w => 
-        anchorItemIds.includes(w.id) || (w.condition !== 'Javításra vár' && w.condition !== 'Lecserélendő')
-      );
-
+      const availableWardrobe = wardrobe.filter(w => w.condition !== 'Lecserélendő' && w.condition !== 'Javításra vár');
       const anchorItems = wardrobe.filter(w => anchorItemIds.includes(w.id));
+      const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
+        ? styleProfile.customStylingRules
+        : [];
 
-      const prompt = `Te egy világklasszis mester személyi stylist vagy, aki a személyre szabott, önazonos öltözködés nagymestere.
+      const prompt = `Te egy világklasszis mester személyi stylist és sartorial rétegezési szakértő vagy.
 
-A LEGELSŐ ÉS LEGFONTOSABB SZABÁLY: A FELHASZNÁLÓ EGYÉNI STÍLUS DNS-E AZ ALAP!
-Nem sablonos kliséket és jelmezeket készítünk az eseményre, hanem a FELHASZNÁLÓ SAJÁT SZEMÉLYES STÍLUSÁT ÉS EGYÉNISÉGÉT adaptáljuk intelligensen az eseményhez úgy, hogy 100%-ig önazonos és magabiztos maradjon!
+A LEGELSŐ ÉS LEGFONTOSABB SZABÁLY: A FELHASZNÁLÓ EGYÉNI STÍLUS DNS-E, SZEMÉLYES SZABÁLYAI ÉS A TÖKÉLETES RÉTEGEZÉS AZ ALAP!
+Nem sablonos kliséket és jelmezeket készítünk az eseményre, hanem a FELHASZNÁLÓ SAJÁT SZEMÉLYES STÍLUSÁT ÉS EGYÉNISÉGÉT adaptáljuk intelligensen az eseményhez úgy, hogy 100%-ig önazonos, funkcionális és magabiztos maradjon!
 
-FELHASZNÁLÓ STÍLUSPROFILJA ÉS SZEMÉLYES PREFERENCIÁI:
+FELHASZNÁLÓ STÍLUSPROFILJA:
 - Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura'])}
 - Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
 - Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
 - Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
+
+🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI (SZIGORÚAN KÖTELEZŐ BETARTANI!):
+${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
 
 ESEMÉNY / ALKALOM: "${eventName}"
 HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${weather?.temperature}°C, ${weather?.condition}
@@ -483,14 +522,26 @@ ${anchorItems.length > 0 ? `KÖTELEZŐ KULCSDARABOK (Anchor Items): ${JSON.strin
 Ruhatár (${availableWardrobe.length} elem):
 ${JSON.stringify(availableWardrobe.map(w => ({ id: w.id, name: w.name, category: w.category, color: w.color, formality: w.formality, fit: w.fit || '', condition: w.condition, style: w.styleArchetype })))}
 
-STYLIST DÖNTÉSI LOGIKA (Személyes Stílus DNS + Esemény Harmónia):
-1. ÖNAZONOS STÍLUS-ADAPTÁCIÓ:
-   - Ha a felhasználó stílusa pl. az elegáns 'Quiet Luxury / Sprezzatura / Klasszikus', és egy lazább eseményre (pl. techno buli, nyári terasz, kerti party) megy:
-     Akkor a SAJÁT kifinomult, prémium stílusát fordítsd le az esemény nyelvére (pl. sötét árnyalatú, minőségi finomkötött pólóing, letisztult sötét nadrág, prémium bőr sneaker vagy kigombolt lezser ing), ahelyett hogy klisés vagy kényelmetlen darabokat adnál rá!
-   - Kerüld a merev túlöltözöttséget (pl. ne erőltess strukturált öltönyt táncos klubba), de őrizd meg a felhasználó igényességét és stíluskarakterét!
+STYLIST DÖNTÉSI & RÉTEGEZÉSI LOGIKA (KRITIKUS FONTOSSÁGÚ SZABÁLYOK):
 
-2. 3 KÜLÖNBÖZŐ SZEMÉLYES HANGULAT AZ ESEMÉNYRE:
-   - Készíts 3 olyan szettet, amelyek mindegyike a felhasználó ízlésvilágából építkezik, de 3 különböző nüanszot / energiát képvisel (pl. 1. Kifinomult & Letisztult, 2. Karakteres & Laza, 3. Kényelmes & Modern).
+1. 👔 KÖTELEZŐ BÁZISRÉTEG (Base Layer - 'tops'):
+   - MINDEN SZETTNEK KÖTELEZŐEN TARTALMAZNIA KELL egy közvetlenül a bőrön hordható felső bázisréteget: 'tops' (ing, oxford ing, vászoning, pamut póló, elegáns alapfelső)!
+   - ❌ SZIGORÚ HIBA ÉS TILALOM: SOHA NE AJÁNLJ PULÓVERT ('knitwear'), KARDIGÁNT VAGY ZAKÓT ('outerwear') CSUPASZ FELSŐTESTRE BÁZIS ING/PÓLÓ NÉLKÜL! A pulóver és a zakó alá MINDIG KÖTELEZŐ a gardróbból egy megfelelő ing vagy póló kiválasztása!
+
+2. 🧥 KÖZTES & KÜLSŐ RÉTEGEZÉS (Mid & Outer Layers):
+   - Kötöttáru / Pulóver ('knitwear'): KÖTELEZŐEN az ingre vagy pólóra rétegezve.
+   - Zakó / Kabát ('outerwear'): Az ingre, vagy ing + finom pulóver kombinációra rétegezve.
+   - Nadrág ('bottoms') és Lábbeli ('shoes'): Minden szettnek kötelező része.
+
+3. 🌡️ IDŐJÁRÁS- ÉS HŐMÉRSÉKLETI DINAMIKA, LEVÁLASZTHATÓ RÉTEGEK (Day-to-Night, Beltér/Kültér):
+   - Vedd figyelembe az aktuális hőmérsékletet (${weather?.temperature || 20}°C, ${weather?.condition || 'Kellemes'}) és a napközbeni/esti/beltéri hőingadozást (bent fűtés vagy klíma van, este lehűl a levegő)!
+   - A szett legyen MODULÁRIS: ha a felhasználó leveszi a zakót vagy a pulóvert (mert meleg a helyiség vagy melegebb a délután), az alatta lévő ing/póló önmagában is legyen hibátlan, elegáns és önazonos!
+   - Hűvös / hideg időben (< 18°C) és este: javasolj 3-rétegű vagy meleg 2-rétegű összeállítást (Ing + Pulóver + Zakó/Kabát + Nadrág + Cipő).
+   - Átmeneti időben (18–23°C): Ing + Zakó (vagy Ing + finomkötött pulóver/kardigán, ami szükség esetén vállra vethető vagy levehető).
+   - Melegben (24°C+): Könnyű lélegző pamut/len ing vagy felső + nadrág + loafer/sneaker.
+
+4. 3 KÜLÖNBÖZŐ SZEMÉLYES HANGULAT AZ ESEMÉNYRE:
+   - Készíts 3 olyan szettet, amelyek mindegyike a fenti rétegezési szabályok szerint épül fel, de 3 különböző hangulatot képvisel (pl. 1. Kifinomult & Letisztult, 2. Karakteres & Laza, 3. Kényelmes & Modern).
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
 [
@@ -500,15 +551,21 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
     "styleArchetype": "A felhasználó személyes stílusához és az alkalomhoz illő stílusnév",
     "occasion": "${eventName}",
     "matchScore": 97,
-    "stylingNotes": "Személyre szabott stylist tanács a viseléshez és rétegzéshez",
-    "culturalFitReasoning": "Hogyan érvényesül a felhasználó személyes stílusa és az esemény összhangja ebben a szettben",
-    "weatherSuitability": "Időjárási és kényelmi megfelelés (${weather?.temperature || 20}°C)",
-    "itemIds": ["id1", "id2", "id3"]
+    "stylingNotes": "Személyre szabott stylist tanács a viseléshez és a darabok összhangjához",
+    "layeringAdvice": "Gyakorlati rétegezési útmutató (pl. 'Este és kültéren a kasmír pulóver melegen tart, bent a meleg étteremben levéve az alatta lévő oxford ing önmagában is tökéletesen mutat.')",
+    "culturalFitReasoning": "Hogyan érvényesül a felhasználó személyes stílusa, egyéni szabályai és az esemény összhangja ebben a szettben",
+    "weatherSuitability": "Időjárási és hőmérsékleti megfelelés (${weather?.temperature || 20}°C)",
+    "itemIds": ["ing_vagy_polo_id", "opcionalis_pulover_id", "opcionalis_zako_id", "nadrag_id", "cipo_id"]
   }
 ]`;
 
       const contents = [{ parts: [{ text: prompt }] }];
-      const parsed = await callGeminiApi({ apiKey, contents });
+      const parsed = await callGeminiApi({ 
+        apiKey, 
+        contents, 
+        preferredModels: REASONING_MODELS, 
+        timeoutMs: 7000 
+      });
       
       if (Array.isArray(parsed)) {
         return parsed.map((p, idx) => ({
@@ -518,6 +575,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
           occasion: p.occasion || eventName,
           matchScore: p.matchScore || 94 + (idx * 2) % 5,
           stylingNotes: p.stylingNotes || "Harmonikus összeállítás a gardróbodból.",
+          layeringAdvice: p.layeringAdvice || "Funkcionálisan rétegezett összeállítás, amely meleg belső térben és hűvösebb időben is jól alkalmazkodik.",
           culturalFitReasoning: p.culturalFitReasoning || "Tökéletesen igazodik az esemény dress code-jához és atmoszférájához.",
           weatherSuitability: p.weatherSuitability || `Ideális a(z) ${weather?.temperature || 20}°C-os időjáráshoz.`,
           items: (p.itemIds || [])
@@ -556,21 +614,31 @@ export async function analyzeWardrobeGaps(wardrobe = [], profile = {}) {
 
       // Count items per category and identify potential replacements
       const replacementCandidates = wardrobe.filter(w => w.condition === 'Lecserélendő' || w.condition === 'Játszós / Kopott');
+      const customRules = Array.isArray(profile.customStylingRules) && profile.customStylingRules.length > 0
+        ? profile.customStylingRules
+        : [];
 
       const prompt = `Te egy mester kapszula ruhatár-tervező és sartorial stylist vagy.
 Elemezd a felhasználó gardróbját (${wardrobe.length} elem), testalkatát és stílusprofilját:
 Stílusprofil: ${JSON.stringify({ height: profile.height, weight: profile.weight, body: profile.bodyType, preferredStyles: profile.preferredStyles, philosophy: profile.stylePhilosophy })}
+
+🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI:
+${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
+
 Meglévő ruhatár elemek: ${JSON.stringify(compactItems)}
 ${replacementCandidates.length > 0 ? `Elhasználódott / játszós darabok a szekrényben: ${JSON.stringify(replacementCandidates.map(r => ({ name: r.name, category: r.category, color: r.color })))}` : ''}
 
 FONTOS SZABÁLYOK AZ AJÁNLÁSOKHOZ:
 
-1. SZABÁS (FIT) BEÉPÍTÉSE:
+1. EGYÉNI SZABÁLYOK SZIGORÚ TISZTELETBEN TARTÁSA:
+   - SOHA NE AJÁNLJ olyan darabot, kategóriát vagy anyagot, amit a felhasználó kizárt (pl. ha 'Nem szeretem a pólóingeket', SOHA ne ajánlj poloinget; ha 'Csak 100% természetes anyagok', csak tiszta pamut/len/gyapjú/selyem darabot ajánlj; ha kerül bizonyos szabást, tartsd be)!
+
+2. SZABÁS (FIT) BEÉPÍTÉSE:
    - Vizsgáld meg, milyen szabású darabokat hord a felhasználó (pl. Slim tailored, Slim fit, Tapered, Regular)!
    - Ha a felhasználó Slim Fit / karcsúsított szabású ruhákat hord vagy atlétikus testalkatú, akkor az ajánlott darabok megnevezésébe (title) és KIFEJEZETTEN a keresési kulcsszavakba (searchKeywords) is ÉPÍTSD BE a szabást (pl. 'Slim Fit Olasz Gyapjú Zakó', searchKeywords: 'slim fit navy blue wool blazer férfi zakó')!
 
-2. TELÍTETTSÉG & INTELLIGENS CSERE SZABÁLY (Redundancy & Smart Replacement):
-   - Ha egy adott típusból / kiegészítőből (pl. fonott öv, fehér bőr sneaker, sötétkék pólóing stb.) a ruhatárban MÁR VAN 2 VAGY TÖBB szép, 'Megkímélt / Kiváló' vagy 'Vadonatúj' állapotú darab, akkor MÉG HA VAN IS egy 'Játszós / Kopott' darab belőle, NEM SZABAD annak lecserélését / pótlását ajánlani!
+3. TELÍTETTSÉG & INTELLIGENS CSERE SZABÁLY (Redundancy & Smart Replacement):
+   - Ha egy adott típusból / kiegészítőből (pl. fonott öv, fehér bőr sneaker, sötétkék ing stb.) a ruhatárban MÁR VAN 2 VAGY TÖBB szép, 'Megkímélt / Kiváló' vagy 'Vadonatúj' állapotú darab, akkor MÉG HA VAN IS egy 'Játszós / Kopott' darab belőle, NEM SZABAD annak lecserélését / pótlását ajánlani!
    - Csak akkor ajánlj cserét ('isReplacement': true), ha az adott KULCSFONTOSSÁGÚ darabból nincs másik jó állapotú alternatíva a ruhatárban, és hiánya blokkolja a szettek építését!
    - Mindig a VALÓDI KAPSZULA HIÁNYOKRA fókuszálj, amelyek új kombinációs hidakat és outfit variációkat hoznak létre.
 
@@ -584,14 +652,19 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
     "estimatedPrice": "35 000 - 65 000 Ft",
     "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "accessories",
     "season": "Tavasz / Nyár" | "Ősz / Tél" | "Egész évben",
-    "reason": "Részletes szakmai indoklás, miért ez a kulcsdarab hiányzik a ruhatárból és hogyan kombinálható a meglévő darabokkal",
+    "reason": "Részletes szakmai indoklás, miért ez a kulcsdarab hiányzik a ruhatárból és hogyan illeszkedik a felhasználó egyéni szabályaihoz",
     "isReplacement": false,
     "searchKeywords": "konkrét keresési kulcsszavak webshophoz szabással és anyaggal (pl. slim fit navy tailored wool blazer ferfi)"
   }
 ]`;
 
       const contents = [{ parts: [{ text: prompt }] }];
-      const parsed = await callGeminiApi({ apiKey, contents });
+      const parsed = await callGeminiApi({ 
+        apiKey, 
+        contents, 
+        preferredModels: REASONING_MODELS, 
+        timeoutMs: 7000 
+      });
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed;
       }

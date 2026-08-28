@@ -10,7 +10,7 @@ A **Sartorial Wardrobe Assistant** egy modern, mesterséges intelligenciával t�
 
 ### 🛠️ Technológiai Stack:
 - **Frontend Keretrendszer:** React (Vite, TailwindCSS + Luxury Gold Glassmorphism Design System)
-- **AI Modell Motor:** Google Gemini 3.x (`gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.1-flash-lite`)
+- **AI Modell Motor:** Google Gemini 3.x (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.7-flash`, `gemini-3.6-flash`)
 - **Adatperzisztencia & Szinkronizáció:** Firebase Authentication & Cloud Firestore (Valós idejű kétirányú `onSnapshot` szinkronizáció Mobile ➔ Webapp)
 - **Képfeldolgozó Pipeline:** Kliens oldali Canvas & Blob motor (640×640 @ 0.75 JPEG, ~35–50 KB)
 - **Webshop & SKU Motor:** Multi-CDN képkinyerő és mikroadat parser (Next Direct, Zara, Reserved, Massimo Dutti, H&M, Mango, ASOS)
@@ -49,7 +49,10 @@ sequenceDiagram
 
     alt Fotó / Képfeltöltés
         User->>App: Kép készítése vagy kiválasztása
-        App->>Opt: Kép átméretezése (640x640 @ 0.75 JPEG)
+        App->>Opt: Kép átméretezése (520x520 @ 0.72 JPEG)
+    else Vágólap (Ctrl+V / Kép beillesztése)
+        User->>App: Böngészőből jobb klikk -> Kép másolása -> Ctrl+V
+        App->>Opt: Vágólap kép Blob/URL konvertálása Base64-be
     else Webshop Link vagy Termékkód (SKU)
         User->>App: Beilleszti a linket vagy termékkódot (pl. Next AA6536)
         App->>WS: parseWebshopUrlOrCode + findFirstWorkingImageUrl
@@ -79,15 +82,18 @@ sequenceDiagram
 
 ---
 
-### 🎭 Workflow 3: Esemény- és Kulturális Dress Code Hangolt AI Stylist
+### 🎭 Workflow 3: Esemény- és Kulturális Dress Code Hangolt AI Stylist & Rétegezési Motor
 1. **Esemény Dekódolás:** A beírt esemény jellegének, helyszínének és kulturális normáinak értelmezése (pl. underground klub, gála, nyári randi).
 2. **Kulturális Tiltólisták Alkalmazása:**
    - Techno / Rave / Club esetén: Szigorúan kizárja a formális zakókat, nyakkendőket és öltönynadrágokat.
    - Formális esemény esetén: Kizárja a lezser sportos darabokat.
-3. **Önazonos Stílus-Adaptáció:**
-   - A felhasználó saját stílusfilozófiáját és preferált színeit/anyagait (Style DNA) adaptálja az esemény keretei közé.
-4. **3 Hiteles Szettvariáció:**
-   - Generál 3 szettet, és a kártyákon megjeleníti az esemény-összhang indoklását (`culturalFitReasoning`).
+3. **Kötelező Bázisréteg & Anatómiai Rétegezés:**
+   - **Bázisréteg (Base Layer):** Minden szett kötelezően tartalmaz egy bőrön hordható felsőt (`tops`: ing vagy prémium pamut póló). Szigorúan tilos pulóvert vagy zakót bázis felső nélkül ajánlani!
+   - **Köztes & Külső Réteg (Mid & Outer Layers):** A pulóver (`knitwear`) és zakó (`outerwear`) az ingre rétegződik.
+4. **Időjárás & Hőmérsékleti Dinamika (Moduláris rétegek):**
+   - Felkészít a beltéri fűtésre/klímára és az esti lehűlésre: a felső réteg levehető, és az alatta lévő ing/póló önmagában is elegáns és önazonos megjelenést biztosít. Részletes rétegezési tanácsot ad (`layeringAdvice`).
+5. **3 Hiteles Szettvariáció:**
+   - Generál 3 szettet, és a kártyákon megjeleníti az esemény-összhang indoklását (`culturalFitReasoning`) és a rétegezési útmutatót.
 
 ---
 
@@ -102,9 +108,21 @@ sequenceDiagram
 
 ### 📏 Workflow 5: Gyártói Méretprofil & Illeszkedési Mátrix
 1. **Méretek rögzítése:** Minden ruha rendelkezik opcionális `brand` és `size` mezővel.
-2. **Dinamikus Aggregáció:**
+2. **Márka Névtér Konszolidáció (Brand Aliasing & Canonical Mapping):**
+   - A rendszer a `normalizeBrandName` motorral automatikusan egyetlen kanonikus márkanév alá fűzi a domain alapú (pl. `reserved.com` ➔ `Reserved`, `next.co.uk` ➔ `Next Direct`), kelmefabrikos (pl. `Next (Nova Fides)` ➔ `Next Direct`), illetve eltérő kis- és nagybetűs elnevezéseket.
+3. **Dinamikus Aggregáció & Megjelenítés:**
    - A `StyleDNAView` automatikusan összesíti a kategóriánkénti bázisméreteket (Zakó: 50, Ing: 40/M, Nadrág: 32/32, Cipő: 42.5).
-   - Gyártói Illeszkedési Mátrixot épít (pl. Boglioli ➔ 50, Eton ➔ 40, Incotex ➔ 32/32), amely vásárláskor azonnal segít a méretválasztásban.
+   - Gyártói Illeszkedési Mátrixot épít (pl. Boglioli ➔ 50, Eton ➔ 40, Incotex ➔ 32/32, Next Direct ➔ L / 50), feltüntetve az összefűzött aliasokat, ami vásárláskor azonnal segít a méretválasztásban.
+
+---
+
+### 🧠 Workflow 6: Szabad Szöveges AI Stylist Tanítás & Egyéni Szabályrendszer
+1. **Szabályok rögzítése szabad szöveggel:**
+   - A felhasználó a `StyleDNAView` felületen szabadon megadhatja személyes öltözködési szabályait és tiltásait (pl. *"Nem szeretem a pólóingeket"*, *"Csak 100% természetes anyagok"*, *"Kerülöm a skinny szabást"*).
+2. **Keresztfunkciós Szabályalkalmazás:**
+   - **Stylist Motor (`generateEventOutfits`):** Szigorúan kizárja a tiltott darabokat/kombinációkat még lezser alkalmak esetén is, és a szettek leírásában (`culturalFitReasoning`) indokolja a szabályoknak való megfelelést.
+   - **Kapszula Gap Elemző (`analyzeWardrobeGaps`):** Sosem ajánl olyan hiányzó kulcsdarabot, amit a felhasználó kizárt.
+   - **Vásárlási Döntéstámogató (`evaluateAndExtractPrePurchaseItem`):** Automatikusan ellenőrzi az új terméket az egyéni szabályok ellenében. Ha ütközést észlel (pl. pólóing kiszemelésekor), azonnali kiemelt figyelmeztetést generál (`fitMismatchWarning`: *"⚠️ Személyes szabály ütközés: Nem szereted a pólóingeket!"*), a döntést pedig 'Gondold Át' vagy 'Kerülendő' státuszra állítja.
 
 ---
 
@@ -137,8 +155,8 @@ sequenceDiagram
 ---
 
 ## ⚡ Minőségi & Sebesség-szabályok
-1. **Modellek:** Kizárólag a hivatalos 2026-os Gemini 3.x modelleket használjuk (`gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.1-flash-lite`).
-2. **Késleltetés:** Maximum 5.5 mp-es abort timeout per kérés, aktív gyors modell megjegyzése (`activeFastModel`).
+1. **Modellek:** Kizárólag a hivatalos 2026-os Gemini 3.x modelleket használjuk (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.7-flash`, `gemini-3.6-flash`).
+2. **Késleltetés:** Maximum 5.0–7.0 mp-es abort timeout per kérés, adaptív modellválasztás (Fast-Lite modellek webshop linkekhez és képazonosításhoz, Deep Reasoning modellek stylist szettekhez), aktív gyors modell megjegyzése (`activeFastModel`).
 3. **Képméret:** Minden feltöltött kép 640×640-re tömörítve fut át, megőrizve a 100%-os vizuális élességet és az AI pontosságot.
 4. **Biztonság & Hibatűrés:** Minden méret, márka és webshop adat null-safe, üres adatok esetén nem akadhat el a kód.
 

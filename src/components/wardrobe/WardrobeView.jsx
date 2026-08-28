@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Search, Shirt } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { normalizeBrandName } from '../../services/webshop';
 
 export default function WardrobeView({ onAddNewItem, onSelectItem }) {
   const { wardrobe } = useAuth();
@@ -53,10 +54,11 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
+        const normalizedBrand = normalizeBrandName(item.brand);
         const matchName = item.name?.toLowerCase().includes(q);
         const matchMaterial = item.material?.toLowerCase().includes(q);
         const matchColor = item.color?.toLowerCase().includes(q);
-        const matchBrand = item.brand?.toLowerCase().includes(q);
+        const matchBrand = item.brand?.toLowerCase().includes(q) || normalizedBrand?.toLowerCase().includes(q);
         const matchSize = item.size?.toLowerCase().includes(q);
         const matchStyle = item.styleArchetype?.toLowerCase().includes(q);
         const matchTags = item.tags?.some(t => t.toLowerCase().includes(q));
@@ -188,6 +190,8 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
                   <img
                     src={item.imageUrl}
                     alt={item.name}
+                    loading="lazy"
+                    decoding="async"
                     className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
                   />
                   

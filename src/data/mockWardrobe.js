@@ -251,5 +251,11 @@ export const INITIAL_USER_PROFILE = {
   preferredStyles: ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura', 'Smart Urban'],
   dislikedStyles: ['Logo-heavy Streetwear', 'Túldíszített Fast Fashion'],
   favoriteColors: ['Sötétkék (Navy)', 'Teveszín (Camel)', 'Törtfehér / Krém', 'Olívazöld (Olive)', 'Dohánybarna / Espresso', 'Antracitszürke (Charcoal)'],
-  stylePhilosophy: 'Időtlen, magas minőségű természetes anyagok (gyapjú, len, kasmír, full-grain bőr), kényelmes, mégis kifogástalanul szabott sziluettek könnyed olasz lazasággal kombinálva.'
+  stylePhilosophy: 'Időtlen, magas minőségű természetes anyagok (gyapjú, len, kasmír, full-grain bőr), kényelmes, mégis kifogástalanul szabott sziluettek könnyed olasz lazasággal kombinálva.',
+  customStylingRules: [
+    'Nem szeretem a pólóingeket',
+    'Csak 100% természetes anyagok (gyapjú, len, pamut, selyem, kasmír, bőr)',
+    'Kerülöm a túl szűk / skinny szabásokat, a slim tailored és az egyenes sziluettet részesítem előnyben',
+    'Zakóhoz és elegáns szettekhez nem hordok kereknyakú pólót'
+  ]
 };

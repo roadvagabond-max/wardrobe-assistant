@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart } from 'lucide-react';
+import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
-import { optimizeImageForUpload, getSmartGarmentImage } from '../../services/imageOptimizer';
+import { optimizeImageForUpload, getSmartGarmentImage, ensureBase64Image } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
 
 export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
   const { wardrobe, profile, addItem } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('camera'); // 'camera', 'upload', 'link'
+  const [activeTab, setActiveTab] = useState('camera'); // 'camera', 'clipboard', 'upload', 'link'
   const [imagePreview, setImagePreview] = useState(null);
   const [webshopUrl, setWebshopUrl] = useState('');
   const [webshopContext, setWebshopContext] = useState(null);
@@ -33,6 +33,109 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
       setAddedToWardrobe(false);
     }
   }, [prefillData]);
+
+  // Global window paste listener for Advisor View
+  useEffect(() => {
+    const handleWindowPaste = (e) => {
+      const target = e.target;
+      const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+      const hasImageFile = Array.from(e.clipboardData?.items || []).some(item => item.type && item.type.startsWith('image/'));
+
+      if (!isInput || hasImageFile) {
+        handlePastedData(e.clipboardData?.items, e.clipboardData?.getData('text'));
+        if (hasImageFile) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleWindowPaste);
+    return () => window.removeEventListener('paste', handleWindowPaste);
+  }, []);
+
+  const handlePastedData = async (items, textData) => {
+    if (items && items.length > 0) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type && items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) {
+            setIsAnalyzing(true);
+            setAnalysisError(null);
+            try {
+              const optimized = await ensureBase64Image(file);
+              setImagePreview(optimized);
+              setEvaluationResult(null);
+            } catch (err) {
+              console.error('Vágólap kép hiba:', err);
+              setAnalysisError('Nem sikerült a vágólapon lévő kép beolvasása.');
+            } finally {
+              setIsAnalyzing(false);
+            }
+            return true;
+          }
+        }
+      }
+    }
+
+    const cleanText = (textData || '').trim();
+    if (cleanText && (cleanText.startsWith('http://') || cleanText.startsWith('https://') || cleanText.startsWith('data:image/'))) {
+      if (/\.(jpeg|jpg|png|webp|avif)($|\?)/i.test(cleanText) || cleanText.includes('images') || cleanText.includes('cdn') || cleanText.includes('static') || cleanText.startsWith('data:image/')) {
+        setIsAnalyzing(true);
+        setAnalysisError(null);
+        try {
+          const optimized = await ensureBase64Image(cleanText);
+          setImagePreview(optimized || cleanText);
+          setEvaluationResult(null);
+        } catch (err) {
+          console.error('Vágólap link hiba:', err);
+        } finally {
+          setIsAnalyzing(false);
+        }
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const handleClipboardButtonClick = async () => {
+    try {
+      setIsAnalyzing(true);
+      setAnalysisError(null);
+
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          const imageType = item.types.find(type => type.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const optimized = await ensureBase64Image(blob);
+            setImagePreview(optimized);
+            setEvaluationResult(null);
+            setIsAnalyzing(false);
+            return;
+          }
+        }
+      }
+
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          const handled = await handlePastedData(null, text);
+          if (handled) {
+            setIsAnalyzing(false);
+            return;
+          }
+        }
+      }
+
+      setIsAnalyzing(false);
+      setAnalysisError('Nem található kép a vágólapon. Kattints jobb gombbal a fotóra ➔ "Kép másolása", majd nyomj Ctrl+V-t!');
+    } catch (err) {
+      console.warn('Vágólap olvasási hiba:', err);
+      setIsAnalyzing(false);
+      setAnalysisError('Nyomj Ctrl + V-t a billentyűzeten a kép beillesztéséhez!');
+    }
+  };
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -150,8 +253,18 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           Megvegyem ezt a ruhadarabot?
         </h2>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Fotózd le a próbafülkében vagy másold be a webshop linket. Az AI ellenőrzi a <strong>Kombinálhatóságot</strong>, a <strong>Változatosságot</strong> és a <strong>Személyes Illeszkedést</strong>!
+          Fotózd le a próbafülkében vagy másold be a webshop linket. Az AI ellenőrzi a <strong>Kombinálhatóságot</strong>, a <strong>Változatosságot</strong> és a <strong>Személyes Illeszkedést & Szabályokat</strong>!
         </p>
+        {profile.customStylingRules && profile.customStylingRules.length > 0 && (
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            <span className="text-[10px] text-[var(--accent-gold-light)] bg-[var(--accent-gold-glow)] px-2.5 py-1 rounded-lg border border-[var(--border-gold)]/40 flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-[var(--accent-gold)] shrink-0" />
+              <span className="truncate max-w-xl">
+                <strong>Egyéni stílusszabály-ellenőrzés aktív ({profile.customStylingRules.length}):</strong> {profile.customStylingRules.join(' • ')}
+              </span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Input Stage */}
@@ -160,7 +273,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           
           {/* Source Tabs */}
           {!imagePreview && (
-            <div className="grid grid-cols-3 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
               <button
                 type="button"
                 onClick={() => setActiveTab('camera')}
@@ -174,13 +287,24 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
 
               <button
                 type="button"
+                onClick={() => setActiveTab('clipboard')}
+                className={`py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
+                  activeTab === 'clipboard' ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' : 'text-[var(--text-secondary)] hover:text-white'
+                }`}
+              >
+                <Clipboard className="w-4 h-4" />
+                <span>Vágólap (Ctrl+V)</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveTab('upload')}
                 className={`py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
                   activeTab === 'upload' ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' : 'text-[var(--text-secondary)] hover:text-white'
                 }`}
               >
                 <Upload className="w-4 h-4" />
-                <span>Kép Feltöltése</span>
+                <span>Feltöltés</span>
               </button>
 
               <button
@@ -191,7 +315,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                 }`}
               >
                 <LinkIcon className="w-4 h-4" />
-                <span>Webshop Link / Cikkszám</span>
+                <span>Webshop Link</span>
               </button>
             </div>
           )}
@@ -220,7 +344,30 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
             </div>
           )}
 
-          {/* Tab 2: Upload */}
+          {/* Tab 2: Clipboard Paste */}
+          {activeTab === 'clipboard' && !imagePreview && (
+            <div
+              onClick={handleClipboardButtonClick}
+              className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3 bg-[var(--accent-gold-glow)] group"
+            >
+              <div className="w-14 h-14 rounded-full bg-[var(--accent-gold)]/20 flex items-center justify-center text-[var(--accent-gold)] group-hover:scale-110 transition-transform">
+                <Clipboard className="w-7 h-7" />
+              </div>
+              <div className="space-y-1 max-w-sm">
+                <p className="text-sm font-semibold text-white">
+                  Kattints ide a vágólap beillesztéséhez
+                </p>
+                <p className="text-xs text-[var(--accent-gold-light)] font-medium">
+                  Vagy nyomj <kbd className="px-1.5 py-0.5 rounded bg-black border border-white/20 text-white font-mono text-[11px]">Ctrl + V</kbd>-t bárhol!
+                </p>
+                <p className="text-[11px] text-[var(--text-muted)] pt-1">
+                  Másold ki a termékfotót a webshopból (Jobb klikk ➔ Kép másolása) és illeszd be ide!
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Tab 3: Upload */}
           {activeTab === 'upload' && !imagePreview && (
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -243,7 +390,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
             </div>
           )}
 
-          {/* Tab 3: Link or Product Code */}
+          {/* Tab 4: Link or Product Code */}
           {activeTab === 'link' && !imagePreview && (
             <form onSubmit={handleLinkInput} className="space-y-3">
               <div className="flex items-center justify-between">
@@ -290,9 +437,19 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
 
           {/* Error Message if any */}
           {analysisError && (
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300">
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <span>{analysisError}</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 animate-slide-up">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>{analysisError}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleClipboardButtonClick}
+                className="btn-gold py-1 px-2.5 text-[11px] shrink-0 flex items-center gap-1.5 self-end sm:self-auto shadow"
+              >
+                <Clipboard className="w-3.5 h-3.5" />
+                <span>Kép Beillesztése (Ctrl+V)</span>
+              </button>
             </div>
           )}
 
@@ -307,13 +464,24 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                     onError={() => setImagePreview(null)}
                     className="max-h-full max-w-full object-contain rounded-xl shadow-lg" 
                   />
-                  <button
-                    type="button"
-                    onClick={() => setImagePreview(null)}
-                    className="absolute top-3 right-3 p-2 rounded-full bg-black/80 text-white hover:bg-black border border-white/10"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
+                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleClipboardButtonClick}
+                      className="p-2 rounded-full bg-black/80 text-[var(--accent-gold)] hover:bg-black border border-white/10"
+                      title="Kép cseréje vágólapról (Ctrl+V)"
+                    >
+                      <Clipboard className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImagePreview(null)}
+                      className="p-2 rounded-full bg-black/80 text-white hover:bg-black border border-white/10"
+                      title="Kép törlése"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="p-4 rounded-2xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-center space-y-2">
@@ -324,6 +492,17 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                   <p className="text-xs text-[var(--text-secondary)]">
                     {webshopContext?.brand ? `Márka: ${webshopContext.brand}` : ''} {webshopContext?.productCode ? `• SKU: ${webshopContext.productCode}` : ''}
                   </p>
+                  
+                  <div className="pt-2 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={handleClipboardButtonClick}
+                      className="btn-gold py-1.5 px-3 text-xs flex items-center gap-1.5 shadow"
+                    >
+                      <Clipboard className="w-4 h-4" />
+                      <span>Fotó Beillesztése Vágólapról (Ctrl+V)</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -569,6 +748,8 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                               <img
                                 src={item.imageUrl}
                                 alt={item.name}
+                                loading="lazy"
+                                decoding="async"
                                 className="max-h-full max-w-full object-contain rounded"
                               />
                               {isCandidateItem && (

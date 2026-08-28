@@ -251,6 +251,77 @@ export function parseWebshopUrlOrCode(rawInput) {
   return parsed;
 }
 
+/**
+ * Normalizes brand names to merge variations like domain names (e.g. reserved.com, next.co.uk),
+ * fabric / sub-brand labels (e.g. next(nova fides), Zara Man, Massimo Dutti Studio),
+ * and differing capitalization into a single canonical brand identity.
+ */
+export function normalizeBrandName(rawBrand) {
+  if (!rawBrand || typeof rawBrand !== 'string') return '';
+
+  let brand = rawBrand.trim();
+  if (!brand) return '';
+
+  // 1. Remove URLs, protocol, query params and domain extensions (.com, .co.uk, .hu, etc.)
+  brand = brand
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .replace(/\.(com|co\.uk|hu|de|it|fr|es|eu|org|net|pl)(\/.*|\?.*)?$/i, '');
+
+  // 2. Remove parenthetical descriptions, e.g. "Next (Nova Fides)", "Zara (Manteco)", "Reserved (Eco)"
+  brand = brand.replace(/\s*\([^)]*\)/g, '').trim();
+
+  // 3. Remove fabric/mill suffixes with hyphen or slash, e.g. "Next / Nova Fides", "Next - Italian Fabric"
+  brand = brand.replace(/\s*[\/\-]\s*(nova fides|manteco|vitale barberis|lanificio|candiani|loropiana|fabric|wool|cotton|linen).*/i, '').trim();
+
+  // 4. Normalized string for fast matching
+  const lower = brand.toLowerCase().replace(/[^a-z0-9&]/g, '');
+
+  // Canonical mapping for well-known brands
+  if (/^next/i.test(lower)) return 'Next Direct';
+  if (/^reserved/i.test(lower)) return 'Reserved';
+  if (/^zara/i.test(lower)) return 'Zara';
+  if (/^massimo/i.test(lower) || lower.includes('massimodutti')) return 'Massimo Dutti';
+  if (/^h[&]?m/i.test(lower) || lower === 'hm' || lower.startsWith('handm')) return 'H&M';
+  if (/^mango/i.test(lower)) return 'Mango';
+  if (/^asos/i.test(lower)) return 'ASOS';
+  if (/^boglioli/i.test(lower)) return 'Boglioli';
+  if (/^eton/i.test(lower)) return 'Eton';
+  if (/^incotex/i.test(lower)) return 'Incotex';
+  if (/^suitsupply/i.test(lower) || lower.includes('suitsupply')) return 'Suitsupply';
+  if (/^loropiana/i.test(lower) || lower.includes('loropiana')) return 'Loro Piana';
+  if (/^brunello/i.test(lower) || lower === 'cucinelli') return 'Brunello Cucinelli';
+  if (/^ralphlauren/i.test(lower) || lower.includes('poloralphlauren') || lower === 'polo') return 'Ralph Lauren';
+  if (/^tommy/i.test(lower) || lower === 'hilfiger') return 'Tommy Hilfiger';
+  if (/^calvinklein/i.test(lower) || lower === 'ck') return 'Calvin Klein';
+  if (/^hugoboss/i.test(lower) || lower === 'boss' || lower === 'hugo') return 'Hugo Boss';
+  if (/^cos(stores)?/i.test(lower)) return 'COS';
+  if (/^arket/i.test(lower)) return 'Arket';
+  if (/^uniqlo/i.test(lower)) return 'Uniqlo';
+  if (/^mohito/i.test(lower)) return 'Mohito';
+  if (/^sinsay/i.test(lower)) return 'Sinsay';
+  if (/^tagliatore/i.test(lower)) return 'Tagliatore';
+  if (/^carmina/i.test(lower)) return 'Carmina';
+  if (/^rota/i.test(lower)) return 'Rota';
+  if (/^aspesi/i.test(lower)) return 'Aspesi';
+  if (/^commonprojects/i.test(lower)) return 'Common Projects';
+  if (/^sunspel/i.test(lower)) return 'Sunspel';
+
+  // 5. Generic cleaner: remove trailing noise words like "man", "men", "studio", "official", "store", "online", "collection"
+  let cleaned = brand
+    .replace(/\b(official|store|online|collection|fashion|apparel|clothing|design|studio|man|men|woman|women)\b/gi, '')
+    .trim();
+
+  if (!cleaned) cleaned = brand;
+
+  // Title-case fallback
+  return cleaned
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
 export const parseWebshopUrl = parseWebshopUrlOrCode;
 
 /**
@@ -289,15 +360,16 @@ export async function extractWebshopData(rawInput = '') {
 
   // Case 2: Parse URL or Product Code (Next, Zara, Reserved, H&M, Massimo Dutti, Mango, ASOS)
   const parsed = parseWebshopUrlOrCode(cleanInput);
+  const normalizedBrand = normalizeBrandName(parsed.brand);
 
   return {
     imageUrl: parsed.imageUrl || '',
     images: parsed.images || [],
     title: parsed.title || '',
     description: '',
-    brand: parsed.brand || '',
+    brand: normalizedBrand || parsed.brand || '',
     productCode: parsed.productCode || '',
     rawInput: cleanInput,
-    rawText: `Márka: ${parsed.brand || 'Webshop'}, Cikkszám / Termékkód: ${parsed.productCode || cleanInput}, Eredeti link: ${cleanInput}`
+    rawText: `Márka: ${normalizedBrand || parsed.brand || 'Webshop'}, Cikkszám / Termékkód: ${parsed.productCode || cleanInput}, Eredeti link: ${cleanInput}`
   };
 }

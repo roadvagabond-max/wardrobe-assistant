@@ -71,6 +71,16 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
           <p className="text-sm text-[var(--text-secondary)] mt-1">
             Az AI azonosítja a ruhatárad legfontosabb hiányzó láncszemeit a maximális variálhatóságért.
           </p>
+          {profile.customStylingRules && profile.customStylingRules.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <span className="text-[10px] text-[var(--accent-gold-light)] bg-[var(--accent-gold-glow)] px-2.5 py-1 rounded-lg border border-[var(--border-gold)]/40 flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-[var(--accent-gold)] shrink-0" />
+                <span className="truncate max-w-xl">
+                  <strong>Egyéni szabályok érvényben ({profile.customStylingRules.length}):</strong> {profile.customStylingRules.join(' • ')}
+                </span>
+              </span>
+            </div>
+          )}
         </div>
 
         <button

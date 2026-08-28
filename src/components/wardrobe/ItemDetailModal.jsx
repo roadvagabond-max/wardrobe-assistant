@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Trash2, Sparkles, Tag, ShieldCheck, Calendar, Lightbulb, Edit3, Check, Camera, Upload } from 'lucide-react';
+import { X, Trash2, Sparkles, Tag, ShieldCheck, Calendar, Lightbulb, Edit3, Check, Camera, Upload, Clipboard } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ensureBase64Image } from '../../services/imageOptimizer';
 import ColorPalettePicker from '../common/ColorPalettePicker';
@@ -114,6 +114,76 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
     });
   };
 
+  // Paste handler for edit mode
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const handleWindowPaste = async (e) => {
+      const items = e.clipboardData?.items;
+      if (items && items.length > 0) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type && items[i].type.startsWith('image/')) {
+            const file = items[i].getAsFile();
+            if (file) {
+              e.preventDefault();
+              try {
+                const optimized = await ensureBase64Image(file);
+                setEditData(prev => ({ ...prev, imageUrl: optimized }));
+              } catch (err) {
+                console.error('Vágólap beillesztési hiba:', err);
+              }
+              return;
+            }
+          }
+        }
+      }
+
+      const text = e.clipboardData?.getData('text')?.trim();
+      if (text && (text.startsWith('http') || text.startsWith('data:image/'))) {
+        if (/\.(jpeg|jpg|png|webp|avif)($|\?)/i.test(text) || text.includes('images') || text.includes('cdn') || text.startsWith('data:image/')) {
+          e.preventDefault();
+          try {
+            const optimized = await ensureBase64Image(text);
+            setEditData(prev => ({ ...prev, imageUrl: optimized || text }));
+          } catch (err) {
+            console.error('Vágólap link hiba:', err);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleWindowPaste);
+    return () => window.removeEventListener('paste', handleWindowPaste);
+  }, [isEditing]);
+
+  const handleClipboardPasteClick = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const itm of clipboardItems) {
+          const imageType = itm.types.find(type => type.startsWith('image/'));
+          if (imageType) {
+            const blob = await itm.getType(imageType);
+            const optimized = await ensureBase64Image(blob);
+            setEditData(prev => ({ ...prev, imageUrl: optimized }));
+            return;
+          }
+        }
+      }
+
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text && (text.startsWith('http') || text.startsWith('data:image/'))) {
+          const optimized = await ensureBase64Image(text);
+          setEditData(prev => ({ ...prev, imageUrl: optimized || text }));
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Vágólap beillesztési hiba:', err);
+    }
+  };
+
   const handleSaveEdit = (e) => {
     e.preventDefault();
     const fullUpdatedItem = {
@@ -183,16 +253,30 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
                 <img 
                   src={editData.imageUrl || item.imageUrl} 
                   alt="Preview" 
+                  loading="lazy"
+                  decoding="async"
                   className="max-h-full max-w-full object-contain rounded-lg" 
                 />
-                <button
-                  type="button"
-                  onClick={() => photoInputRef.current?.click()}
-                  className="absolute bottom-3 right-3 bg-black/80 text-white hover:text-[var(--accent-gold)] px-3 py-1.5 rounded-xl border border-white/20 text-xs flex items-center gap-1.5 shadow-xl"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Új fotó feltöltése</span>
-                </button>
+                <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleClipboardPasteClick}
+                    className="bg-black/80 text-[var(--accent-gold)] hover:bg-black px-3 py-1.5 rounded-xl border border-white/20 text-xs flex items-center gap-1.5 shadow-xl"
+                    title="Beillesztés vágólapról (Ctrl+V)"
+                  >
+                    <Clipboard className="w-3.5 h-3.5" />
+                    <span>Vágólap (Ctrl+V)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="bg-black/80 text-white hover:text-[var(--accent-gold)] px-3 py-1.5 rounded-xl border border-white/20 text-xs flex items-center gap-1.5 shadow-xl"
+                    title="Új fotó feltöltése"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Fotó</span>
+                  </button>
+                </div>
                 <input 
                   type="file" 
                   accept="image/*" 
@@ -362,7 +446,7 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
           <>
             {/* Large Image (Uncropped, Proportional) */}
             <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
-              <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain rounded-lg shadow-md" />
+              <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain rounded-lg shadow-md" />
               {item.qualityScore && (
                 <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/85 backdrop-blur-md border border-[var(--border-gold)] text-xs font-bold text-amber-300 flex items-center gap-1.5 shadow-lg">
                   <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />

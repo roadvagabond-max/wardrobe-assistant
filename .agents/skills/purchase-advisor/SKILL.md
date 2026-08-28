@@ -12,7 +12,8 @@ Ez a skill a vásárlás előtti tudatos döntéshozatalt és a kapszula ruhatá
    - *Kombinálhatóság:* Minimum 3 komplett szett a meglévő ruhatár darabjaival.
    - *Változatosság & Csere:* Ha van kopott hasonló darab, kifejezetten ajánlja a minőségi pótlást.
    - *Személyes Illeszkedés:* Bőrtónus és testalkat harmónia.
-2. **Szabás & Méret Intelligencia (Fit Mismatch):**
+2. **Szabás & Egyéni Szabályok Ellenőrzése (Fit & Custom Rules Mismatch):**
    - Azonnal jelzi, ha a termék szabása (pl. Regular) eltér a felhasználó ruhatárában domináló szabástól (pl. Slim Tailored), és méretajánlást ad.
-3. **Kapszula Gap Redundancia-szűrő:**
-   - Nem javasolja olyan darabok pótlását, amelyekből már 2+ kiváló állapotú darab van a szekrényben.
+   - Szigorúan ellenőrzi az egyéni stílusszabályokat (pl. pólóing tilalom, anyag- és színkorlátok), és ütközés esetén kiemelt figyelmeztetést generál.
+3. **Kapszula Gap Redundancia & Szabályszűrő:**
+   - Nem javasolja olyan darabok pótlását, amelyekből már 2+ kiváló állapotú darab van a szekrényben, vagy amelyeket a felhasználó az egyéni szabályaival kizárt.
