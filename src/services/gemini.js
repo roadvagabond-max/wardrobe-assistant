@@ -330,7 +330,17 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
 
       const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
         ? styleProfile.customStylingRules
+        : [];
+
+      const prompt = `Te egy világklasszis személyi stylist, szabászati és vásárlási döntéstámogató vagy.
+ELEMEZD A MEGADOTT RUHADARABOT (FOTÓ VAGY WEBSHOP LINK / CIKKSZÁM ALAPJÁN A GOOGLE ÉS DIVAT-TUDÁSODAT HASZNÁLVA) ÉS VÉGEZD EL A 3 DÖNTÉSI PILLÉR ÉRTÉKELÉST, KÜLÖNÖS TEKINTETTEL A SZABÁSRA (FIT), A TESTALKATHHOZ VALÓ ILLESZKEDÉSRE, A FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAIRA ÉS A KÖTELEZŐ RÉTEGEZÉSRE!
+${itemName ? `Megadott név: "${itemName}"` : ''} ${itemPrice ? `Ár: "${itemPrice}"` : ''} ${webshopTextInfo ? `Webshop info: ${webshopTextInfo}` : ''}
 Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: styleProfile.weight, body: styleProfile.bodyType, skin: styleProfile.skinTone, styles: styleProfile.preferredStyles, philosophy: styleProfile.stylePhilosophy })}
+
+FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI:
+${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
+
+Meglévő ruhatár (${compactWardrobe.length} elem a szabásokkal és méretekkel): ${JSON.stringify(compactWardrobe)}
 
 3 DÖNTÉSI PILLÉR, EGYÉNI SZABÁLYOK & RÉTEGEZÉSI INTELLIGENCIA:
 1. Kombinálhatóság & KÖTELEZŐ RÉTEGEZÉS:

@@ -725,7 +725,6 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 
                 {isAnalyzing && (
                   <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white rounded-2xl">
-                    <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin" />"absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white rounded-2xl">
                     <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin" />
                     <p className="text-xs font-medium tracking-wide">Gemini 3.5 Flash AI villámgyorsan elemzi a terméket...</p>
                   </div>
