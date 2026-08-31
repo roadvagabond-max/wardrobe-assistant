@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { X, Key, Database, Sparkles, RotateCcw, Download, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { isFirebaseConfigured } from '../../services/firebase';
+import { isFirebaseConfigured, db } from '../../services/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { isGeminiConfigured } from '../../services/gemini';
 
 export default function SettingsModal({ isOpen, onClose }) {
-  const { wardrobe, resetToDemoData } = useAuth();
+  const { wardrobe, resetToDemoData, currentUser } = useAuth();
 
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('GEMINI_API_KEY') || '');
   const [firebaseApiKey, setFirebaseApiKey] = useState(() => localStorage.getItem('VITE_FIREBASE_API_KEY') || '');
@@ -15,12 +16,24 @@ export default function SettingsModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const handleSaveKeys = (e) => {
+  const handleSaveKeys = async (e) => {
     e.preventDefault();
-    if (geminiKey) localStorage.setItem('GEMINI_API_KEY', geminiKey.trim());
+    const cleanGeminiKey = geminiKey ? geminiKey.trim() : '';
+    if (cleanGeminiKey) localStorage.setItem('GEMINI_API_KEY', cleanGeminiKey);
     if (firebaseApiKey) localStorage.setItem('VITE_FIREBASE_API_KEY', firebaseApiKey.trim());
     if (firebaseProjectId) localStorage.setItem('VITE_FIREBASE_PROJECT_ID', firebaseProjectId.trim());
     if (firebaseAuthDomain) localStorage.setItem('VITE_FIREBASE_AUTH_DOMAIN', firebaseAuthDomain.trim());
+
+    if (currentUser && db && isFirebaseConfigured && cleanGeminiKey) {
+      try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+          geminiApiKey: cleanGeminiKey,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        console.warn('Firestore geminiApiKey mentési hiba:', err);
+      }
+    }
 
     setSavedSuccess(true);
     setTimeout(() => {

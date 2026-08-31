@@ -118,13 +118,18 @@ export function AuthProvider({ children }) {
               if (data.savedOutfits) {
                 setSavedOutfits(data.savedOutfits);
               }
+              if (data.geminiApiKey && !localStorage.getItem('GEMINI_API_KEY')) {
+                localStorage.setItem('GEMINI_API_KEY', data.geminiApiKey);
+              }
             } else {
-              // If user document doesn't exist yet, seed it with current local profile
+              // If user document doesn't exist yet, seed it with current local profile & API key
               const localProfile = JSON.parse(localStorage.getItem('user_style_profile') || JSON.stringify(INITIAL_USER_PROFILE));
+              const localGeminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
               await setDoc(userDocRef, {
                 email: user.email,
                 displayName: user.displayName,
                 profile: localProfile,
+                ...(localGeminiKey ? { geminiApiKey: localGeminiKey } : {}),
                 updatedAt: new Date().toISOString()
               }, { merge: true });
             }
