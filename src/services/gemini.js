@@ -471,8 +471,11 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         timeoutMs: 22000
       });
 
+      const candidateCat = parsed.item?.category || (parsed.item?.subCategory === 'knitwear' || (parsed.item?.name || '').toLowerCase().includes('pulóver') ? 'knitwear' : 'tops');
       const extractedItem = {
+        id: 'candidate-item',
         ...(parsed.item || {}),
+        category: candidateCat,
         name: itemName || parsed.item?.name || 'Új Ruhadarab',
         brand: normalizeBrandName(parsed.item?.brand) || parsed.item?.brand || '',
         imageUrl: imageBase64OrUrl,
@@ -484,28 +487,31 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
           const matchedItems = (o.matchedItemIds || []).map(id => wardrobe.find(w => w.id === id)).filter(Boolean);
           const allItems = [extractedItem, ...matchedItems];
 
-          // 1. Kötelező Bázis Felső ellenőrzés ha a vizsgált termék pulóver vagy zakó/kabát
+          // 1. Kötelező Bázis Felső ellenőrzés (tops)
           const hasTops = allItems.some(i => i.category === 'tops');
           if (!hasTops) {
-            const availableTop = wardrobe.find(w => w.category === 'tops' && w.condition !== 'Lecserélendő' && !allItems.some(i => i.id === w.id));
+            const availableTop = wardrobe.find(w => w.category === 'tops' && w.condition !== 'Lecserélendő' && !allItems.some(i => i.id === w.id)) ||
+                                 wardrobe.find(w => w.category === 'tops' && !allItems.some(i => i.id === w.id));
             if (availableTop) {
               allItems.push(availableTop);
             }
           }
 
-          // 2. Kötelező Nadrág ellenőrzés
+          // 2. Kötelező Nadrág ellenőrzés (bottoms)
           const hasBottoms = allItems.some(i => i.category === 'bottoms');
           if (!hasBottoms) {
-            const availableBottom = wardrobe.find(w => w.category === 'bottoms' && w.condition !== 'Lecserélendő' && !allItems.some(i => i.id === w.id));
+            const availableBottom = wardrobe.find(w => w.category === 'bottoms' && w.condition !== 'Lecserélendő' && !allItems.some(i => i.id === w.id)) ||
+                                   wardrobe.find(w => w.category === 'bottoms' && !allItems.some(i => i.id === w.id));
             if (availableBottom) {
               allItems.push(availableBottom);
             }
           }
 
-          // 3. Kötelező Lábbeli ellenőrzés
+          // 3. Kötelező Lábbeli ellenőrzés (shoes)
           const hasShoes = allItems.some(i => i.category === 'shoes');
           if (!hasShoes) {
-            const availableShoes = wardrobe.find(w => w.category === 'shoes' && w.condition !== 'Lecserélendő' && !allItems.some(i => i.id === w.id));
+            const availableShoes = wardrobe.find(w => w.category === 'shoes' && w.condition !== 'Lecserélendő' && !allItems.some(i => i.id === w.id)) ||
+                                   wardrobe.find(w => w.category === 'shoes' && !allItems.some(i => i.id === w.id));
             if (availableShoes) {
               allItems.push(availableShoes);
             }
