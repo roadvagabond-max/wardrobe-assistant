@@ -308,6 +308,123 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 }
 
 /**
+ * Helper to ensure complete anatomical layering for an outfit across all modules
+ * 1: Tops (Bázis ing/póló közvetlenül a bőrön)
+ * 2: Knitwear (Köztes pulóver/kötöttáru)
+ * 3: Blazer (Zakó)
+ * 4: Coat (Nagykabát/Télikabát)
+ * 5: Bottoms (Nadrág)
+ * 6: Shoes (Lábbeli)
+ * 7: Accessories (Kiegészítő)
+ */
+export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], candidateItem = null) {
+  const items = [...rawItems];
+  if (candidateItem && !items.some(i => i.id === candidateItem.id)) {
+    items.unshift(candidateItem);
+  }
+
+  // Helper: Is this item a base top wearable directly on the skin (shirt / t-shirt / polo)?
+  const isBaseTop = (item) => {
+    if (!item) return false;
+    const cat = item.category || '';
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    
+    // Explicitly exclude sweaters, cardigans, blazers, and coats
+    if (cat === 'knitwear' || sub === 'knitwear' || sub === 'sweater' || sub === 'cardigan' || name.includes('pulóver') || name.includes('kardigán')) return false;
+    if (cat === 'outerwear' || sub === 'blazer' || sub === 'coat' || sub === 'overcoat' || name.includes('zakó') || name.includes('kabát')) return false;
+    if (cat === 'bottoms' || cat === 'shoes' || cat === 'accessories') return false;
+    
+    return cat === 'tops' || sub === 'shirt' || sub === 't-shirt' || sub === 'polo' || name.includes('ing') || name.includes('póló') || name.includes('felső');
+  };
+
+  // Helper: Is this item bottoms (pants/trousers)?
+  const isBottom = (item) => {
+    if (!item) return false;
+    const cat = item.category || '';
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    return cat === 'bottoms' || sub === 'trousers' || sub === 'jeans' || sub === 'pants' || name.includes('nadrág') || name.includes('chino') || name.includes('farmer');
+  };
+
+  // Helper: Is this item shoes?
+  const isShoe = (item) => {
+    if (!item) return false;
+    const cat = item.category || '';
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    return cat === 'shoes' || sub === 'loafers' || sub === 'boots' || sub === 'sneakers' || sub === 'oxfords' || sub === 'derbies' || name.includes('cipő') || name.includes('csizma') || name.includes('loafer') || name.includes('bakancs');
+  };
+
+  // Helper: Is this item a belt?
+  const isBelt = (item) => {
+    if (!item) return false;
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    return sub === 'belt' || name.includes('öv') || name.includes('bőröv');
+  };
+
+  // 1. Check if the outfit has a valid Base Top (ing vagy póló)
+  const hasBaseTop = items.some(i => isBaseTop(i));
+  if (!hasBaseTop) {
+    const baseTop = wardrobe.find(w => isBaseTop(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+                    wardrobe.find(w => isBaseTop(w) && !items.some(i => i.id === w.id));
+    if (baseTop) {
+      items.push(baseTop);
+    }
+  }
+
+  // 2. Check if the outfit has Bottoms (nadrág)
+  const hasBottom = items.some(i => isBottom(i));
+  if (!hasBottom) {
+    const bottom = wardrobe.find(w => isBottom(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+                   wardrobe.find(w => isBottom(w) && !items.some(i => i.id === w.id));
+    if (bottom) {
+      items.push(bottom);
+    }
+  }
+
+  // 3. Check if the outfit has Shoes (lábbeli)
+  const hasShoe = items.some(i => isShoe(i));
+  if (!hasShoe) {
+    const shoe = wardrobe.find(w => isShoe(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+                 wardrobe.find(w => isShoe(w) && !items.some(i => i.id === w.id));
+    if (shoe) {
+      items.push(shoe);
+    }
+  }
+
+  // 4. Check if the outfit has a Belt (öv - kötelező kiegészítő)
+  const hasBelt = items.some(i => isBelt(i));
+  if (!hasBelt) {
+    const belt = wardrobe.find(w => isBelt(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+                 wardrobe.find(w => isBelt(w) && !items.some(i => i.id === w.id));
+    if (belt) {
+      items.push(belt);
+    }
+  }
+
+  // 5. Sort in natural anatomical layering order:
+  const getItemLayerRank = (item) => {
+    const cat = item.category || '';
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+
+    if (sub === 'coat' || sub === 'overcoat' || name.includes('kabát') || name.includes('trench')) return 4;
+    if (cat === 'outerwear' || sub === 'blazer' || sub === 'jacket' || name.includes('zakó') || name.includes('dzseki')) return 3;
+    if (cat === 'knitwear' || sub === 'knitwear' || sub === 'sweater' || sub === 'cardigan' || name.includes('pulóver') || name.includes('kardigán')) return 2;
+    if (isBaseTop(item)) return 1;
+    if (isBottom(item)) return 5;
+    if (isShoe(item)) return 6;
+    if (isBelt(item)) return 7;
+    return 8;
+  };
+
+  items.sort((a, b) => getItemLayerRank(a) - getItemLayerRank(b));
+  return items;
+}
+
+/**
  * 2. UNIFIED ULTRA-FAST Vásárlás Előtti Döntéstámogató
  */
 export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webshopContext = {}, itemName = '', itemPrice = '', wardrobe = [], styleProfile = {} }) {
@@ -351,102 +468,98 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
         ? styleProfile.customStylingRules
         : [];
 
-      const prompt = `Te egy világklasszis személyi stylist, szabászati szakértő és kapszula ruhatár döntéstámogató vagy.
-ELEMEZD A MEGADOTT RUHADARABOT (FOTÓ VAGY WEBSHOP LINK / CIKKSZÁM ALAPJÁN) ÉS VÉGEZD EL A 4 DÖNTÉSI PILLÉR ÉRTÉKELÉST, KÜLÖNÖS TEKINTETTEL A SZABÁSRA (FIT), A STILISZTIKAI LEFEDETTSÉGRE / REDUNDANCIÁRA, AZ ANYAGMINŐSÉGRE ÉS A TÖKÉLETES ANATÓMIAI RÉTEGEZÉSRE!
+      const prompt = `Te egy világklasszis személyi stylist, divatelemző és kapszula ruhatár döntéstámogató vagy.
+ELEMEZD A MEGADOTT RUHADARABOT KIZÁRÓLAG A WEBSHOPBAN / FOTÓN TALÁLT VALÓS ADATOK ALAPJÁN!
 ${itemName ? `Megadott név: "${itemName}"` : ''} ${itemPrice ? `Ár: "${itemPrice}"` : ''} ${webshopTextInfo ? `Webshop info: ${webshopTextInfo}` : ''}
 Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: styleProfile.weight, body: styleProfile.bodyType, skin: styleProfile.skinTone, styles: styleProfile.preferredStyles, philosophy: styleProfile.stylePhilosophy })}
 
-🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI (SZIGORÚAN KÖTELEZŐ BETARTANI!):
+🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI:
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
 
 Meglévő ruhatár (${compactWardrobe.length} elem gazdag metaadatokkal): ${JSON.stringify(compactWardrobe)}
 
-SZIGORÚ ANTI-HALLUCINÁCIÓS SZABÁLYOK:
-1. Ha a kép vagy az ismert márka & SKU (pl. Next #AA1-939, Zara, Reserved) alapján a termék 100%-ban egyértelmű, elemezd a valós darabot.
-2. HA NINCS FOTÓ ÉS A WEBSHOP BEMENET ALAPJÁN A RUHA NEM AZONOSÍTHATÓ BIZTOSAN:
-   - SOHA NE TALÁLJ KI KITALÁLT RUHÁT VAGY FANTOM SZETTEKET!
-   - Állítsd be: "isUnknown": true, "verdict": "Kép vagy adat szükséges", "verdictSummary": "A megadott link vagy bemenet alapján nem sikerült automatikusan beazonosítani a konkrét ruhadarabot. Kérlek illeszd be a termék fotóját a vágólapról (Ctrl+V) vagy add meg a nevét és kategóriáját a megbízható döntéstámogatáshoz!", "fitMismatchWarning": "⚠️ A termék vizuális adatai nem állnak rendelkezésre a megbízható értékeléshez.", "pros": [], "cons": []
+SZIGORÚ VALÓS ADAT ELV ÉS ANTI-HALLUCINÁCIÓS SZABÁLYOK:
+1. KIZÁRÓLAG AZOKAT AZ ADATOKAT ADD MEG, AMIKET A WEBSHOP LEÍRÁSA, CÍME VAGY FOTÓJA TÉNYLEGESEN TARTALMAZ!
+2. HA EGY ADAT (PL. SZABÁS, ANYAGÖSSZETÉTEL, MÉRET) NEM SZEREPEL A WEBSHOPBAN VAGY NEM ÁLL RENDELKEZÉSRE:
+   - SOHA NE TALÁLJ KI SEMMIT, NE TIPPELJ ÉS NE ERŐLTESS RÁ SEMMIT A FELHASZNÁLÓ PROFILJÁBÓL!
+   - Ha a szabás nincs megadva: "fit": "Nem ismert szabás" (vagy null), és a szabásbeli elemzésnél jelezd, hogy a webshop nem közölte a szabást.
+   - Ha az anyagösszetétel nincs megadva: "material": "Nem ismert anyagösszetétel".
+   - Ha a méret nincs megadva: "size": "".
+3. SOHA NE ÁLLÍTSD EGY TERMÉKRŐL, HOGY SLIM FIT VAGY REGULAR FIT, HA EZT A WEBSHOP NEM ÍRJA KIFEJEZETTEN!
 
 4 DÖNTÉSI PILLÉR & SARTORIAL LOGIKA:
 
-1. 👔 KOMBINÁLHATÓSÁG & 3 GARANTÁLT KOMPLETT OUTFIT (Kötelező Anatómiai Rétegzés):
-   - Készíts 3 különböző komplett outfitet a kiszemelt ruhadarabbal ÉS a meglévő gardrób elemeivel (használd a pontos 'id'-kat a 'matchedItemIds' tömbben!).
-   - ⚠️ KÖTELEZŐ BÁZISRÉTEG SZABÁLY (Base Layer Guard):
-     * MINDEN OUTFITNEK KÖTELEZŐEN TARTALMAZNIA KELL EGY BÁZIS INGET VAGY PÓLÓT ('tops')!
-     * HA A KISZEMELT TERMÉK EGY PULÓVER ('knitwear') VAGY ZAKÓ/KABÁT ('outerwear'): A pulóver és zakó egy KÖZTES / KÜLSŐ réteg! Ezért a meglévő ruhatárból a 'matchedItemIds' listába KÖTELEZŐEN VÁLASSZ egy megfelelő BÁZIS INGET VAGY PÓLÓT ('tops' - pl. pamuting vagy galléros ing)! SOHA ne tegyél össze szettet pulóverrel úgy, hogy nincs alatta bázis ing/póló a meglévő ruhatáradból!
-     * Anatómiai rétegrend: 1 db Bázis felső ('tops' - ing/póló) + 0-1 db Köztes réteg ('knitwear' - pulóver) + 0-2 db Külső réteg ('outerwear' - zakó és/vagy télikabát) + 1 db Alsó ('bottoms' - nadrág) + 1 db Lábbeli ('shoes' - cipő).
-   - ❄️ TÉLI / HIDEG RÉTEGEZÉS: Hideg időjárási szettnél a zakó ('blazer') FÖLÉ rétegződhet a téli szövetkabát ('overcoat' / 'coat')! Ha a kiszemelt darab egy zakó, hideg szettnél párosíthatod a ruhatárban lévő nagykabáttal; ha téli kabát, alatta szerepelhet zakó + ing!
+1. 👔 KOMBINÁLHATÓSÁG & 3 KOMPLETT OUTFIT:
+   - Készíts 3 különböző komplett, hordható outfitet a kiszemelt darab és a meglévő ruhatár elemeiből.
+   - KÖTELEZŐ ELEMEK:
+     * 👔 Bázis felső ('tops' - ing vagy minőségi pamut póló közvetlenül a bőrön; szabadon válassz a szett stílusához illő darabot a ruhatárból, ne fixen ugyanazt).
+     * 👖 Alsó ('bottoms' - nadrág a ruhatárból).
+     * 👞 Lábbeli ('shoes' - cipő / csizma / loafer / sneaker a ruhatárból).
+     * 🎗️ Öv ('accessories' - a cipővel harmonizáló bőröv a ruhatárból, kötelező kiegészítő).
+   - OPCIONÁLIS RÉTEGEK: Köztes réteg ('knitwear' - pulóver/kardigán), Zakó ('outerwear' / 'blazer'), Télikabát ('coat' / 'overcoat'), egyéb kiegészítők (díszzsebkendő, sál stb.).
+   - A 'matchedItemIds' listába KÖTELEZŐEN TEDD BE az összes olyan darab pontos 'id'-ját, amit a szetthez és a leírásban ('stylingTip') felhasználsz!
 
-2. ⚖️ VÁLTOZATOSSÁG, DUPLIKÁCIÓ & STILISZTIKAI LEFEDETTSÉG / REDUNDANCIA (Aesthetic Overlap):
-   - Vizsgáld meg, hogy van-e már a ruhatárban olyan darab, ami STILISZTIKAILAG ÉS FUNKCIONÁLISAN UGYANEZT A MEGJELENÉST / SZEREPKÖRT nyújtja (pl. van már sötétkék gyapjú zakó, vagy sötétbarna loafer, vagy fehér pamuting)!
-   - Ha van ilyen darab, és annak állapota 'Vadonatúj / Kifogástalan' vagy 'Megkímélt / Kiváló':
-     * Állítsd be az 'aestheticOverlap' objektumot:
-       { "isRedundant": true, "existingItemName": "A meglévő hasonló darab pontos neve", "reason": "Szakmai indoklás, miért felesleges stilisztikai duplikáció", "alternativeRecommendation": "Konkrét hiánypótló javaslat (mit érdemes inkább venni helyette, pl. teveszínű zakó vagy olívazöld chino, ami valóban tágítja a stílusskálát)" }
-     * Csökkentsd a pontszámot és tedd be a 'cons' listába!
-   - Ha a meglévő hasonló darab 'Játszós / Kopott' vagy 'Lecserélendő', akkor ez egy KIVÁLÓ MINŐSÉGI CSERE ('isRedundant': false, ajánld a cserét!).
+2. ⚖️ VÁLTOZATOSSÁG & STILISZTIKAI LEFEDETTSÉG (Aesthetic Overlap):
+   - Ha a ruhatárban már van azonos szerepkörű/megjelenésű darab, töltsd ki az 'aestheticOverlap' objektumot.
 
-3. 📐 SZEMÉLYES ILLESZKEDÉS, SZABÁS (FIT) & EGYÉNI SZABÁLYOK:
-   - 🔍 VALÓSÁGHŰ SZABÁS-AZONOSÍTÁS: A termék szabását ('fit') KIZÁRÓLAG a webshop termékleírásából, címéből vagy fotójának valós formájából azonosítsd! Ha a termék egy klasszikus kötött pulóver (pl. Reserved Merinógyapjú pulóver) és nincs külön feltüntetve, hogy karcsúsított (slim), akkor a szabása 'Regular Fit' vagy 'Classic Fit', NEM Slim Fit! SOHA ne találd ki, hogy Slim Fit csak azért, mert a felhasználó profiljában az szerepel!
-   - SZABÁSVISSZAJELZÉS: Ha a termék valós szabása (pl. Regular Fit) eltér a felhasználó preferált szabásától (pl. Slim tailored), jelezd a 'fitMismatchWarning' mezőben (pl. "⚠️ Szabásbeli eltérés: A kiszemelt pulóver Regular / egyenes szabású, míg a ruhatáradban a Slim / karcsúsított vonalvezetés dominál") és adj konkrét méretválasztási javaslatot ('sizingAdvice')!
-   - EGYÉNI SZABÁLYSÉRTÉS: Ha a termék ütközik egyéni stílusszabállyal (pl. 'Nem szeretem a pólóingeket', 'Csak természetes anyagok', 'Kerülöm a skinny szabást'), azonnal generálj kiemelt figyelmeztetést a 'fitMismatchWarning'-ban, és állítsd 'Gondold Át' vagy 'Kerülendő' státuszra!
-   - SZEMÉLYES ÉRTÉKELÉS ('personalFitVerdict'): Részletes szakvélemény a bőrtónus, testalkat és stílus DNS illeszkedéséről.
+3. 📐 SZEMÉLYES ILLESZKEDÉS & SZABÁS:
+   - Csak a valós adatok alapján értékeld a termék illeszkedését a stílus DNS-hez.
 
-4. 🧶 ANYAGMINŐSÉG & MŰSZÁL AUDIT:
-   - Prémium természetes anyagok (100% gyapjú, kasmír, len, egyiptomi pamut, selyem, valódi bőr): 'isSynthetic': false, 'fabricScore': 9.5, 'fabricWarning': null vagy elismerő értékelés.
-   - Olcsó, nem lélegző műszál (100% poliészter, akril, műbőr/PU): 'isSynthetic': true, 'fabricScore': 3-5, kötelező 'fabricWarning', minőségi pontszám csökkentés, 'compatibilityScore' max 50-60%.
+4. 🧶 ANYAGMINŐSÉG:
+   - A kinyert valós anyag alapján értékeld a minőséget. Ha nem ismert, jelezd az ismeretlen anyagot.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
   "item": {
-    "name": "${itemName || 'Elegáns magyar terméknév'}",
+    "name": "${itemName || 'Valós magyar terméknév'}",
     "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "dresses" | "skirts" | "accessories",
     "subCategory": "blazer" | "knitwear" | "shirt" | "t-shirt" | "polo" | "trousers" | "jeans" | "loafers" | "sneakers" | "boots" | "coat" | "overcoat" | "jacket" | "other",
-    "color": "Valódi fő szín magyarul (pl. Sötétkék, Homokbézs, Fekete)",
+    "color": "Webshopban talált szín magyarul",
     "colorHex": "#hex",
-    "material": "Valós vagy kinyert anyagösszetétel (pl. 100% Merinógyapjú / 100% Gyapjú / 100% Poliészter)",
-    "brand": "${webshopBrand || 'Márkanév / Gyártó ha felismerhető'}",
-    "size": "Méret ha webshopból vagy címkéből kivehető",
-    "fit": "Valós szabás (pl. Regular Fit, Classic Fit, Slim Fit, Relaxed, Oversized, Tapered)",
-    "qualityScore": 9.2,
+    "material": "Webshopban talált valós anyag (ha nem ismert: 'Nem ismert anyagösszetétel')",
+    "brand": "${webshopBrand || 'Márkanév ha ismert'}",
+    "size": "Méret ha kinyerhető",
+    "fit": "Webshopban megadott szabás ha szerepel (ha nincs megadva: 'Nem ismert szabás')",
+    "qualityScore": 9.0,
     "formality": "Smart Casual",
     "styleArchetype": "Old Money & Quiet Luxury",
     "condition": "Vadonatúj / Kifogástalan",
-    "stylingTip": "Mivel hordd és hogyan rétegezd (mindig bázis ingre/pólóra)",
+    "stylingTip": "Viselési javaslat a meglévő darabokkal",
     "whenToWear": "Mikor hordd",
     "colorHarmony": "Színharmónia indoklás",
-    "bodyFitAdvice": "Szabás, egyéni stílusszabályok és testalkat indoklás",
+    "bodyFitAdvice": "Szabás és testalkat indoklás",
     "tags": ["alapdarab"]
   },
   "compatibilityScore": 94,
   "verdict": "Erősen Ajánlott" | "Érdemes Megfontolni" | "Gondold Át",
-  "verdictSummary": "Részletes szakmai összefoglaló a vásárlási döntésről, az anyagösszetételről és az egyéni szabályokról",
+  "verdictSummary": "Részletes szakmai összefoglaló a valós adatok alapján",
   "pros": [
-    "2-4 konkrét indok, amiért megéri megvenni (pl. prémium 100% merinógyapjú anyag, kitűnő kombinálhatóság)"
+    "Konkrét valós érvek a vásárlás mellett"
   ],
   "cons": [
-    "1-3 megfontolandó szempont vagy figyelmeztetés (pl. regular szabás miatt érdemes lehet kisebb méretet választani)"
+    "Megfontolandó szempontok"
   ],
-  "personalFitVerdict": "Részletes szakvélemény a bőrtónushoz, testalkathoz és stílus DNS-hez való illeszkedésről",
+  "personalFitVerdict": "Szakvélemény a profilhoz való illeszkedésről",
   "duplicationWarning": "Duplikáció vagy csere-javaslat",
   "aestheticOverlap": {
     "isRedundant": false,
     "existingItemName": "Meglévő hasonló ruhadarab neve (ha van)",
     "reason": "Miért fedi le már ez a darab a megjelenést",
-    "alternativeRecommendation": "Mit érdemes inkább venni helyette, ami valóban tágítja a kapszula ruhatárat"
+    "alternativeRecommendation": "Mit érdemes inkább venni helyette"
   },
-  "fitMismatchWarning": "Szabásbeli eltérés VAGY személyes stílusszabály ütközés (ha nincs hiba, null)",
-  "fabricWarning": "Kiemelt figyelmeztetés ha műszálas/poliészter, vagy elismerés ha tiszta természetes anyag",
-  "fabricScore": 9.5,
+  "fitMismatchWarning": "Szabásbeli észrevétel (ha a webshop nem közölte a szabást, vagy ha nincs hiba: null)",
+  "fabricWarning": "Anyagminőségi észrevétel",
+  "fabricScore": 9.0,
   "isSynthetic": false,
-  "sizingAdvice": "Méretválasztási tanács a meglévő márkáid és testalkatod alapján",
+  "sizingAdvice": "Méretválasztási tanács",
   "outfits": [
     {
       "title": "Szett 1 Neve",
       "occasion": "Alkalom",
-      "styleType": "pl. Olasz Sprezzatura",
+      "styleType": "Stílusirányzat",
       "matchedItemIds": ["bázis_ing_id", "nadrág_id", "cipő_id", "opcionális_zakó_id"],
-      "stylingTip": "Gyakorlati rétegezési és viselési útmutató (pl. a finomkötött pulóver alá az egyiptomi pamuting gallérja elegáns kontrasztot ad)",
-      "whyItWorks": "Miért harmonizál a meglévő ruhatárral és a rétegekkel"
+      "stylingTip": "Részletes rétegezési és viselési leírás",
+      "whyItWorks": "Miért harmonizál a darabokkal"
     }
   ]
 }`;
@@ -471,6 +584,22 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         timeoutMs: 22000
       });
 
+      // Strict Real-Data-Only Fit Check (Zero Guessing / Zero Automatic Assignment)
+      const fullText = `${webshopContext.rawInput || ''} ${webshopContext.title || ''} ${itemName || ''} ${parsed.item?.name || ''}`.toLowerCase();
+      const hasExplicitSlim = fullText.includes('slim') || fullText.includes('karcsúsított') || fullText.includes('fitted') || fullText.includes('skinny');
+      const hasExplicitRegular = fullText.includes('regular') || fullText.includes('classic') || fullText.includes('egyenes');
+
+      if (parsed && parsed.item) {
+        if (hasExplicitSlim) {
+          parsed.item.fit = 'Slim Fit';
+        } else if (hasExplicitRegular) {
+          parsed.item.fit = 'Regular Fit';
+        } else if (!parsed.item.fit || parsed.item.fit === 'Slim Fit') {
+          // If not explicitly stated in webshop text, DO NOT guess Slim Fit!
+          parsed.item.fit = 'Nem ismert szabás';
+        }
+      }
+
       const candidateCat = parsed.item?.category || (parsed.item?.subCategory === 'knitwear' || (parsed.item?.name || '').toLowerCase().includes('pulóver') ? 'knitwear' : 'tops');
       const extractedItem = {
         id: 'candidate-item',
@@ -485,49 +614,37 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
       if (parsed && Array.isArray(parsed.outfits)) {
         parsed.outfits = parsed.outfits.map(o => {
           const matchedItems = (o.matchedItemIds || []).map(id => wardrobe.find(w => w.id === id)).filter(Boolean);
-          const allItems = [extractedItem, ...matchedItems];
-
-          // 1. Kötelező Bázis Felső ellenőrzés (tops)
-          const hasTops = allItems.some(i => i.category === 'tops');
-          if (!hasTops) {
-            const availableTop = wardrobe.find(w => w.category === 'tops' && w.condition !== 'Lecserélendő' && !allItems.some(i => i.id === w.id)) ||
-                                 wardrobe.find(w => w.category === 'tops' && !allItems.some(i => i.id === w.id));
-            if (availableTop) {
-              allItems.push(availableTop);
-            }
-          }
-
-          // 2. Kötelező Nadrág ellenőrzés (bottoms)
-          const hasBottoms = allItems.some(i => i.category === 'bottoms');
-          if (!hasBottoms) {
-            const availableBottom = wardrobe.find(w => w.category === 'bottoms' && w.condition !== 'Lecserélendő' && !allItems.some(i => i.id === w.id)) ||
-                                   wardrobe.find(w => w.category === 'bottoms' && !allItems.some(i => i.id === w.id));
-            if (availableBottom) {
-              allItems.push(availableBottom);
-            }
-          }
-
-          // 3. Kötelező Lábbeli ellenőrzés (shoes)
-          const hasShoes = allItems.some(i => i.category === 'shoes');
-          if (!hasShoes) {
-            const availableShoes = wardrobe.find(w => w.category === 'shoes' && w.condition !== 'Lecserélendő' && !allItems.some(i => i.id === w.id)) ||
-                                   wardrobe.find(w => w.category === 'shoes' && !allItems.some(i => i.id === w.id));
-            if (availableShoes) {
-              allItems.push(availableShoes);
-            }
-          }
-
-          // 4. Természetes anatómiai rétegrend szerinti rendezés:
-          // Bázis felső (tops) -> Köztes kötött (knitwear) -> Zakó/Kabát (outerwear) -> Nadrág (bottoms) -> Lábbeli (shoes)
-          const orderMap = { tops: 1, knitwear: 2, outerwear: 3, bottoms: 4, shoes: 5, accessories: 6 };
-          allItems.sort((a, b) => (orderMap[a.category] || 99) - (orderMap[b.category] || 99));
+          const fullEnforcedItems = enforceAnatomicalOutfitLayers(matchedItems, wardrobe, extractedItem);
 
           return {
             ...o,
-            items: allItems
+            items: fullEnforcedItems
           };
         });
       }
+
+      // Safe fallbacks for pros, cons, personalFitVerdict, aestheticOverlap
+      if (parsed) {
+        if (!Array.isArray(parsed.pros) || parsed.pros.length === 0) {
+          parsed.pros = [
+            `Kiválóan beilleszthető a(z) ${styleProfile.preferredStyles?.[0] || 'Klasszikus'} stílusprofilodba.`,
+            `Garantáltan több komplett összeállítást nyit meg a meglévő darabjaiddal.`
+          ];
+        }
+        if (!Array.isArray(parsed.cons)) {
+          parsed.cons = parsed.fitMismatchWarning 
+            ? [parsed.fitMismatchWarning] 
+            : ['Ügyelj az anyagösszetételnek megfelelő kímélő kezelésre és tisztításra.'];
+        }
+        if (!parsed.personalFitVerdict) {
+          parsed.personalFitVerdict = `Harmonizál a(z) ${styleProfile.bodyType || 'Atlétikus'} testalkatoddal és a meglévő ruhatárad színeivel.`;
+        }
+      }
+
+      return {
+        ...parsed,
+        extractedItem
+      };
 
       // Safe fallbacks for pros, cons, personalFitVerdict, aestheticOverlap
       if (parsed) {
@@ -674,24 +791,25 @@ ${JSON.stringify(richWardrobe)}
 
 SARTORIAL BLUEPRINT & ANATÓMIAI RÉTEGEZÉSI SZABÁLYOK:
 
-1. 👔 KÖTELEZŐ BÁZISRÉTEG (Base Layer - 'tops'):
-   - MINDEN SZETTNEK KÖTELEZŐEN TARTALMAZNIA KELL pontosan egy közvetlenül a bőrön hordható felső bázisréteget: 'tops' (ing vagy prémium pamut póló)!
-   - Zakóhoz vagy elegáns eseményhez KÖTELEZŐEN galléros ing ('subCategory': 'shirt').
-   - ❌ SZIGORÚ TILALOM: SOHA NE AJÁNLJ PULÓVERT ('knitwear') VAGY ZAKÓT ('outerwear') CSUPASZ FELSŐTESTRE BÁZIS ING/PÓLÓ NÉLKÜL!
+1. 👔 KÖTELEZŐ ELEMEK MINDEN SZETTBEN:
+   - 👔 Bázis felső ('tops' - ing vagy minőségi pamut póló közvetlenül a bőrön; szabadon válassz a ruhatárból a szett hangulatához illő felsőt, ne fixen ugyanazt).
+   - 👖 Alsó ('bottoms' - pontosan 1 db nadrág / chino / flanelnadrág / farmer a ruhatárból).
+   - 👞 Lábbeli ('shoes' - pontosan 1 pár cipő / csizma / loafer / sneaker a ruhatárból).
+   - 🎗️ Öv ('accessories' - a cipővel harmonizáló bőröv a ruhatárból, kötelező kiegészítő).
 
-2. 👖 ALSÓ ('bottoms') ÉS 👞 LÁBBELI ('shoes'):
-   - Minden szettnek kötelező része pontosan 1 db nadrág és pontosan 1 pár lábbeli (hidegben zárt elegáns cipő/csizma, melegben loafer/sneaker).
-
-3. 🧥 KÖZTES & KÜLSŐ RÉTEGEZÉS (Mid & Outer Layers):
-   - Kötöttáru / Pulóver ('knitwear'): Opcionálisan 0 vagy 1 db pulóver/kardigán az ingre rétegezve.
+2. 🧥 OPCIONÁLIS RÉTEGEK (Időjárás, esemény és stílus szerint):
+   - Kötöttáru / Pulóver ('knitwear'): Opcionálisan 0 vagy 1 db pulóver/kardigán az ingre/pólóra rétegezve.
+   - Zakó ('outerwear' / 'blazer'): Opcionális zakó / dzseki a bázisra/pulóverre.
    - ❄️ TÉLI / HIDEG IDŐ (< 12°C vagy Téli esemény):
-     * KETTŐS KÜLSŐ RÉTEG ENGEDÉLYEZETT ÉS AJÁNLOTT: A zakó ('blazer') FÖLÉ mehet a téli szövetkabát / nagykabát ('overcoat' / 'coat')!
-     * Teljes luxus téli rétegezés: Ing + Kasmír pulóver + Zakó + Nagykabát + Nadrág + Bőrcipő/Csizma.
-   - 🌤️ ÁTMENETI IDŐ (12–19°C): 1 db zakó vagy könnyű dzseki az ingre (vagy ing + vékony pulóver).
-   - ☀️ MELEG / NYÁR (20°C+): Könnyű len/pamut ing vagy felső + nadrág + loafer/sneaker. Vastag télikabát és vastag kötött pulóver SZIGORÚAN TILOS!
+     * KETTŐS KÜLSŐ RÉTEG ENGEDÉLYEZETT: A zakó ('blazer') FÖLÉ mehet a téli szövetkabát / nagykabát ('overcoat' / 'coat')!
+     * Teljes luxus téli rétegezés: Ing + Pulóver + Zakó + Nagykabát + Nadrág + Öv + Bőrcipő/Csizma.
+   - ☀️ MELEG / NYÁR (20°C+): Könnyű len/pamut ing vagy felső + nadrág + öv + loafer/sneaker. Vastag télikabát és vastag kötött pulóver SZIGORÚAN TILOS!
+
+3. ✦ TOVÁBBI KIEGÉSZÍTŐK:
+   - Az AI stílusérzéke szerint opcionálisan bevonhatók további kiegészítők a ruhatárból (pl. díszzsebkendő zakóhoz, sál hidegben, óra, napszemüveg).
 
 4. 3 KÜLÖNBÖZŐ SZEMÉLYES HANGULAT AZ ESEMÉNYRE:
-   - Készíts 3 olyan komplett szettet, amelyek a fenti rétegezési szabályok szerint épülnek fel, de 3 különböző stílusárnyalatot képviselnek (pl. 1. Kifinomult & Letisztult, 2. Karakteres & Laza, 3. Kényelmes & Modern).
+   - Készíts 3 olyan komplett szettet, amelyek a fenti rétegezési szabályok szerint épülnek fel, de 3 különböző stílusárnyalatot képviselnek.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
 [
@@ -702,10 +820,10 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
     "occasion": "${eventName}",
     "matchScore": 97,
     "stylingNotes": "Személyre szabott stylist tanács a viseléshez és a darabok összhangjához",
-    "layeringAdvice": "Gyakorlati rétegezési útmutató (pl. 'Kültéren a teveszínű gyapjúkabát a zakó fölött melegen tart, a meleg étterembe érve levéve a sötétkék zakó és az egyiptomi pamuting önmagában is kifogástalan eleganciát nyújt.')",
-    "culturalFitReasoning": "Hogyan érvényesül a felhasználó személyes stílusa, egyéni szabályai és az esemény összhangja ebben a szettben",
+    "layeringAdvice": "Gyakorlati rétegezési útmutató",
+    "culturalFitReasoning": "Hogyan érvényesül a felhasználó személyes stílusa és az esemény összhangja ebben a szettben",
     "weatherSuitability": "Időjárási és hőmérsékleti megfelelés (${weather?.temperature || 20}°C)",
-    "itemIds": ["ing_id", "opcionalis_pulover_id", "opcionalis_zako_id", "opcionalis_teli_kabat_id", "nadrag_id", "cipo_id"]
+    "itemIds": ["bázis_ing_id", "opcionalis_pulover_id", "opcionalis_zako_id", "opcionalis_teli_kabat_id", "nadrag_id", "cipo_id", "ov_id"]
   }
 ]`;
 
@@ -718,20 +836,25 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
       });
       
       if (Array.isArray(parsed)) {
-        return parsed.map((p, idx) => ({
-          id: p.id || `outfit-${Date.now()}-${idx}`,
-          title: p.title || `${idx + 1}. Stílusos Szett`,
-          styleArchetype: p.styleArchetype || 'Eseményhez Hangolt',
-          occasion: p.occasion || eventName,
-          matchScore: p.matchScore || 94 + (idx * 2) % 5,
-          stylingNotes: p.stylingNotes || "Harmonikus összeállítás a gardróbodból.",
-          layeringAdvice: p.layeringAdvice || "Funkcionálisan rétegezett összeállítás, amely a belső térben és hűvösebb időben is jól alkalmazkodik.",
-          culturalFitReasoning: p.culturalFitReasoning || "Tökéletesen igazodik az esemény dress code-jához és atmoszférájához.",
-          weatherSuitability: p.weatherSuitability || `Ideális a(z) ${weather?.temperature || 20}°C-os időjáráshoz.`,
-          items: (p.itemIds || [])
+        return parsed.map((p, idx) => {
+          const rawItems = (p.itemIds || [])
             .map(id => wardrobe.find(w => w.id === id))
-            .filter(Boolean)
-        })).filter(o => o.items.length > 0);
+            .filter(Boolean);
+          const fullEnforcedItems = enforceAnatomicalOutfitLayers(rawItems, availableWardrobe, null);
+
+          return {
+            id: p.id || `outfit-${Date.now()}-${idx}`,
+            title: p.title || `${idx + 1}. Stílusos Szett`,
+            styleArchetype: p.styleArchetype || 'Eseményhez Hangolt',
+            occasion: p.occasion || eventName,
+            matchScore: p.matchScore || 94 + (idx * 2) % 5,
+            stylingNotes: p.stylingNotes || "Harmonikus összeállítás a gardróbodból.",
+            layeringAdvice: p.layeringAdvice || "Funkcionálisan rétegezett összeállítás, amely a belső térben és hűvösebb időben is jól alkalmazkodik.",
+            culturalFitReasoning: p.culturalFitReasoning || "Tökéletesen igazodik az esemény dress code-jához és atmoszférájához.",
+            weatherSuitability: p.weatherSuitability || `Ideális a(z) ${weather?.temperature || 20}°C-os időjáráshoz.`,
+            items: fullEnforcedItems
+          };
+        }).filter(o => o.items.length > 0);
       }
     } catch (e) {
       console.error("Gemini Stylist hiba:", e);
@@ -781,7 +904,7 @@ export async function analyzeWardrobeGaps(wardrobe = [], profile = {}) {
       );
 
       const prompt = `Te egy mester kapszula ruhatár-tervező és sartorial stylist vagy.
-Elemezd a felhasználó gardróbját (${wardrobe.length} elem), testalkatát és stílusprofilját:
+Elemezd a felhasználó gardróbját (${wardrobe.length} elem), testalkatát és stílusprofilját, és KÉSZÍTS EGY ÁTFOGÓ, 6–8 STRATÉGIAI KULCSDARABBÓL ÁLLÓ HIÁNYLISTÁT!
 Stílusprofil: ${JSON.stringify({ height: profile.height, weight: profile.weight, body: profile.bodyType, preferredStyles: profile.preferredStyles, philosophy: profile.stylePhilosophy })}
 
 🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI:
@@ -790,33 +913,33 @@ ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincse
 Meglévő ruhatár elemek (${compactItems.length} db részletes adatokkal): ${JSON.stringify(compactItems)}
 ${replacementCandidates.length > 0 ? `Elhasználódott / játszós darabok a szekrényben: ${JSON.stringify(replacementCandidates.map(r => ({ name: r.name, category: r.category, color: r.color })))}` : ''}
 
-KRITIKUS KAPSZULA GAP SZABÁLYOK:
+KAPSZULA HIÁNYELEMZÉS & PRIORITÁSI IRÁNYELVEK:
 
-1. 👞 SZEZONÁLIS LÁBBELI ÉS FUNKCIONÁLIS GAP AUDIT (1. Számú Prioritás!):
-   - ${!hasAutumnWinterShoes ? '⚠️ FIGYELEM: A felhasználónak JELENLEG 0 DB ŐSZI / TÉLI LÁBBELIJE (pl. bőr Chelsea csizma, Chukka bakancs, téli bélelt elegáns bőrcipő) van a ruhatárában! Ez a ruhatár legkritikusabb szezonális hiánya. KÖTELEZŐ legalább egy őszi/téli prémium bőrlábbelit ajánlani (pl. "Barna Full-grain Bőr Chelsea Csizma")!' : 'A lábbeli kategória rendelkezik őszi/téli fedettséggel.'}
+1. 🎯 ÁTFOGÓ 6-8 DARABOS HIÁNYLISTA (Különböző szintek és rétegek lefedése):
+   - 🔴 **Kritikus Hiány (Priority Score: 90–100):** Olyan funkcionális alapdarabok, amikből 0 db van, és nélkülük egész szezonok vagy szettek esnek ki (pl. őszi/téli bőr Chelsea csizma vagy harmonizáló bőröv).
+   - 🟡 **Fontos Kapszula Bázis (Priority Score: 80–89):** Nélkülözhetetlen rétegzési alapok (pl. prémium nehézsúlyú törtfehér pamut póló zakók és pulóverek alá, vagy meleg szürke gyapjú flanelnadrág).
+   - 🟢 **Nagy Varianciát Adó Kulcsdarabok (Priority Score: 70–79):** Olyan karakteres, sokoldalú új darabok, amik +8–15 új hordható szettet nyitnak meg a meglévő ruhákkal (pl. földszínű merinó/kasmír garbó, strukturálatlan teveszínű zakó, olívazöld chino).
+   - ⚪ **Stílusgazdagító / Nice to Have (Priority Score: 50–69):** Extra kifinomultságot adó kiegészítők (pl. 100% kasmír sál a télikabáthoz, hernyóselyem díszzsebkendő).
 
-2. 🛑 KATEGÓRIA TELÍTETTSÉGI STOP (Category Saturation Guard):
-   - Ha egy adott típusból / kategóriából (pl. ingek, vékony pamut felsők, loafer cipők) MÁR VAN 2 VAGY TÖBB szép állapotú darab a ruhatárban, SZIGORÚAN TILOS még egy hasonlót ajánlani!
-   - Csak olyan kulcsdarabokat ajánlj, amelyek a ruhatár VALÓDI HIÁNYZÓ SZEZONÁLIS VAGY FUNKCIÓS PILLÉREIT (pl. téli lábbeli, gyapjú szövetnadrág, átmeneti réteg) pótolják!
+2. 👞 SZEZONÁLIS LÁBBELI GAP:
+   - ${!hasAutumnWinterShoes ? 'KÖTELEZŐ legalább egy prémium őszi/téli bőrlábbelit ajánlani (pl. Barna Full-Grain Bőr Chelsea Csizma)!' : 'A lábbeli kategória rendelkezik őszi/téli darabbal.'}
 
-3. 📐 SZABÁS (FIT) ÉS ANYAGMINŐSÉG:
-   - Kizárólag 100% természetes prémium anyagokat ajánlj (gyapjú, len, kasmír, egyiptomi pamut, valódi bőr).
-   - Építsd be a preferált szabást (pl. Slim tailored) a címbe és a keresési kulcsszavakba (searchKeywords).
+3. 📐 SZABÁS & ANYAG:
+   - Kizárólag 100% természetes anyagokat ajánlj (gyapjú, len, kasmír, pamut, bőr).
 
-4. ♻️ INTELLIGENS CSERE (Replacement):
-   - Csak akkor jelölj meg cserét ('isReplacement': true), ha az adott kulcsfontosságú darabból nincs más jó állapotú alternatíva a ruhatárban.
-
-VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
+VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT (6-8 darabbal):
 [
   {
     "id": "gap-1",
     "title": "Pontos terméknév a szabással és anyaggal (pl. 'Sötétbarna Full-Grain Bőr Chelsea Csizma')",
-    "recommendedFit": "pl. Slim tailored / Classic last",
-    "impact": "+8 Új Őszi/Téli Outfit Variáció",
-    "estimatedPrice": "42 000 - 75 000 Ft",
+    "recommendedFit": "pl. Classic last / Slim tailored",
+    "priorityScore": 96,
+    "priorityLevel": "Kritikus Alapdarab" | "Fontos Kapszula Bázis" | "Nagy Varianciát Adó Kulcsdarab" | "Stílusgazdagító / Nice to Have",
+    "impact": "+10 Új Őszi/Téli Outfit Variáció",
+    "estimatedPrice": "45 000 - 85 000 Ft",
     "category": "shoes" | "outerwear" | "knitwear" | "tops" | "bottoms" | "accessories",
     "season": "Ősz / Tél" | "Tavasz / Nyár" | "Egész évben",
-    "reason": "Részletes szakmai indoklás, miért ez a kulcsdarab hiányzik a ruhatárból és hogyan zárja le a szezonális funkcionális rést",
+    "reason": "Részletes szakmai indoklás, miért ez a kulcsdarab hiányzik a ruhatárból és hogyan növeli a kombinálhatóságot",
     "isReplacement": false,
     "searchKeywords": "konkrét keresési kulcsszavak webshophoz (pl. mens dark brown leather chelsea boots)"
   }
@@ -827,10 +950,10 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
         apiKey, 
         contents, 
         preferredModels: REASONING_MODELS, 
-        timeoutMs: 20000 
+        timeoutMs: 22000 
       });
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
       }
     } catch (e) {
       console.error('Gemini Capsule Gap hiba:', e);
@@ -843,7 +966,9 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
       id: 'gap-chelsea-boots',
       title: 'Sötétbarna Full-Grain Bőr Chelsea Csizma',
       recommendedFit: 'Classic last / True to size',
-      impact: '+9 Új Őszi/Téli Outfit Variáció',
+      priorityScore: 98,
+      priorityLevel: 'Kritikus Alapdarab',
+      impact: '+12 Új Őszi/Téli Outfit Variáció',
       estimatedPrice: '45 000 - 85 000 Ft',
       category: 'shoes',
       season: 'Ősz / Tél',
@@ -852,10 +977,26 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
       searchKeywords: 'mens dark brown leather chelsea boots ferfi bor csizma'
     },
     {
+      id: 'gap-heavy-tshirt',
+      title: 'Prémium Nehézsúlyú Törtfehér Pamut Póló (220 GSM)',
+      recommendedFit: 'Slim tailored / Regular fit',
+      priorityScore: 88,
+      priorityLevel: 'Fontos Kapszula Bázis',
+      impact: '+10 Új Rétegezhető Szett',
+      estimatedPrice: '12 000 - 22 000 Ft',
+      category: 'tops',
+      season: 'Egész évben',
+      reason: 'Kiváló minőségű, sűrű szövésű bázisdarab, ami zakók és pulóverek alatt tartást és friss kontrasztot nyújt.',
+      isReplacement: false,
+      searchKeywords: 'mens heavyweight white cotton t-shirt feher pamut polo'
+    },
+    {
       id: 'gap-flannel-trousers',
       title: 'Sötétszürke Olasz Gyapjú Flanel Nadrág',
       recommendedFit: 'Slim tailored / Tapered',
-      impact: '+7 Új Outfit Variáció',
+      priorityScore: 84,
+      priorityLevel: 'Fontos Kapszula Bázis',
+      impact: '+8 Új Őszi/Téli Outfit Variáció',
       estimatedPrice: '28 000 - 52 000 Ft',
       category: 'bottoms',
       season: 'Ősz / Tél',
@@ -864,16 +1005,46 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
       searchKeywords: 'mens slim fit charcoal wool flannel trousers gyapju nadrag'
     },
     {
-      id: 'gap-camel-blazer',
-      title: 'Teveszínű Strukturálatlan Gyapjú Zakó',
+      id: 'gap-camel-turtleneck',
+      title: 'Teveszínű (Camel) Merinógyapjú Garbó Pulóver',
       recommendedFit: 'Slim tailored',
-      impact: '+8 Új Outfit Variáció',
-      estimatedPrice: '45 000 - 78 000 Ft',
-      category: 'outerwear',
-      season: 'Egész évben',
-      reason: 'A sötétkék zakód mellé új stílusdimenziót és meleg tónusú eleganciát hoz a ruhatáradba.',
+      priorityScore: 78,
+      priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
+      impact: '+9 Új Elegáns Téli Szett',
+      estimatedPrice: '24 000 - 45 000 Ft',
+      category: 'knitwear',
+      season: 'Ősz / Tél',
+      reason: 'A garbó azonnal kifinomult, olasz sprezzatura karaktert ad zakó alá rétegezve anélkül, hogy inget kellene vasalnod.',
       isReplacement: false,
-      searchKeywords: 'mens camel wool blazer ferfi teveszin gyapju zako'
+      searchKeywords: 'mens camel merino wool turtleneck pulover garbo'
+    },
+    {
+      id: 'gap-leather-belt',
+      title: 'Dohánybarna Kézműves Bőröv Sárgaréz Csattal',
+      recommendedFit: 'Classic 3.5cm',
+      priorityScore: 74,
+      priorityLevel: 'Fontos Kapszula Bázis',
+      impact: '+15 Szett Harmonizálása',
+      estimatedPrice: '14 000 - 28 000 Ft',
+      category: 'accessories',
+      season: 'Egész évben',
+      reason: 'Összeköti a felső- és alsóruházatot, tökéletes összhangot teremtve a barna loaferrel és chelsea csizmával.',
+      isReplacement: false,
+      searchKeywords: 'mens handmade brown leather belt ferfi bor ov'
+    },
+    {
+      id: 'gap-cashmere-scarf',
+      title: 'Antracitszürke 100% Mongol Kasmír Sál',
+      recommendedFit: 'One size (180x30cm)',
+      priorityScore: 62,
+      priorityLevel: 'Stílusgazdagító / Nice to Have',
+      impact: '+6 Hideg Téli Megjelenés',
+      estimatedPrice: '22 000 - 38 000 Ft',
+      category: 'accessories',
+      season: 'Ősz / Tél',
+      reason: 'A téli szövetkabát elengedhetetlen luxus kísérője, ami védi a nyakat és textúrát ad a hideg utcai szetteknek.',
+      isReplacement: false,
+      searchKeywords: 'mens 100 cashmere charcoal grey scarf ferfi kasmir sal'
     }
   ];
 

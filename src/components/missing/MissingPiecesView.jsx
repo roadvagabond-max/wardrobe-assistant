@@ -63,6 +63,9 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
 
   // Filter gaps
   const filteredGaps = gaps.filter(gap => {
+    const score = gap.priorityScore || (gap.isReplacement ? 85 : 75);
+    if (selectedFilter === 'critical_important') return score >= 80;
+    if (selectedFilter === 'high_variance') return score >= 70 && score < 80;
     if (selectedFilter === 'replacement') return gap.isReplacement;
     if (selectedFilter === 'tavasz_nyar') return gap.season?.includes('Tavasz') || gap.season?.includes('Nyár') || gap.season?.includes('Egész');
     if (selectedFilter === 'osz_tel') return gap.season?.includes('Ősz') || gap.season?.includes('Tél') || gap.season?.includes('Egész');
@@ -83,7 +86,7 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
             Hiányzó Stratégiai Kulcsdarabok
           </h2>
           <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Az AI azonosítja a ruhatárad legfontosabb hiányzó láncszemeit a maximális variálhatóságért.
+            Az AI azonosítja a ruhatárad prioritásos hiánypontjait és a legnagyobb variációs értéket adó kulcsdarabokat.
           </p>
           {profile.customStylingRules && profile.customStylingRules.length > 0 && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -99,7 +102,10 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
 
         <button
           type="button"
-          onClick={() => loadGaps(true)}
+          onClick={() => {
+            try { localStorage.removeItem('capsule_gaps_cache'); } catch (_) {}
+            loadGaps(true);
+          }}
           disabled={isLoading}
           className="btn-secondary text-xs self-start sm:self-center flex items-center gap-1.5"
         >
@@ -111,10 +117,12 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
       {/* Seasonal & Category Filter Tabs */}
       <div className="flex flex-wrap gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
         {[
-          { id: 'all', label: 'Összes Hiányzó Kulcsdarab' },
-          { id: 'tavasz_nyar', label: '🌸☀️ Tavaszi / Nyári Kapszula' },
+          { id: 'all', label: 'Összes Kulcsdarab' },
+          { id: 'critical_important', label: '🔴 Kritikus & Fontos Alapok' },
+          { id: 'high_variance', label: '🟢 Nagy Varianciájú Újdonságok' },
           { id: 'osz_tel', label: '🍂❄️ Őszi / Téli Kapszula' },
-          { id: 'replacement', label: '♻️ Megújítandó / Lecserélendő Alapdarabok' }
+          { id: 'tavasz_nyar', label: '🌸☀️ Tavaszi / Nyári Kapszula' },
+          { id: 'replacement', label: '♻️ Megújítandó Darabok' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -135,7 +143,7 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
       {isLoading && (
         <div className="glass-card p-12 text-center space-y-3">
           <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin mx-auto" />
-          <p className="text-sm text-white font-medium">Gemini 3.7 Flash elemzi a kapszula ruhatáradat és a hiányzó darabokat...</p>
+          <p className="text-sm text-white font-medium">Gemini 3.7 Flash elemzi a kapszula ruhatáradat és rangsorolja a hiányzó darabokat...</p>
         </div>
       )}
 
@@ -144,6 +152,7 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filteredGaps.map(gap => {
             const isWishlisted = wishlistIds.has(gap.id);
+            const score = gap.priorityScore || 80;
 
             return (
               <div
@@ -154,6 +163,25 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
                   
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Priority Score & Level Badge */}
+                      {score >= 90 ? (
+                        <span className="badge bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
+                          🔴 {gap.priorityLevel || 'Kritikus Alapdarab'} ({score}p)
+                        </span>
+                      ) : score >= 80 ? (
+                        <span className="badge bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
+                          🟡 {gap.priorityLevel || 'Fontos Bázis'} ({score}p)
+                        </span>
+                      ) : score >= 70 ? (
+                        <span className="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                          🟢 {gap.priorityLevel || 'Nagy Variancia'} ({score}p)
+                        </span>
+                      ) : (
+                        <span className="badge bg-slate-500/20 text-slate-300 border border-slate-500/30 text-[10px] font-medium">
+                          ⚪ {gap.priorityLevel || 'Nice to Have'} ({score}p)
+                        </span>
+                      )}
+
                       <span className="badge badge-emerald text-[10px]">
                         ✨ {gap.impact}
                       </span>

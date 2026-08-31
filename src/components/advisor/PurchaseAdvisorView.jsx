@@ -813,12 +813,13 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                     {/* Visual Flat-lay Photo Grid */}
                     <div className="grid grid-cols-2 gap-2 p-2 rounded-xl bg-black/50 border border-white/5">
                       {outfit.items?.map((item, iIdx) => {
-                        const isCandidateItem = iIdx === 0;
+                        const isCandidateItem = item.id === 'candidate-item' || item.name === evaluationResult.extractedItem?.name;
 
                         return (
+                          <div key={iIdx} className="space-y-1 group relative">
                             <div className={`aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center border relative transition-all ${
                               isCandidateItem
-                                ? 'border-[var(--accent-gold)] ring-1 ring-[var(--accent-gold-glow)]'
+                                ? 'border-[var(--accent-gold)] ring-1 ring-[var(--accent-gold-glow)] shadow-md shadow-[var(--accent-gold)]/10'
                                 : 'border-white/10 group-hover:border-white/30'
                             }`}>
                               <img
@@ -834,7 +835,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                                 </span>
                               )}
                               <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
-                                {item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Réteg'}
+                                {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') ? '🎗️ Öv' : item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Kiegészítő'}
                               </span>
                             </div>
                             <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5">

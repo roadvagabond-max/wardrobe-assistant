@@ -86,6 +86,27 @@ export function findFirstWorkingImageUrl(candidateUrls = [], timeoutMs = 1500) {
 }
 
 /**
+ * Detect product fit from text/slug ONLY if explicitly stated; otherwise returns empty string
+ */
+export function detectFitFromText(text = '') {
+  if (!text || typeof text !== 'string') return '';
+  const lower = text.toLowerCase();
+  if (lower.includes('slim fit') || lower.includes('slim-fit') || lower.includes('karcsúsított') || lower.includes('skinny')) {
+    return 'Slim Fit';
+  }
+  if (lower.includes('regular fit') || lower.includes('regular-fit') || lower.includes('classic fit') || lower.includes('egyenes szabás')) {
+    return 'Regular Fit';
+  }
+  if (lower.includes('oversize') || lower.includes('relaxed') || lower.includes('loose') || lower.includes('bővebb') || lower.includes('box')) {
+    return 'Relaxed / Oversized';
+  }
+  if (lower.includes('tapered') || lower.includes('szűkülő')) {
+    return 'Tapered';
+  }
+  return ''; // Return empty string if not explicitly mentioned in the text
+}
+
+/**
  * Intelligent URL & Raw Product Code (SKU) Parser
  */
 export function parseWebshopUrlOrCode(rawInput) {
@@ -95,6 +116,7 @@ export function parseWebshopUrlOrCode(rawInput) {
     productCode: '',
     title: '',
     description: '',
+    fit: detectFitFromText(input),
     images: [],
     imageUrl: '',
     isDirectCode: false
