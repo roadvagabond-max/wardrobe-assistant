@@ -318,10 +318,19 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
  * 7: Accessories (Kiegészítő)
  */
 export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], candidateItem = null) {
-  const items = [...rawItems];
+  let items = [...rawItems];
   if (candidateItem && !items.some(i => i.id === candidateItem.id)) {
     items.unshift(candidateItem);
   }
+
+  // Deduplicate by ID immediately
+  const itemMap = new Map();
+  items.forEach(i => {
+    if (i && i.id && !itemMap.has(i.id)) {
+      itemMap.set(i.id, i);
+    }
+  });
+  items = Array.from(itemMap.values());
 
   // Helper: Is this item a base top wearable directly on the skin (shirt / t-shirt / polo)?
   const isBaseTop = (item) => {
@@ -404,7 +413,48 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   }
 
-  // 5. Sort in natural anatomical layering order:
+  // 5. Strictly ensure AT MOST ONE item of each core type:
+  // - Exactly 1 Belt
+  const beltIndices = [];
+  items.forEach((item, idx) => {
+    if (isBelt(item)) beltIndices.push(idx);
+  });
+  if (beltIndices.length > 1) {
+    const keepIdx = beltIndices[0];
+    items = items.filter((_, idx) => !beltIndices.includes(idx) || idx === keepIdx);
+  }
+
+  // - Exactly 1 Bottom
+  const bottomIndices = [];
+  items.forEach((item, idx) => {
+    if (isBottom(item)) bottomIndices.push(idx);
+  });
+  if (bottomIndices.length > 1) {
+    const keepIdx = bottomIndices[0];
+    items = items.filter((_, idx) => !bottomIndices.includes(idx) || idx === keepIdx);
+  }
+
+  // - Exactly 1 Shoe
+  const shoeIndices = [];
+  items.forEach((item, idx) => {
+    if (isShoe(item)) shoeIndices.push(idx);
+  });
+  if (shoeIndices.length > 1) {
+    const keepIdx = shoeIndices[0];
+    items = items.filter((_, idx) => !shoeIndices.includes(idx) || idx === keepIdx);
+  }
+
+  // - Exactly 1 Base Top
+  const topIndices = [];
+  items.forEach((item, idx) => {
+    if (isBaseTop(item)) topIndices.push(idx);
+  });
+  if (topIndices.length > 1) {
+    const keepIdx = topIndices[0];
+    items = items.filter((_, idx) => !topIndices.includes(idx) || idx === keepIdx);
+  }
+
+  // 6. Sort in natural anatomical layering order:
   const getItemLayerRank = (item) => {
     const cat = item.category || '';
     const sub = (item.subCategory || '').toLowerCase();
@@ -507,6 +557,10 @@ SZIGORÚ VALÓS ADAT ELV ÉS ANTI-HALLUCINÁCIÓS SZABÁLYOK:
 
 4. 🧶 ANYAGMINŐSÉG:
    - A kinyert valós anyag alapján értékeld a minőséget. Ha nem ismert, jelezd az ismeretlen anyagot.
+
+🚫 CSENDES SZABÁLYBETARTÁS (Silent Rule Enforcement):
+- A felhasználó egyéni stílusszabályait és tiltásait KÖTELEZŐEN A HÁTTÉRBEN, CSENDBEN TARTSD BE a szettek és tanácsok generálásakor!
+- SZIGORÚAN TILOS a szövegben megemlíteni vagy magyarázni a felhasználó saját szabályait (pl. TILOS leírni, hogy "a szabályod szerint nem választottunk pólóinget", "mivel kérted az ing+jogger kerülését" stb.)! A leírás kizárólag a darabok valódi eleganciájára, esztétikájára és kombinálhatóságára fókuszáljon!
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
@@ -811,6 +865,11 @@ SARTORIAL BLUEPRINT & ANATÓMIAI RÉTEGEZÉSI SZABÁLYOK:
 4. 3 KÜLÖNBÖZŐ SZEMÉLYES HANGULAT AZ ESEMÉNYRE:
    - Készíts 3 olyan komplett szettet, amelyek a fenti rétegezési szabályok szerint épülnek fel, de 3 különböző stílusárnyalatot képviselnek.
 
+🚫 CSENDES SZABÁLYBETARTÁS (Silent Rule Enforcement):
+- A felhasználó egyéni szabályait és tiltásait (pl. nem hord pólóinget, nem vesz fel joggert inggel stb.) KÖTELEZŐEN A HÁTTÉRBEN, CSENDBEN TARTSD BE a szettek összeállításakor!
+- SZIGORÚAN TILOS a kimeneti szövegekben (stylingNotes, culturalFitReasoning, layeringAdvice) megemlíteni vagy magyarázni a felhasználó saját szabályait (pl. TILOS leírni, hogy "szabályaid szerint nem választottunk pólóinget", "betartva az ing+jogger tiltást" stb.)!
+- A felhasználó tisztában van a saját szabályaival; a leírás KIZÁRÓLAG a szett esztétikájára, a színek és anyagok kifinomult harmóniájára és az esemény dress code-jára fókuszáljon!
+
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
 [
   {
@@ -926,6 +985,14 @@ KAPSZULA HIÁNYELEMZÉS & PRIORITÁSI IRÁNYELVEK:
 
 3. 📐 SZABÁS & ANYAG:
    - Kizárólag 100% természetes anyagokat ajánlj (gyapjú, len, kasmír, pamut, bőr).
+
+🚫 SZIGORÚ SZABÁLYÉRTELMEZÉS & CSENDES SZABÁLYBETARTÁS:
+1. PONTOS, KATEGÓRIASPECIFIKUS ÉRTELMEZÉS (TILOS A TÚLÁLTALÁNOSÍTÁS!):
+   - Ha egy szabály konkrét darabra/kategóriára vonatkozik (pl. "Nem szeretem a fehér nadrágokat"), az KIZÁRÓLAG a nadrágokra érvényes!
+   - SZIGORÚAN TILOS kiterjeszteni más kategóriákra: a fehér pamut póló, fehér ing és fehér bőr sneaker a klasszikus ruhatár tökéletesen érvényes, engedélyezett alapdarabjai!
+2. CSENDES SZABÁLYBETARTÁS:
+   - A 'reason' mezőben SZIGORÚAN TILOS megemlíteni a felhasználó szabályait (TILOS leírni: "a preferenciáid miatt", "a szabályod szerint", "mivel tiltottad" stb.)!
+   - Az indoklás KIZÁRÓLAG a darab minőségére, rétegezhetőségére és kombinációs értékére fókuszáljon!
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT (6-8 darabbal):
 [
