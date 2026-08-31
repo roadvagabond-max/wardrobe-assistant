@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Deploy to Firebase Hosting & GitHub Pages
 
 on:
   push:
@@ -12,11 +12,11 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
+  group: 'deploy'
   cancel-in-progress: false
 
 jobs:
-  build:
+  build_and_deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -33,18 +33,20 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Upload artifact
+      - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}'
+          channelId: live
+          projectId: wardrobe-assistant-48e01
+        continue-on-error: true
