@@ -3,6 +3,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ensureBase64Image } from './imageOptimizer';
 
 const getEnvOrLocal = (key, fallback = '') => {
   return import.meta.env[key] || localStorage.getItem(key) || fallback;
@@ -50,23 +51,30 @@ export async function logoutUser() {
   }
 }
 
-// Upload Image to Firebase Storage
-export async function uploadGarmentImage(file, userId = 'user') {
+// Upload Image to Firebase Storage (Always compressed client-side to ~35-50KB)
+export async function uploadGarmentImage(fileOrDataUrl, userId = 'user') {
   if (storage) {
     try {
-      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
-      const storageRef = ref(storage, `users/${userId}/wardrobe/${Date.now()}.${fileExt}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      return await getDownloadURL(snapshot.ref);
+      // Compress to lightweight 600x600 JPEG (~35KB)
+      const base64 = await ensureBase64Image(fileOrDataUrl, 600, 600, 0.75);
+      if (base64 && typeof base64 === 'string' && base64.startsWith('data:')) {
+        const byteString = atob(base64.split(',')[1]);
+        const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mimeString });
+        const storageRef = ref(storage, `users/${userId}/wardrobe/${Date.now()}.jpg`);
+        const snapshot = await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+        return await getDownloadURL(snapshot.ref);
+      }
     } catch (e) {
       console.warn('Firebase Storage hiba, helyi adatURL használata:', e);
     }
   }
 
   // Fallback to DataURL
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
+  return await ensureBase64Image(fileOrDataUrl, 600, 600, 0.75);
 }
