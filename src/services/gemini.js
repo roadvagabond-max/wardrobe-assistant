@@ -3,7 +3,7 @@ import { ensureBase64Image } from './imageOptimizer';
 import { normalizeBrandName } from './webshop';
 
 const getGeminiApiKey = () => {
-  return import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || 'AQ.Ab8RN6KI92lORSWUYkyTduRjayE_470SGe4rkmFWdAT5a29NsA';
+  return (import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || '').trim();
 };
 
 export const isGeminiConfigured = () => Boolean(getGeminiApiKey());
@@ -104,6 +104,10 @@ async function callGeminiApi({
   preferredModels = FAST_MODELS,
   timeoutMs = 5500
 }) {
+  if (!apiKey) {
+    throw new Error('Nincs beállítva Google Gemini API kulcs! Kérlek add meg a saját ingyenes API kulcsodat a Beállítások (Fogaskerék) menüben (aistudio.google.com/apikey).');
+  }
+
   let lastError = null;
 
   // Prioritize previously successful model if it exists in preferred list for zero-latency calls
@@ -158,6 +162,10 @@ async function callGeminiApi({
         const errBody = await response.text();
         console.warn(`Gemini (${model}) státusz: ${response.status}`, errBody);
         
+        if (response.status === 400 && (errBody.includes('API key not valid') || errBody.includes('INVALID_ARGUMENT'))) {
+          throw new Error('Érvénytelen Google Gemini API kulcs! Kérlek generálj egy saját ingyenes kulcsot az aistudio.google.com/apikey oldalon, és másold be a Beállítások menübe!');
+        }
+
         // If 503 or 429, invalidate activeFastModel cache so next call doesn't hit it first
         if (response.status === 503 || response.status === 429) {
           activeFastModel = null;
@@ -167,6 +175,9 @@ async function callGeminiApi({
       }
     } catch (e) {
       clearTimeout(timeoutId);
+      if (e.message?.includes('Érvénytelen Google Gemini API kulcs')) {
+        throw e;
+      }
       console.warn(`Hiba vagy időtúllépés a(z) ${model} modellel:`, e.name === 'AbortError' ? `Időtúllépés (>${(timeoutMs/1000).toFixed(1)}s)` : e.message);
       activeFastModel = null;
       lastError = e;
