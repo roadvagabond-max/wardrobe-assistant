@@ -70,21 +70,26 @@ sequenceDiagram
 
 ---
 
-### 🛍️ Workflow 2: Vásárlás Előtti 3-Outfit Döntéstámogatás & Szabás-ellenőrzés
+### 🛍️ Workflow 2: Vásárlás Előtti 4-Pilléres Döntéstámogatás, Stilisztikai Lefedettség & Szabás-ellenőrzés
 1. **Input:** A felhasználó fotót készít a próbafülkében, vagy beilleszt egy webshop linket / termékkódot.
 2. **Szigorú Anti-Hallucinációs Garancia:**
    - Ha a link alapján vagy a fotó hiányában a termék nem azonosítható 100%-os bizonyossággal, az AI **szigorúan tilos, hogy fantom ruhát találjon ki**. Helyette jelzi az azonosítás hiányát (`isUnknown: true`), és megkéri a felhasználót a valós kép vagy név megadására.
-3. **Szabás & Testalkat vizsgálat (Fit Mismatch Intelligence):**
+3. **Stilisztikai Lefedettség & Redundancia Audit (`aestheticOverlap`):**
+   - Ha a ruhatárban már van hasonló megjelenésű/szerepkörű darab (pl. másik sötétkék zakó vagy sötétbarna loafer), az AI megnevezi a meglévő darabot (`existingItemName`), figyelmeztet a felesleges funkcionális duplikációra, és valódi hiánypótló alternatívát javasol (`alternativeRecommendation`).
+4. **Strukturált Előnyök & Hátrányok (`pros` & `cons`):**
+   - Részletes vásárlási érveket és megfontolandó szempontokat generál, valamint személyre szabott testalkati és színtípus szakvéleményt ad (`personalFitVerdict`).
+5. **Szabás & Testalkat vizsgálat (Fit Mismatch Intelligence):**
    - Az AI összeveti a termék szabását (pl. Regular Fit) a ruhatárban lévő darabok domináns szabásával (pl. Slim Tailored) és a felhasználó testalkatával.
    - Ha eltérést észlel, kiemelt figyelmeztetést generál (`fitMismatchWarning`), és konkrét méretválasztási javaslatot ad (`sizingAdvice`).
-4. **Anyagösszetétel & Műszál Auditor (Fabric & Synthetic Intelligence):**
+6. **Anyagösszetétel & Műszál Auditor (Fabric & Synthetic Intelligence):**
    - A meglévő prémium természetes gardrób (gyapjú, kasmír, pamut, len, selyem, bőr) és stílusprofil alapján szigorúan ellenőrzi az anyagösszetételt.
    - Ha a termék gyenge, nem lélegző műszálból (100% poliészter, akril, műbőr/PU) készült, kiemelt figyelmeztetést generál (`fabricWarning`), alacsonyabb minőségi pontszámot ad (`fabricScore`, `qualityScore`), és a döntést 'Gondold Át' vagy 'Kerülendő' státuszra állítja.
-5. **3 Döntési Pillér Szintézise:**
-   - **1. Pillér:** 3 komplett outfit generálása a meglévő gardrób elemeivel kombinálva (kötelező bázisrétegezéssel).
-   - **2. Pillér:** Duplikáció vs Csere vizsgálat (ha van kopott hasonló darab, kifejezetten ajánlja cserére).
-   - **3. Pillér:** Bőrtónus és testalkat harmónia ellenőrzése.
-6. **Hozzáadás:** Egyetlen kattintással átemelhető a ruhatárba (`handleAddToWardrobe`).
+7. **4 Döntési Pillér Szintézise:**
+   - **1. Pillér:** 3 komplett outfit generálása a meglévő gardrób elemeivel kombinálva (kötelező anatómiai rétegezéssel, hidegben zakó + télikabát támogatással).
+   - **2. Pillér:** Változatosság, Duplikáció & Stilisztikai Lefedettség vizsgálat.
+   - **3. Pillér:** Személyes illeszkedés, szabás és egyéni szabályok harmóniája.
+   - **4. Pillér:** Anyagminőség és természetes szál integritás.
+8. **Hozzáadás:** Egyetlen kattintással átemelhető a ruhatárba (`handleAddToWardrobe`).
 
 ---
 
@@ -92,22 +97,26 @@ sequenceDiagram
 1. **Esemény Dekódolás:** A beírt esemény jellegének, helyszínének és kulturális normáinak értelmezése (pl. underground klub, gála, nyári randi).
 2. **Kulturális Tiltólisták Alkalmazása:**
    - Techno / Rave / Club esetén: Szigorúan kizárja a formális zakókat, nyakkendőket és öltönynadrágokat.
-   - Formális esemény esetén: Kizárja a lezser sportos darabokat.
-3. **Kötelező Bázisréteg & Anatómiai Rétegezés:**
-   - **Bázisréteg (Base Layer):** Minden szett kötelezően tartalmaz egy bőrön hordható felsőt (`tops`: ing vagy prémium pamut póló). Szigorúan tilos pulóvert vagy zakót bázis felső nélkül ajánlani!
+   - Formális esemény esetén: Kizárja a lezser sportos és játszós/kopott darabokat.
+3. **Kötelező Bázisréteg & Anatómiai Rétegezés (Sartorial Blueprint):**
+   - **Bázisréteg (Base Layer):** Minden szett kötelezően tartalmaz egy bőrön hordható felsőt (`tops`: ing vagy prémium pamut póló). Szigorúan tilos pulóvert vagy zakót bázis felső nélkül ajánlani! Zakóhoz kötelező galléros ing.
    - **Köztes & Külső Réteg (Mid & Outer Layers):** A pulóver (`knitwear`) és zakó (`outerwear`) az ingre rétegződik.
+   - **Téli / Hideg Idő (< 12°C):** Kettős külső réteg engedélyezett és támogatott: a zakó (`blazer`) fölé rétegződhet a téli szövetkabát / nagykabát (`overcoat` / `coat`).
 4. **Időjárás & Hőmérsékleti Dinamika (Moduláris rétegek):**
    - Felkészít a beltéri fűtésre/klímára és az esti lehűlésre: a felső réteg levehető, és az alatta lévő ing/póló önmagában is elegáns és önazonos megjelenést biztosít. Részletes rétegezési tanácsot ad (`layeringAdvice`).
+   - 20°C felett a vastag téli kabát és meleg kötött pulóver szigorúan tiltott.
 5. **3 Hiteles Szettvariáció:**
-   - Generál 3 szettet, és a kártyákon megjeleníti az esemény-összhang indoklását (`culturalFitReasoning`) és a rétegezési útmutatót.
+   - Generál 3 komplett szettet (ing + nadrág + lábbeli + rétegek), és a kártyákon megjeleníti az esemény-összhang indoklását (`culturalFitReasoning`) és a rétegezési útmutatót.
 
 ---
 
-### 🧩 Workflow 4: Kapszula Ruhatár Gap Elemzés & Intelligens Csere
-1. **Kapszula Ruhatár Index Számítása:** Figyelembe veszi a kategória-lefedettséget (zakó, ing, kötött, nadrág, cipő) és az állapotarányokat.
-2. **Telítettségi & Redundancia Szűrő:**
-   - Ha egy kategóriából (pl. fonott övek, fehér pólók) már van 2+ jó állapotú darab, nem ajánlja a kopottabb pótlását, mert funkcionálisan lefedett.
-3. **Szabásérzékeny Ajánlások & Keresőkifejezések:**
+### 🧩 Workflow 4: Kapszula Ruhatár Gap Elemzés & Intelligens Szezonális Audit
+1. **Szezonális Lábbeli & Funkciós Audit (1. Számú Prioritás):**
+   - Ha a ruhatárban 0 db őszi/téli cipő van (nincs Chelsea csizma, Chukka vagy téli elegáns bőrlábbeli), a rendszer azonnal 1. prioritású kritikus hiányként jelöli meg.
+2. **Kategória Telítettségi Stop (Category Saturation Guard):**
+   - Ha egy felső kategóriából (pl. ingek, pamut felsők) már van 2+ jó állapotú darab, tilos újabb hasonlót ajánlani, amíg az alapkategóriák (pl. téli cipő, meleg nadrág, téli kabát) nincsenek lefedve.
+3. **Kapszula Ruhatár Index Számítása:** Figyelembe veszi a kategória-lefedettséget és állapotarányokat.
+4. **Szabásérzékeny Ajánlások & Keresőkifejezések:**
    - A hiányzó darabok nevébe és a `searchKeywords` mezőbe beépíti a preferált szabást (pl. *"Slim Fit Sötétkék Olasz Gyapjú Zakó"*).
 
 ---

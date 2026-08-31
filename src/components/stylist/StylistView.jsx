@@ -361,7 +361,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                         <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] border border-white/10 p-1 flex items-center justify-center relative">
                           <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
                           <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
-                            {item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : item.category === 'outerwear' ? '🧥 Külső' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Réteg'}
+                            {item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Réteg'}
                           </span>
                         </div>
                         <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5">

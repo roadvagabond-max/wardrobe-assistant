@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard, Feather, ShieldAlert, Layers } from 'lucide-react';
+import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard, Feather, ShieldAlert, Layers, Compass } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
@@ -709,6 +709,47 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                 <p className="text-[var(--text-secondary)] leading-relaxed">
                   {evaluationResult.fabricWarning}
                 </p>
+              </div>
+            )}
+
+            {/* Aesthetic Role & Redundancy Overlap Box */}
+            {evaluationResult.aestheticOverlap && (
+              <div className={`p-4 rounded-xl border text-xs space-y-2 animate-slide-up ${
+                evaluationResult.aestheticOverlap.isRedundant
+                  ? 'bg-gradient-to-r from-amber-500/15 via-amber-950/20 to-black/40 border-amber-500/40 text-amber-200'
+                  : 'bg-gradient-to-r from-emerald-500/10 to-black/40 border-emerald-500/30 text-emerald-200'
+              }`}>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 font-bold text-white">
+                    <Compass className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
+                    <span>Stilisztikai Lefedettség & Kapszula Skála:</span>
+                  </div>
+                  {evaluationResult.aestheticOverlap.isRedundant ? (
+                    <span className="badge badge-gold text-[10px]">
+                      ⚠️ Lefedett Stílusszerepkör
+                    </span>
+                  ) : (
+                    <span className="badge badge-emerald text-[10px]">
+                      ✨ Új Stílusdimenzió
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-[var(--text-secondary)] leading-relaxed">
+                  {evaluationResult.aestheticOverlap.reason || 
+                    (evaluationResult.aestheticOverlap.isRedundant
+                      ? `A ruhatáradban lévő '${evaluationResult.aestheticOverlap.existingItemName}' már teljes mértékben lefedi ezt a megjelenést.`
+                      : 'Ez a darab valóban új stíluslehetőségeket és kombinációkat nyit meg a ruhatáradban.')}
+                </p>
+
+                {evaluationResult.aestheticOverlap.alternativeRecommendation && (
+                  <div className="pt-2 border-t border-white/10 text-[11px] text-[var(--accent-gold-light)] flex items-start gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-white">Mit érdemes inkább venni helyette?</strong> {evaluationResult.aestheticOverlap.alternativeRecommendation}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
