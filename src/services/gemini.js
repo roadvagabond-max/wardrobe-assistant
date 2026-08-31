@@ -102,9 +102,10 @@ async function callGeminiApi({
   maxOutputTokens = 2500, 
   temperature = 0.15,
   preferredModels = FAST_MODELS,
-  timeoutMs = 5500
+  timeoutMs = 20000
 }) {
-  if (!apiKey) {
+  const cleanKey = (apiKey || '').trim();
+  if (!cleanKey) {
     throw new Error('Nincs beállítva Google Gemini API kulcs! Kérlek add meg a saját ingyenes API kulcsodat a Beállítások (Fogaskerék) menüben (aistudio.google.com/apikey).');
   }
 
@@ -120,7 +121,7 @@ async function callGeminiApi({
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
       const requestBody = {
         contents,
         generationConfig: {
@@ -140,7 +141,7 @@ async function callGeminiApi({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey
+          'x-goog-api-key': cleanKey
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal
@@ -291,7 +292,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         contents: [{ parts }], 
         tools, 
         preferredModels: FAST_MODELS, 
-        timeoutMs: 5000 
+        timeoutMs: 18000 
       });
       if (result && result.brand) {
         result.brand = normalizeBrandName(result.brand) || result.brand;
@@ -468,7 +469,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         tools, 
         temperature: 0.1,
         preferredModels: FAST_MODELS,
-        timeoutMs: 6500
+        timeoutMs: 22000
       });
 
       const extractedItem = {
@@ -565,7 +566,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         contents: [{ parts }], 
         temperature: 0.1,
         preferredModels: FAST_MODELS,
-        timeoutMs: 5000
+        timeoutMs: 18000
       });
     } catch (e) {
       console.error('Color season analysis hiba:', e);
@@ -674,7 +675,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
         apiKey, 
         contents, 
         preferredModels: REASONING_MODELS, 
-        timeoutMs: 7000 
+        timeoutMs: 22000 
       });
       
       if (Array.isArray(parsed)) {
@@ -787,7 +788,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
         apiKey, 
         contents, 
         preferredModels: REASONING_MODELS, 
-        timeoutMs: 7000 
+        timeoutMs: 20000 
       });
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed;
