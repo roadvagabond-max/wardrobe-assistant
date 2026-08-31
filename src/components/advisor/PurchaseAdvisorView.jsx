@@ -816,8 +816,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                         const isCandidateItem = iIdx === 0;
 
                         return (
-                          <div key={iIdx} className="space-y-1 group relative">
-                            <div className={`aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center border transition-all ${
+                            <div className={`aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center border relative transition-all ${
                               isCandidateItem
                                 ? 'border-[var(--accent-gold)] ring-1 ring-[var(--accent-gold-glow)]'
                                 : 'border-white/10 group-hover:border-white/30'
@@ -830,10 +829,13 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                                 className="max-h-full max-w-full object-contain rounded"
                               />
                               {isCandidateItem && (
-                                <span className="absolute top-1 left-1 bg-[var(--accent-gold)] text-black text-[9px] font-bold px-1 py-0.5 rounded shadow">
+                                <span className="absolute top-1 right-1 bg-[var(--accent-gold)] text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
                                   ÚJ
                                 </span>
                               )}
+                              <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
+                                {item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Réteg'}
+                              </span>
                             </div>
                             <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5">
                               {item.name}
