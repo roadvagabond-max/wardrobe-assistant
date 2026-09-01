@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Sparkles, Trash2, Bot, User, RefreshCw, MessageSquare, Loader2, ArrowRight, Layers, Compass, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { chatWithMasterStylist } from '../../services/gemini';
+import { chatWithMasterStylist, formatStylistJsonToMarkdown } from '../../services/gemini';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
 
 const QUICK_PROMPTS = [
@@ -139,7 +139,8 @@ export default function StylistChatView({ weather }) {
   // Find wardrobe items mentioned in model text to offer rich visual previews
   const extractMentionedWardrobeItems = (text) => {
     if (!text || !wardrobe || wardrobe.length === 0) return [];
-    const lower = text.toLowerCase();
+    const formatted = formatStylistJsonToMarkdown(text);
+    const lower = formatted.toLowerCase();
     return wardrobe.filter(w => {
       if (!w.name) return false;
       const wName = w.name.toLowerCase();
@@ -156,17 +157,31 @@ export default function StylistChatView({ weather }) {
     setIsLightboxOpen(true);
   };
 
-  // Simple rich text / markdown renderer
-  const renderFormattedContent = (content) => {
-    const paragraphs = content.split('\n\n');
+  // Rich text / markdown renderer with JSON auto-formatting
+  const renderFormattedContent = (rawContent) => {
+    const formattedContent = formatStylistJsonToMarkdown(rawContent);
+    const paragraphs = formattedContent.split('\n\n');
     return (
-      <div className="space-y-2.5 text-xs sm:text-sm leading-relaxed">
+      <div className="space-y-3 text-xs sm:text-sm leading-relaxed">
         {paragraphs.map((p, pIdx) => {
-          // Check for bullet lists
-          if (p.startsWith('• ') || p.startsWith('- ') || p.startsWith('* ')) {
-            const items = p.split('\n');
+          const trimmed = p.trim();
+          if (!trimmed) return null;
+
+          // Headings (### )
+          if (trimmed.startsWith('### ')) {
+            const headingText = trimmed.replace(/^###\s+/, '');
             return (
-              <ul key={pIdx} className="space-y-1 pl-4 list-disc text-[var(--text-secondary)]">
+              <h4 key={pIdx} className="text-sm sm:text-base font-bold text-[var(--accent-gold)] mt-2 pt-1 border-b border-white/10 pb-1 flex items-center gap-1.5">
+                <span>{headingText}</span>
+              </h4>
+            );
+          }
+
+          // Bullet lists
+          if (trimmed.startsWith('• ') || trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            const items = trimmed.split('\n');
+            return (
+              <ul key={pIdx} className="space-y-1.5 pl-4 list-disc text-white/90">
                 {items.map((itm, iIdx) => (
                   <li key={iIdx} dangerouslySetInnerHTML={{ 
                     __html: itm.replace(/^[•\-\*]\s*/, '').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>') 
@@ -177,10 +192,10 @@ export default function StylistChatView({ weather }) {
           }
 
           // Numbered list
-          if (/^\d+\.\s/.test(p)) {
-            const items = p.split('\n');
+          if (/^\d+\.\s/.test(trimmed)) {
+            const items = trimmed.split('\n');
             return (
-              <ol key={pIdx} className="space-y-1 pl-4 list-decimal text-[var(--text-secondary)]">
+              <ol key={pIdx} className="space-y-1.5 pl-4 list-decimal text-white/90">
                 {items.map((itm, iIdx) => (
                   <li key={iIdx} dangerouslySetInnerHTML={{ 
                     __html: itm.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>') 
@@ -192,8 +207,8 @@ export default function StylistChatView({ weather }) {
 
           // Regular paragraph with bold support
           return (
-            <p key={pIdx} dangerouslySetInnerHTML={{ 
-              __html: p.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>') 
+            <p key={pIdx} className="text-white/90" dangerouslySetInnerHTML={{ 
+              __html: trimmed.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>') 
             }} />
           );
         })}

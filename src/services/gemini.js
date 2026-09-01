@@ -95,18 +95,10 @@ function safeParseJson(rawText) {
 /**
  * Universal Gemini API caller with fast-timeout fallback and robust JSON parsing
  */
-async function callGeminiApi({ 
-  apiKey, 
-  contents, 
-  tools = null, 
-  maxOutputTokens = 2500, 
-  temperature = 0.15,
-  preferredModels = FAST_MODELS,
-  timeoutMs = 20000
-}) {
-  const cleanKey = (apiKey || '').trim();
+async function callGeminiApi({ apiKey, contents, preferredModels = FAST_MODELS, timeoutMs = 8000, maxOutputTokens = 8192, temperature = 0.2, tools = null, expectJson = true }) {
+  const cleanKey = cleanApiKey(apiKey);
   if (!cleanKey) {
-    throw new Error('Nincs beállítva Google Gemini API kulcs! Kérlek add meg a saját ingyenes API kulcsodat a Beállítások (Fogaskerék) menüben (aistudio.google.com/apikey).');
+    throw new Error('Nincs érvényes Google Gemini API kulcs! Kérlek add meg a Beállítások menüben.');
   }
 
   let lastError = null;
@@ -130,11 +122,11 @@ async function callGeminiApi({
         }
       };
 
-      // Google API rule: If tools (like googleSearch) are used, responseMimeType CANNOT be application/json
-      if (tools && tools.length > 0) {
-        requestBody.tools = tools;
-      } else {
+      // Google API rule: If tools are used or expectJson is false, do not force application/json
+      if (expectJson && (!tools || tools.length === 0)) {
         requestBody.generationConfig.responseMimeType = "application/json";
+      } else if (tools && tools.length > 0) {
+        requestBody.tools = tools;
       }
 
       const response = await fetch(url, {
@@ -153,10 +145,15 @@ async function callGeminiApi({
         const data = await response.json();
         const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         if (rawText) {
-          const parsed = safeParseJson(rawText);
-          if (parsed) {
-            activeFastModel = model; // Cache this working model
-            return parsed;
+          if (expectJson) {
+            const parsed = safeParseJson(rawText);
+            if (parsed) {
+              activeFastModel = model; // Cache this working model
+              return parsed;
+            }
+          } else {
+            activeFastModel = model;
+            return rawText.trim();
           }
         }
       } else {
@@ -1359,11 +1356,12 @@ A FELHASZNÁLÓ TELJES RUHATÁRA (${wardrobeInventory.length} db darab):
 ${JSON.stringify(wardrobeInventory, null, 2)}
 
 STÍLUS ÉS KOMMUNIKÁCIÓS IRÁNYELVEK:
-1. Válaszolj közvetlen, barátságos, magabiztos és kifinomult magyar nyelven.
-2. Amikor konkrét összeállítást javasolsz, MINDIG a felhasználó valós ruhatárából válassz konkrét darabokat a pontos nevükkel!
-3. Ha a felhasználó egy új darab vásárlásáról vagy hiányzó ruháról kérdez, javasolj valódi kapszula hiánypótló darabot a meglévő ruhatára alapján.
-4. Ha a felhasználó egy szettet kérdez tőled, használd a sartorial rétegezési szabályokat (Bázis ing + Nadrág + Cipő + Öv + opcionális Pulóver / Zakó / Kabát).
-5. Használj elegáns markdown formázást (félkövér kiemelések, felsorolások).`;
+1. Válaszolj közvetlen, barátságos, magabiztos, kifinomult és emberi magyar nyelven!
+2. SZIGORÚAN TILOS JSON, kódblokk vagy kulcs-érték struktúra (pl. { "top_missing_color": ... }) formátumban válaszolnod! Mindig igényes, szép Markdown folyó szöveget írj!
+3. Amikor konkrét összeállítást javasolsz, MINDIG a felhasználó valós ruhatárából válassz konkrét darabokat a pontos nevükkel!
+4. Ha a felhasználó egy új darab vásárlásáról vagy hiányzó ruháról kérdez, javasolj valódi kapszula hiánypótló darabot a meglévő ruhatára alapján és magyarázd el, miért éri meg beszerezni.
+5. Ha a felhasználó egy szettet kérdez tőled, használd a sartorial rétegezési szabályokat (Bázis ing + Nadrág + Cipő + Öv + opcionális Pulóver / Zakó / Kabát).
+6. Használj elegáns markdown formázást (félkövér kiemelések, felsorolások, bekezdések).`;
 
     // Convert chat history into Gemini contents format
     const contents = [
@@ -1387,17 +1385,120 @@ STÍLUS ÉS KOMMUNIKÁCIÓS IRÁNYELVEK:
     const response = await callGeminiApi({
       apiKey,
       contents,
-      temperature: 0.35,
+      temperature: 0.65,
+      expectJson: false,
       preferredModels: REASONING_MODELS,
       timeoutMs: 25000
     });
 
-    if (typeof response === 'string') return response;
-    if (response && response.text) return response.text;
-    if (response && response.content) return response.content;
-    return typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response);
+    if (typeof response === 'string') {
+      return formatStylistJsonToMarkdown(response);
+    }
+    if (response && response.text) {
+      return formatStylistJsonToMarkdown(response.text);
+    }
+    if (response && response.content) {
+      return formatStylistJsonToMarkdown(response.content);
+    }
+    return formatStylistJsonToMarkdown(response);
   } catch (e) {
     console.error('Hiba a Master Stylist chat során:', e);
     throw e;
   }
+}
+
+/**
+ * 7. Intelligens Formázó: Nyers JSON Stylist válaszok átalakítása elegáns, emberbarát Markdown szöveggé
+ */
+export function formatStylistJsonToMarkdown(data) {
+  if (!data) return '';
+  let obj = data;
+  if (typeof data === 'string') {
+    const trimmed = data.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        obj = JSON.parse(trimmed);
+      } catch (_) {
+        return data;
+      }
+    } else {
+      return data;
+    }
+  }
+
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+    return typeof data === 'string' ? data : JSON.stringify(data);
+  }
+
+  let md = '';
+
+  // 1. Missing colors / top advice
+  if (obj.top_missing_color || obj.secondary_missing_colors) {
+    md += `### 🎨 Színpaletta & Hiányzó Árnyalatok\n\n`;
+    if (obj.top_missing_color) {
+      md += `**Legfontosabb hiányzó szín:** ${obj.top_missing_color}\n\n`;
+    }
+    if (Array.isArray(obj.secondary_missing_colors) && obj.secondary_missing_colors.length > 0) {
+      md += `**További ajánlott színek:**\n`;
+      obj.secondary_missing_colors.forEach(c => {
+        md += `• ${c}\n`;
+      });
+      md += `\n`;
+    }
+  }
+
+  // 2. Color analysis context
+  if (obj.color_analysis_context) {
+    md += `**Színtípus & Altónus Kontextus:**\n${obj.color_analysis_context}\n\n`;
+  }
+
+  // 3. Detailed Stylist verdict
+  if (obj.stylist_detailed_verdict) {
+    md += `### 👔 Mester Stylist Szakvélemény\n${obj.stylist_detailed_verdict}\n\n`;
+  }
+
+  // 4. Why this is the best investment
+  if (Array.isArray(obj.why_this_is_the_best_investment) && obj.why_this_is_the_best_investment.length > 0) {
+    md += `**Miért a legjobb választás a ruhatáradhoz?**\n`;
+    obj.why_this_is_the_best_investment.forEach(w => {
+      md += `• ${w}\n`;
+    });
+    md += `\n`;
+  }
+
+  // 5. Suggested outfits
+  if (Array.isArray(obj.suggested_outfits_with_the_new_piece) && obj.suggested_outfits_with_the_new_piece.length > 0) {
+    md += `### ✦ Szett-Ötletek a Meglévő Darabjaiddal\n\n`;
+    obj.suggested_outfits_with_the_new_piece.forEach((outfit, idx) => {
+      md += `**${idx + 1}. ${outfit.outfit_name || 'Összeállítás'}**\n`;
+      if (outfit.base) md += `• 👔 **Bázis:** ${outfit.base}\n`;
+      if (outfit.bottom) md += `• 👖 **Alsó:** ${outfit.bottom}\n`;
+      if (outfit.shoes) md += `• 👞 **Lábbeli:** ${outfit.shoes}\n`;
+      if (outfit.belt) md += `• 🎗️ **Öv:** ${outfit.belt}\n`;
+      if (outfit.layer) md += `• 🧥 **Réteg:** ${outfit.layer}\n`;
+      md += `\n`;
+    });
+  }
+
+  // 6. Buying recommendation
+  if (obj.buying_recommendation && typeof obj.buying_recommendation === 'object') {
+    md += `### 🛍️ Vásárlási Útmutató\n`;
+    if (obj.buying_recommendation.material) md += `• **Ajánlott anyag:** ${obj.buying_recommendation.material}\n`;
+    if (obj.buying_recommendation.fit) md += `• **Ideális szabás:** ${obj.buying_recommendation.fit}\n`;
+    if (obj.buying_recommendation.neckline) md += `• **Kialakítás / Nyakrész:** ${obj.buying_recommendation.neckline}\n`;
+  }
+
+  // General fallback for other keys
+  if (!md) {
+    for (const [k, v] of Object.entries(obj)) {
+      const formattedKey = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      if (typeof v === 'string') {
+        md += `**${formattedKey}:** ${v}\n\n`;
+      } else if (Array.isArray(v)) {
+        md += `**${formattedKey}:**\n` + v.map(i => `• ${typeof i === 'object' ? JSON.stringify(i) : i}`).join('\n') + '\n\n';
+      }
+    }
+  }
+
+  return md.trim();
 }
