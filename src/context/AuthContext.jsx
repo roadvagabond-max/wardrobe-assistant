@@ -4,6 +4,15 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { INITIAL_WARDROBE, INITIAL_USER_PROFILE } from '../data/mockWardrobe';
 import { ensureBase64Image } from '../services/imageOptimizer';
+import { 
+  getStoredSartorialRules, 
+  loadSartorialRulesFromCloud, 
+  saveSartorialRules, 
+  mineSartorialRulesFromWeb, 
+  checkAndAutoSyncSartorialRules, 
+  toggleRuleStatus, 
+  deleteRule as deleteStoredRule 
+} from '../services/sartorialRules';
 
 const AuthContext = createContext(null);
 
@@ -26,6 +35,9 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem('saved_outfits');
     return saved ? JSON.parse(saved) : [];
   });
+
+  const [sartorialRules, setSartorialRules] = useState(() => getStoredSartorialRules());
+  const [isMiningRules, setIsMiningRules] = useState(false);
 
   // Debounced non-blocking sync to local storage
   useEffect(() => {
@@ -56,7 +68,6 @@ export function AuthProvider({ children }) {
       let hasUpdates = false;
       const optimizedItems = await Promise.all(
         wardrobe.map(async (item) => {
-          // If image is a large Base64 string (> 60KB), compress it
           if (item.imageUrl && typeof item.imageUrl === 'string' && item.imageUrl.startsWith('data:') && item.imageUrl.length > 60000) {
             try {
               const compressed = await ensureBase64Image(item.imageUrl, 520, 520, 0.72);
@@ -72,7 +83,6 @@ export function AuthProvider({ children }) {
 
       if (hasUpdates) {
         setWardrobe(optimizedItems);
-        // Batch update Firestore in background if logged in
         if (currentUser && db && isFirebaseConfigured) {
           Promise.all(
             optimizedItems.map(itm => 
@@ -83,13 +93,31 @@ export function AuthProvider({ children }) {
       }
     };
 
-    // Run when browser is idle to never block UI
     if ('requestIdleCallback' in window) {
       window.requestIdleCallback(() => optimizeOversizedImages());
     } else {
       setTimeout(optimizeOversizedImages, 1500);
     }
   }, [wardrobe.length]);
+
+  // 🔄 7-day Background Auto-Sync for Sartorial Rules
+  useEffect(() => {
+    const runSartorialAutoSync = async () => {
+      try {
+        const loaded = await loadSartorialRulesFromCloud(currentUser?.uid);
+        if (loaded) setSartorialRules(loaded);
+        const res = await checkAndAutoSyncSartorialRules(currentUser?.uid);
+        if (res && res.success) {
+          setSartorialRules(getStoredSartorialRules());
+        }
+      } catch (err) {
+        console.warn('Sartorial rules background auto-sync hiba:', err);
+      }
+    };
+
+    // Run when idle
+    setTimeout(runSartorialAutoSync, 2500);
+  }, [currentUser?.uid]);
 
   // Listen to Firebase Auth state & Real-time Firestore Cloud Sync
   useEffect(() => {
@@ -122,7 +150,6 @@ export function AuthProvider({ children }) {
                 localStorage.setItem('GEMINI_API_KEY', data.geminiApiKey);
               }
             } else {
-              // If user document doesn't exist yet, seed it with current local profile & API key
               const localProfile = JSON.parse(localStorage.getItem('user_style_profile') || JSON.stringify(INITIAL_USER_PROFILE));
               const localGeminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
               await setDoc(userDocRef, {
@@ -146,11 +173,9 @@ export function AuthProvider({ children }) {
           unsubWardrobe = onSnapshot(wardrobeCol, async (snapshot) => {
             if (!snapshot.empty) {
               const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-              // Sort newest first
               items.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
               setWardrobe(items);
             } else {
-              // If cloud wardrobe is empty, upload local items to cloud
               const localItems = JSON.parse(localStorage.getItem('wardrobe_items') || '[]');
               if (localItems.length > 0) {
                 for (const itm of localItems) {
@@ -252,6 +277,31 @@ export function AuthProvider({ children }) {
     ]);
   };
 
+  // Sartorial Rules Actions
+  const mineNewRules = async (focusTopic = '') => {
+    setIsMiningRules(true);
+    try {
+      const res = await mineSartorialRulesFromWeb({ 
+        userUid: currentUser?.uid,
+        focusTopic 
+      });
+      setSartorialRules(getStoredSartorialRules());
+      return res;
+    } finally {
+      setIsMiningRules(false);
+    }
+  };
+
+  const toggleRule = async (ruleId) => {
+    const updated = await toggleRuleStatus(ruleId, currentUser?.uid);
+    setSartorialRules(updated);
+  };
+
+  const deleteSartorialRule = async (ruleId) => {
+    const updated = await deleteStoredRule(ruleId, currentUser?.uid);
+    setSartorialRules(updated);
+  };
+
   // Reset to Demo Data
   const resetToDemoData = () => {
     setWardrobe(INITIAL_WARDROBE);
@@ -286,6 +336,11 @@ export function AuthProvider({ children }) {
         wardrobe,
         profile,
         savedOutfits,
+        sartorialRules,
+        isMiningRules,
+        mineNewRules,
+        toggleRule,
+        deleteSartorialRule,
         loading,
         addItem,
         updateItem,

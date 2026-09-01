@@ -1,6 +1,7 @@
 // Advanced Google Gemini Vision & Fashion Stylist Intelligence Engine
 import { ensureBase64Image } from './imageOptimizer';
 import { normalizeBrandName } from './webshop';
+import { formatRulesForPrompt } from './sartorialRules';
 
 const getGeminiApiKey = () => {
   return (import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || '').trim();
@@ -95,7 +96,7 @@ function safeParseJson(rawText) {
 /**
  * Universal Gemini API caller with fast-timeout fallback and robust JSON parsing
  */
-async function callGeminiApi({ apiKey, contents, preferredModels = FAST_MODELS, timeoutMs = 8000, maxOutputTokens = 8192, temperature = 0.2, tools = null, expectJson = true }) {
+export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_MODELS, timeoutMs = 8000, maxOutputTokens = 8192, temperature = 0.2, tools = null, expectJson = true }) {
   const cleanKey = (apiKey || '').trim();
   if (!cleanKey) {
     throw new Error('Nincs érvényes Google Gemini API kulcs! Kérlek add meg a Beállítások menüben.');
@@ -238,8 +239,10 @@ SZABÁLYOK:
 2. "formality": "Casual (Laza)" | "Smart Casual" | "Business Casual" | "Business Formal" | "Black Tie & Formal".
 3. "styleArchetype": "Klasszikus & Időtlen" | "Old Money & Quiet Luxury" | "Smart Urban" | "Streetwear" | "Olasz Sprezzatura" | "Minimalista" | "Vintage & Retro".
 4. "condition": "Vadonatúj / Kifogástalan" | "Megkímélt / Kiváló" | "Játszós / Kopott" | "Javításra vár" | "Lecserélendő".
-5. Szöveges ajánlások:
-   - "stylingTip": Mivel érdemes kombinálni/hordani? (Konkrét színek és darabok a harmonikus szetthez).
+5. Gallér- és Ujjtípus Specifikáció (Kiemelten fontos):
+   - A névben ("name") és címkékben ("tags") pontosan tüntesd fel a gallér- és ujjtípust: pl. 'Állógalléros Ing', 'Kereknyakú Merinó Pulóver', 'Garbó Pulóver', 'Rövid Ujjú Kötött Póló', 'Csónaknyakú Felső', 'Hosszú Ujjú Slim Fit Ing'!
+6. Szöveges ajánlások:
+   - "stylingTip": Mivel érdemes kombinálni/hordani a sartorial szabályok szerint? (Pl. állógalléros ingnél jelezd, hogy nyitott kardigánnal vagy önmagában viselendő, sosem zárt pulóverrel vagy hajtókás zakóval).
    - "whenToWear": Mikor és milyen alkalmakkor érdemes viselni? (Események, napszakok, hőmérsékleti sáv).
    - "colorHarmony": Hogyan harmonizál a darab színe a felhasználó bőrtónusával / színtípusával?
    - "bodyFitAdvice": Hogyan áll a szabás a felhasználó testalkatán?
@@ -247,7 +250,7 @@ SZABÁLYOK:
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
-  "name": "Pontos és elegáns magyar megnevezés (pl. 'Navy Kék Pique Pamut Pólóing' vagy 'Fekete Slim Fit Póló')",
+  "name": "Pontos és elegáns magyar megnevezés a gallér- és ujjhosszal (pl. 'Navy Kék Állógalléros Len Ing' vagy 'Homokbézs Rövid Ujjú Kötött Póló')",
   "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "dresses" | "skirts" | "accessories",
   "subCategory": "blazer" | "knitwear" | "shirt" | "t-shirt" | "polo" | "trousers" | "jeans" | "loafers" | "sneakers" | "dress" | "skirt" | "coat" | "other",
   "color": "Valódi fő szín magyarul (pl. Sötétkék, Fekete, Fehér, Homokbézs, Olívazöld)",
@@ -260,14 +263,14 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "formality": "Smart Casual",
   "styleArchetype": "Old Money & Quiet Luxury",
   "condition": "Vadonatúj / Kifogástalan",
-  "stylingTip": "Mivel hordd: Konkrét kombinációs javaslatok",
+  "stylingTip": "Mivel hordd: Konkrét kombinációs javaslatok a gallér- és rétegzési szabályok szerint",
   "whenToWear": "Mikor hordd: Események és hőmérséklet",
   "colorHarmony": "A szín és tónus harmóniája a felhasználóval",
   "bodyFitAdvice": "Hogyan áll a szabás a felhasználó testalkatán",
   "stylingAdvice": "Karakteres, sokoldalú darab.",
   "personalMatchScore": 95,
   "imageUrl": "Ha a Google Keresési találatokban találsz közvetlen termékfotó URL-t, add meg, különben hagyd üresen",
-  "tags": ["alapdarab", "pamut", "nyári"]
+  "tags": ["alapdarab", "állógallér", "hosszú ujjú", "pamut"]
 }`;
 
       const parts = [{ text: prompt }];
@@ -330,7 +333,77 @@ export function isHeavyBoot(item) {
 }
 
 /**
- * Helper to ensure complete anatomical layering for an outfit across all modules
+ * Sartorial Collar, Neckline & Sleeve Inspection Helpers
+ */
+export function isStandCollar(item) {
+  if (!item) return false;
+  const text = `${item.name || ''} ${item.subCategory || ''} ${item.pattern || ''} ${item.material || ''} ${(item.tags || []).join(' ')}`.toLowerCase();
+  return (
+    text.includes('állógallér') ||
+    text.includes('allogaller') ||
+    text.includes('mandarin') ||
+    text.includes('band collar') ||
+    text.includes('grandad') ||
+    text.includes('mao gallér') ||
+    text.includes('mao galler') ||
+    text.includes('nehru')
+  );
+}
+
+export function isTurtleneck(item) {
+  if (!item) return false;
+  const text = `${item.name || ''} ${item.subCategory || ''} ${(item.tags || []).join(' ')}`.toLowerCase();
+  return (
+    text.includes('garbó') ||
+    text.includes('garbo') ||
+    text.includes('turtleneck') ||
+    text.includes('rollneck') ||
+    text.includes('mockneck')
+  );
+}
+
+export function isCardigan(item) {
+  if (!item) return false;
+  const text = `${item.name || ''} ${item.subCategory || ''}`.toLowerCase();
+  return text.includes('kardigán') || text.includes('kardigan') || text.includes('cardigan') || text.includes('cipzáras kötött');
+}
+
+export function isShortSleeve(item) {
+  if (!item) return false;
+  const text = `${item.name || ''} ${item.subCategory || ''} ${(item.tags || []).join(' ')}`.toLowerCase();
+  return (
+    text.includes('rövid ujjú') ||
+    text.includes('rovid ujju') ||
+    text.includes('rövidujjú') ||
+    text.includes('short sleeve') ||
+    text.includes('kötött póló') ||
+    text.includes('polo shirt') ||
+    text.includes('t-shirt') ||
+    text.includes('póló') ||
+    text.includes('polo')
+  );
+}
+
+export function isClassicBlazer(item) {
+  if (!item) return false;
+  const cat = (item.category || '').toLowerCase();
+  const sub = (item.subCategory || '').toLowerCase();
+  const name = (item.name || '').toLowerCase();
+  const isBlazer = cat === 'outerwear' || sub === 'blazer' || name.includes('zakó') || name.includes('blézer');
+  return isBlazer && !isStandCollar(item) && !name.includes('dzseki') && !name.includes('kabát');
+}
+
+export function isClosedSweater(item) {
+  if (!item) return false;
+  const cat = (item.category || '').toLowerCase();
+  const sub = (item.subCategory || '').toLowerCase();
+  const name = (item.name || '').toLowerCase();
+  const isKnit = cat === 'knitwear' || sub === 'knitwear' || sub === 'sweater' || name.includes('pulóver');
+  return isKnit && !isCardigan(item) && !isTurtleneck(item);
+}
+
+/**
+ * Helper to ensure complete anatomical layering and strict sartorial harmony for an outfit across all modules
  */
 export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], candidateItem = null, weather = null) {
   let items = [...rawItems];
@@ -362,13 +435,13 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     return cat === 'tops' || sub === 'shirt' || sub === 't-shirt' || sub === 'polo' || name.includes('ing') || name.includes('póló') || name.includes('felső');
   };
 
-  // Helper: Is this item bottoms (pants/trousers)?
+  // Helper: Is this item bottoms (pants/trousers/skirts)?
   const isBottom = (item) => {
     if (!item) return false;
     const cat = item.category || '';
     const sub = (item.subCategory || '').toLowerCase();
     const name = (item.name || '').toLowerCase();
-    return cat === 'bottoms' || sub === 'trousers' || sub === 'jeans' || sub === 'pants' || name.includes('nadrág') || name.includes('chino') || name.includes('farmer');
+    return cat === 'bottoms' || cat === 'skirts' || sub === 'trousers' || sub === 'jeans' || sub === 'pants' || sub === 'skirt' || name.includes('nadrág') || name.includes('chino') || name.includes('farmer') || name.includes('szoknya');
   };
 
   // Helper: Is this item shoes?
@@ -391,17 +464,72 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   const temperature = typeof weather?.temperature === 'number' ? weather.temperature : 22;
   const isWarmWeather = temperature >= 19;
 
-  // 1. Check if the outfit has a valid Base Top (ing vagy póló)
-  const hasBaseTop = items.some(i => isBaseTop(i));
+  // 1. SARTORIAL HARMONY RESOLUTION: Stand collar, Turtleneck & Sleeve rules
+  const hasStandCollarShirt = items.some(i => isBaseTop(i) && isStandCollar(i));
+  const hasClosedSweater = items.some(i => isClosedSweater(i));
+  const hasClassicBlazer = items.some(i => isClassicBlazer(i));
+  const hasTurtleneckKnit = items.some(i => isTurtleneck(i));
+  const hasShortSleeveKnit = items.some(i => (i.category === 'knitwear' || (i.subCategory || '').includes('sweater') || (i.name || '').toLowerCase().includes('pulóver')) && isShortSleeve(i));
+
+  // A. Stand Collar Shirt vs Closed Sweaters & Classic Blazers:
+  // A stand collar shirt (mandarin/band) cannot be worn under a closed crewneck/V-neck sweater or a classic notched/peaked lapel blazer!
+  if (hasStandCollarShirt) {
+    if (hasClosedSweater) {
+      if (candidateItem && isStandCollar(candidateItem)) {
+        items = items.filter(i => !isClosedSweater(i));
+      } else {
+        const classicShirt = wardrobe.find(w => isBaseTop(w) && !isStandCollar(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id));
+        if (classicShirt) {
+          items = items.map(i => isStandCollar(i) && isBaseTop(i) ? classicShirt : i);
+        } else {
+          items = items.filter(i => !isClosedSweater(i));
+        }
+      }
+    }
+
+    if (hasClassicBlazer) {
+      if (candidateItem && isStandCollar(candidateItem)) {
+        items = items.filter(i => !isClassicBlazer(i));
+      } else if (candidateItem && isClassicBlazer(candidateItem)) {
+        const classicShirt = wardrobe.find(w => isBaseTop(w) && !isStandCollar(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id));
+        if (classicShirt) {
+          items = items.map(i => isStandCollar(i) && isBaseTop(i) ? classicShirt : i);
+        }
+      } else {
+        const classicShirt = wardrobe.find(w => isBaseTop(w) && !isStandCollar(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id));
+        if (classicShirt) {
+          items = items.map(i => isStandCollar(i) && isBaseTop(i) ? classicShirt : i);
+        } else {
+          items = items.filter(i => !isClassicBlazer(i));
+        }
+      }
+    }
+  }
+
+  // B. Turtleneck Resolution:
+  // A turtleneck acts as its own top/base layer or mid layer; no collared shirt should be underneath!
+  if (hasTurtleneckKnit) {
+    items = items.filter(i => !isBaseTop(i) || isTurtleneck(i));
+  }
+
+  // C. Short Sleeve Knitwear Resolution:
+  // Under a short sleeve knitwear, do NOT layer a short sleeve t-shirt!
+  if (hasShortSleeveKnit) {
+    items = items.filter(i => !(isBaseTop(i) && isShortSleeve(i) && i.category !== 'knitwear'));
+  }
+
+  // 2. Check if the outfit has a valid Base Top (ing vagy póló) unless turtleneck is already present
+  const hasBaseTop = items.some(i => isBaseTop(i) || isTurtleneck(i) || hasShortSleeveKnit);
   if (!hasBaseTop) {
-    const baseTop = wardrobe.find(w => isBaseTop(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+    const baseTop = wardrobe.find(w => isBaseTop(w) && !isStandCollar(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+                    wardrobe.find(w => isBaseTop(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
                     wardrobe.find(w => isBaseTop(w) && !items.some(i => i.id === w.id));
     if (baseTop) {
       items.push(baseTop);
     }
   }
 
-  // 2. Check if the outfit has Bottoms (nadrág)
+  // 3. Check if the outfit has Bottoms (nadrág)
   const hasBottom = items.some(i => isBottom(i));
   if (!hasBottom) {
     const bottom = wardrobe.find(w => isBottom(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
@@ -411,7 +539,7 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   }
 
-  // 3. Check if the outfit has Shoes (lábbeli) & Enforce Temperature Appropriateness
+  // 4. Check if the outfit has Shoes (lábbeli) & Enforce Temperature Appropriateness
   const currentShoeIndex = items.findIndex(i => isShoe(i));
   if (currentShoeIndex !== -1) {
     const currentShoe = items[currentShoeIndex];
@@ -438,7 +566,7 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   }
 
-  // 4. Check if the outfit has a Belt (öv - kötelező kiegészítő)
+  // 5. Check if the outfit has a Belt (öv - kötelező kiegészítő)
   const hasBelt = items.some(i => isBelt(i));
   if (!hasBelt) {
     const belt = wardrobe.find(w => isBelt(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
@@ -448,7 +576,7 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   }
 
-  // 5. Strictly ensure AT MOST ONE item of each core type:
+  // 6. Strictly ensure AT MOST ONE item of each core type:
   // - Exactly 1 Belt
   const beltIndices = [];
   items.forEach((item, idx) => {
@@ -489,16 +617,16 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     items = items.filter((_, idx) => !topIndices.includes(idx) || idx === keepIdx);
   }
 
-  // 6. Sort in natural anatomical layering order:
+  // 7. Sort in natural anatomical layering order:
   const getItemLayerRank = (item) => {
     const cat = item.category || '';
     const sub = (item.subCategory || '').toLowerCase();
     const name = (item.name || '').toLowerCase();
 
     if (sub === 'coat' || sub === 'overcoat' || name.includes('kabát') || name.includes('trench')) return 4;
-    if (cat === 'outerwear' || sub === 'blazer' || sub === 'jacket' || name.includes('zakó') || name.includes('dzseki')) return 3;
+    if (cat === 'outerwear' || sub === 'blazer' || sub === 'jacket' || name.includes('zakó') || name.includes('dzseki') || name.includes('blézer')) return 3;
     if (cat === 'knitwear' || sub === 'knitwear' || sub === 'sweater' || sub === 'cardigan' || name.includes('pulóver') || name.includes('kardigán')) return 2;
-    if (isBaseTop(item)) return 1;
+    if (isBaseTop(item) || isTurtleneck(item)) return 1;
     if (isBottom(item)) return 5;
     if (isShoe(item)) return 6;
     if (isBelt(item)) return 7;
@@ -552,6 +680,7 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
       const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
         ? styleProfile.customStylingRules
         : [];
+      const dynamicSartorialRules = formatRulesForPrompt();
 
       const prompt = `Te egy világklasszis személyi stylist, divatelemző és kapszula ruhatár döntéstámogató vagy.
 ELEMEZD A MEGADOTT RUHADARABOT KIZÁRÓLAG A WEBSHOPBAN / FOTÓN TALÁLT VALÓS ADATOK ALAPJÁN!
@@ -560,6 +689,9 @@ Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: 
 
 🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI:
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
+
+👔 AKTÍV SARTORIAL HARMÓNIA- ÉS RÉTEGEZÉSI SZABÁLYZAT (AUTONOMIKUSAN KUTATOTT & BESPOKE SZABÁLYOK):
+${dynamicSartorialRules}
 
 Meglévő ruhatár (${compactWardrobe.length} elem gazdag metaadatokkal): ${JSON.stringify(compactWardrobe)}
 
@@ -575,13 +707,13 @@ SZIGORÚ VALÓS ADAT ELV ÉS ANTI-HALLUCINÁCIÓS SZABÁLYOK:
 4 DÖNTÉSI PILLÉR & SARTORIAL LOGIKA:
 
 1. 👔 KOMBINÁLHATÓSÁG & 3 KOMPLETT OUTFIT:
-   - Készíts 3 különböző komplett, hordható outfitet a kiszemelt darab és a meglévő ruhatár elemeiből.
+   - Készíts 3 különböző komplett, hordható outfitet a kiszemelt darab és a meglévő ruhatár elemeiből, szigorúan betartva a fenti sartorial harmóniaszabályokat!
    - KÖTELEZŐ ELEMEK:
-     * 👔 Bázis felső ('tops' - ing vagy minőségi pamut póló közvetlenül a bőrön; szabadon válassz a szett stílusához illő darabot a ruhatárból, ne fixen ugyanazt).
-     * 👖 Alsó ('bottoms' - nadrág a ruhatárból).
+     * 👔 Bázis felső ('tops' - ing vagy minőségi pamut póló közvetlenül a bőrön; ha a céltermék garbó vagy rövid ujjú kötöttáru, az maga a bázis).
+     * 👖 Alsó ('bottoms' - nadrág vagy szoknya a ruhatárból).
      * 👞 Lábbeli ('shoes' - cipő / csizma / loafer / sneaker a ruhatárból).
      * 🎗️ Öv ('accessories' - a cipővel harmonizáló bőröv a ruhatárból, kötelező kiegészítő).
-   - OPCIONÁLIS RÉTEGEK: Köztes réteg ('knitwear' - pulóver/kardigán), Zakó ('outerwear' / 'blazer'), Télikabát ('coat' / 'overcoat'), egyéb kiegészítők (díszzsebkendő, sál stb.).
+   - OPCIONÁLIS RÉTEGEK: Köztes réteg ('knitwear' - pulóver/kardigán), Zakó ('outerwear' / 'blazer'), Télikabát ('coat' / 'overcoat'), egyéb kiegészítők.
    - A 'matchedItemIds' listába KÖTELEZŐEN TEDD BE az összes olyan darab pontos 'id'-ját, amit a szetthez és a leírásban ('stylingTip') felhasználsz!
 
 2. ⚖️ VÁLTOZATOSSÁG & STILISZTIKAI LEFEDETTSÉG (Aesthetic Overlap):
@@ -864,6 +996,7 @@ export async function generateEventOutfits({ eventName, weather, anchorItemIds =
       const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
         ? styleProfile.customStylingRules
         : [];
+      const dynamicSartorialRules = formatRulesForPrompt();
 
       const richWardrobe = availableWardrobe.map(w => ({
         id: w.id,
@@ -894,6 +1027,9 @@ FELHASZNÁLÓ STÍLUSPROFILJA:
 🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI (SZIGORÚAN KÖTELEZŐ BETARTANI!):
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
 
+👔 AKTÍV SARTORIAL HARMÓNIA- ÉS RÉTEGEZÉSI SZABÁLYZAT (AUTONOMIKUSAN KUTATOTT & BESPOKE SZABÁLYOK):
+${dynamicSartorialRules}
+
 ESEMÉNY / ALKALOM: "${eventName}"
 HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${temperature}°C, ${weather?.condition || 'Kellemes'}
 ${anchorItems.length > 0 ? `KÖTELEZŐ KULCSDARABOK (Anchor Items): ${JSON.stringify(anchorItems.map(a => ({ id: a.id, name: a.name, category: a.category, color: a.color })))}` : ''}
@@ -901,15 +1037,43 @@ ${anchorItems.length > 0 ? `KÖTELEZŐ KULCSDARABOK (Anchor Items): ${JSON.strin
 Ruhatár (${richWardrobe.length} elérhető darab gazdag metaadatokkal):
 ${JSON.stringify(richWardrobe)}
 
-SARTORIAL BLUEPRINT & ANATÓMIAI RÉTEGEZÉSI & IDŐJÁRÁSI SZABÁLYOK:
+SARTORIAL BLUEPRINT, ANATÓMIAI RÉTEGEZÉSI & SZILUETTSZABÁLYOK:
 
-1. 👔 KÖTELEZŐ ELEMEK MINDEN SZETTBEN:
-   - 👔 Bázis felső ('tops' - ing vagy minőségi pamut póló közvetlenül a bőrön; szabadon válassz a ruhatárból a szett hangulatához illő felsőt, ne fixen ugyanazt).
-   - 👖 Alsó ('bottoms' - pontosan 1 db nadrág / chino / flanelnadrág / farmer a ruhatárból).
+👔 SARTORIAL HARMÓNIA, GALLÉR-, UJJ- ÉS SZILUETTSZABÁLYZAT (SZIGORÚAN KÖTELEZŐ!):
+
+1. 👔 GALLÉR ÉS HAJTÓKA HARMÓNIA (Collar & Lapel Compatibility):
+   - ❌ ÁLLÓGALLÉROS ING (Mandarin / Band collar / Grandad / Mao / Nehru):
+     * SZIGORÚAN TILTOTT zárt kerek- vagy V-nyakú kötött pulóverrel rétegezni! (Az állógallér nem fekszik rá a kötött nyakkivágásra, gyűrődik és deformálódik).
+     * SZIGORÚAN TILTOTT klasszikus hajtókás (Notched/Peaked lapel) öltönyzakóval kombinálni! (Klasszikus zakóhoz mindig klasszikus galléros - Spread, Point, Button-down - ing kötelező).
+     * Állógalléros ing viselése: Önmagában (nadrággal + cipővel), vagy nyitott kardigánnal / gallér nélküli dzsekivel!
+   - ❌ GARBÓ (Turtleneck / Rollneck):
+     * Garbó alá SZIGORÚAN TILOS galléros inget vagy pólót venni! A garbó önmagában bázisfelső zakó vagy kabát alatt.
+   - ❌ PÓLÓING (Polo collar):
+     * Zárt kereknyakú pulóver alatt gyűrődik. Hordható önállóan, V-nyakú kötöttel vagy laza casual pamut/len zakóval.
+   - ❌ NŐI KIVÁGÁSOK & GALLÉROK:
+     * Csónaknyak, aszimmetrikus, szögletes (Square) nyak alá tilos magas, zárt környakú pamutpólót vagy merev inggallért rétegezni!
+     * Masnis gallér (Pussy-bow) blézerrel vagy V-kardigánnal viselendő, sosem zárt pulóver alá gyűrve.
+
+2. 👕 UJJHOSSZ & RÉTEGEZÉSI HIERARCHIA (Sleeve Length Hierarchy):
+   - ❌ RÖVID UJJÚ KÖTÖTT PULÓVER / KÖTÖTT PÓLÓ:
+     * SZIGORÚAN TILOS alá rövid ujjú pólót vagy rövid ujjú inget rétegezni! (Kettős ujjvég, kilógó vagy gyűrődő ujjak elkerülése). A rövid ujjú kötött pulóvert közvetlenül a bőrön hordjuk (vagy ujjatlan / láthatatlan bázissal)!
+   - ❌ KÖTÖTT MELLÉNY (Sweater vest / Slipover):
+     * Alá KIZÁRÓLAG hosszú ujjú ing (vagy hosszú ujjú garbó/felső) passzol, soha nem rövid ujjú póló!
+   - ❌ ZAKÓ / BLÉZER:
+     * Smart casual és formális zakó alá hosszú ujjú ing szükséges a mandzsetta kilátszódásához és a komfortos viselethez.
+
+3. ⚖️ SZILUETT, TÉRFOGAT & ARÁNYOK EGYENSÚLYA (Volume & Silhouette Balance):
+   - Bő / Oversized felsőhöz ➔ karcsúsított / egyenes alsó (Slim / Straight / Tapered / Ceruzaszoknya).
+   - Bő / Wide-leg nadrághoz vagy A-vonalú maxiszoknyához ➔ testhezálló, betűrt felső és deréköv.
+   - Női Ruhák (Dresses) és Szoknyák rétegezése: Midi és Maxi ruhához derékban szabott / rövidített (Cropped/Tailored) blézer vagy deréköv szükséges; tilos alaktalan, túl hosszú zakóval elnyomni a ruha esését.
+
+4. 👔 KÖTELEZŐ ALAPELEMEK MINDEN SZETTBEN:
+   - 👔 Bázis felső ('tops' - ing vagy minőségi pamut póló közvetlenül a bőrön; ha a szett bázisa garbó vagy rövid ujjú kötött pulóver, az maga a bázis).
+   - 👖 Alsó ('bottoms' - pontosan 1 db nadrág / chino / flanelnadrág / farmer / szoknya a ruhatárból).
    - 👞 Lábbeli ('shoes' - pontosan 1 pár cipő / loafer / sneaker / félcipő a ruhatárból).
    - 🎗️ Öv ('accessories' - a cipővel harmonizáló bőröv a ruhatárból, kötelező kiegészítő).
 
-2. ☀️ HŐMÉRSÉKLETI ÉS LÁBBELI DRESS CODE SZABÁLYOK (${temperature}°C):
+5. ☀️ HŐMÉRSÉKLETI ÉS LÁBBELI DRESS CODE SZABÁLYOK (${temperature}°C):
    - ☀️ MELEG IDŐ (${temperature}°C >= 19°C):
      * SZIGORÚAN KIZÁRT: Őszi/téli bokacipő, bokacsizma, Chelsea csizma, Chukka, bélelt bakancs, vastag télikabát és vastag kötött garbó!
      * KIZÁRÓLAG NYÁRI / KÖNNYŰ LÁBBELI ENGEDÉLYEZETT: Bőr penny/tassel loafer, mokaszin, tiszta bőr sneaker, szellős derbi/oxford félcipő!
@@ -917,13 +1081,13 @@ SARTORIAL BLUEPRINT & ANATÓMIAI RÉTEGEZÉSI & IDŐJÁRÁSI SZABÁLYOK:
    - ❄️ HŰVÖS / HIDEG IDŐ (${temperature}°C < 14°C):
      * Bokacsizma, chelsea csizma, bélelt elegáns lábbeli, téli szövetkabát és meleg flanelnadrág preferált.
 
-3. 🧥 OPCIONÁLIS RÉTEGEK (Időjárás, esemény és stílus szerint):
-   - Kötöttáru / Pulóver ('knitwear'): Opcionálisan 0 vagy 1 db pulóver/kardigán az ingre/pólóra rétegezve.
+6. 🧥 OPCIONÁLIS RÉTEGEK (Időjárás, esemény és stílus szerint):
+   - Kötöttáru / Pulóver ('knitwear'): Opcionálisan 0 vagy 1 db pulóver/kardigán az ingre/pólóra rétegezve (figyelembe véve a fenti gallér- és ujj-szabályokat!).
    - Zakó ('outerwear' / 'blazer'): Opcionális zakó / dzseki a bázisra/pulóverre.
    - ❄️ TÉLI / HIDEG IDŐ (< 12°C vagy Téli esemény):
      * KETTŐS KÜLSŐ RÉTEG ENGEDÉLYEZETT: A zakó ('blazer') FÖLÉ mehet a téli szövetkabát / nagykabát ('overcoat' / 'coat')!
 
-4. 3 KÜLÖNBÖZŐ SZEMÉLYES HANGULAT AZ ESEMÉNYRE:
+7. 3 KÜLÖNBÖZŐ SZEMÉLYES HANGULAT AZ ESEMÉNYRE:
    - Készíts 3 olyan komplett szettet, amelyek a fenti rétegezési szabályok szerint épülnek fel, de 3 különböző stílusárnyalatot képviselnek.
 
 🚫 CSENDES SZABÁLYBETARTÁS (Silent Rule Enforcement):
@@ -1194,6 +1358,7 @@ export async function auditManualOutfit({ items = [], eventName = 'Általános M
       const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
         ? styleProfile.customStylingRules
         : [];
+      const dynamicSartorialRules = formatRulesForPrompt();
 
       const compactItems = items.map(w => ({
         id: w.id,
@@ -1225,6 +1390,9 @@ FELHASZNÁLÓ STÍLUSPROFILJA:
 🚫 FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI (Ha a felhasználó által választott szettben ezek bármelyike sérül, jelezd a figyelmeztetésben és a tanácsokban!):
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
 
+👔 AKTÍV SARTORIAL HARMÓNIA- ÉS RÉTEGEZÉSI SZABÁLYZAT (AUTONOMIKUSAN KUTATOTT & BESPOKE SZABÁLYOK):
+${dynamicSartorialRules}
+
 ESEMÉNY / ALKALOM: "${eventName}"
 HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${weather?.temperature}°C, ${weather?.condition || 'Kellemes'}
 
@@ -1233,10 +1401,14 @@ ${JSON.stringify(compactItems, null, 2)}
 
 SZEMPONTOK AZ AUDITHOZ:
 1. 🎯 Esemény & Dress Code összhang: Illik-e a választott szett az esemény kulturális és formai elvárásaihoz?
-2. 🎨 Színharmónia & Kontraszt: Hogyan illeszkednek egymáshoz a színek és a bőrtónushoz? Érvényesül-e a 3-szín szabály?
-3. 🧵 Anyagok & Textúrák szinergiája: Természetes szálak találkozása (pl. gyapjú flanel, len, pamut twill, sima vagy velúrbőr).
-4. 🧥 Anatómiai rétegezés & Időjárási alkalmasság: Van-e megfelelő bázisréteg (ing a zakó alatt)? Megfelelő-e a ${weather?.temperature || 20}°C-os hőmérséklethez?
-5. ⚖️ Szabások & Arányok összhangja: Nem ütközik-e laza és túlzottan szűk szabás?
+2. 👔 Sartorial Gallér- és Ujj-Harmónia (Kritikus ellenőrzési pontok):
+   - Állógalléros ing (Mandarin / Band collar / Grandad) + zárt kötött pulóver (Crewneck/V-neck) vagy klasszikus hajtókás zakó: DISSZONÁNS RÉTEGEZÉS! (Adj lejjebb a pontszámból, és a 'fitMismatchWarning' és 'suggestions' mezőkben kötelezően részletesen megnevezni a hibát és a helyes viselést).
+   - Rövid ujjú kötött pulóver + alatta rövid ujjú póló: KETTŐS UJJVÉG / GYŰRŐDÉS HIBA! (A rövid ujjú pulóvert bőrön vagy ujjatlan bázissal hordjuk).
+   - Garbó + alatta galléros ing: DISSZONÁNS! (A garbó önmagában a bázis).
+3. 🎨 Színharmónia & Kontraszt: Hogyan illeszkednek egymáshoz a színek és a bőrtónushoz? Érvényesül-e a 3-szín szabály?
+4. 🧵 Anyagok & Textúrák szinergiája: Természetes szálak találkozása (pl. gyapjú flanel, len, pamut twill, sima vagy velúrbőr).
+5. 🧥 Anatómiai rétegezés & Időjárási alkalmasság: Van-e megfelelő bázisréteg? Megfelelő-e a ${weather?.temperature || 20}°C-os hőmérséklethez?
+6. ⚖️ Szabások & Arányok összhangja: Bő felsőhöz szűkített alsó; széles nadrághoz/szoknyához betűrt felső és öv.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
@@ -1269,27 +1441,76 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
       const temp = typeof weather?.temperature === 'number' ? weather.temperature : 22;
       const hasBootInWarmWeather = temp >= 19 && items.some(i => isHeavyBoot(i));
 
+      // Deterministic Sartorial Checks for Manual Selection
+      const hasStandCollarShirt = items.some(i => (i.category === 'tops' || (i.name || '').toLowerCase().includes('ing')) && isStandCollar(i));
+      const hasClosedSweater = items.some(i => isClosedSweater(i));
+      const hasClassicBlazer = items.some(i => isClassicBlazer(i));
+      const hasShortSleeveKnit = items.some(i => (i.category === 'knitwear' || (i.name || '').toLowerCase().includes('pulóver')) && isShortSleeve(i));
+      const hasShortSleeveTee = items.some(i => i.category === 'tops' && isShortSleeve(i) && !isStandCollar(i));
+      const hasTurtleneck = items.some(i => isTurtleneck(i));
+      const hasCollaredShirtUnderTurtleneck = hasTurtleneck && items.some(i => i.category === 'tops' && (i.name || '').toLowerCase().includes('ing'));
+
       const strengths = Array.isArray(parsed?.strengths) && parsed.strengths.length > 0 
         ? parsed.strengths 
         : ['Jól megválasztott alapdarabok a gardróbodból.'];
 
       const suggestions = Array.isArray(parsed?.suggestions) ? [...parsed.suggestions] : [];
+      let penalty = 0;
+      let fitMismatchWarning = parsed?.fitMismatchWarning || null;
+
+      // Stand collar clash check
+      if (hasStandCollarShirt && hasClosedSweater) {
+        penalty += 15;
+        suggestions.unshift('Az állógalléros ing (mandarin/band collar) nem illik zárt kerek- vagy V-nyakú kötött pulóver alá, mert gyűrődik a kötött szegély alatt. Hordd önmagában vagy nyitott kardigánnal!');
+        if (!fitMismatchWarning) {
+          fitMismatchWarning = '⚠️ Gallér-összhang hiba: Az állógalléros ing nem illik zárt pulóver alá.';
+        }
+      }
+
+      if (hasStandCollarShirt && hasClassicBlazer) {
+        penalty += 12;
+        suggestions.unshift('Az állógalléros ing klasszikus hajtókás zakóval stilisztikailag ütközik. Hagyományos zakóhoz válassz klasszikus galléros (Spread/Button-down) inget!');
+        if (!fitMismatchWarning) {
+          fitMismatchWarning = '⚠️ Gallér-hajtóka hiba: Az állógalléros ing klasszikus hajtókás zakóval disszonáns.';
+        }
+      }
+
+      // Short sleeve knitwear + short sleeve tee clash
+      if (hasShortSleeveKnit && hasShortSleeveTee) {
+        penalty += 14;
+        suggestions.unshift('Rövid ujjú kötött pulóver alá nem javasolt rövid ujjú pólót venni, mert a póló ujja kilóg vagy megvastagítja a pulóver ujját. Viseld közvetlenül a bőrön vagy ujjatlan bázissal!');
+        if (!fitMismatchWarning) {
+          fitMismatchWarning = '⚠️ Ujjak rétegzési hibája: Rövid ujjú kötött felső alá ne vegyél rövid ujjú pólót!';
+        }
+      }
+
+      // Turtleneck + collared shirt clash
+      if (hasCollaredShirtUnderTurtleneck) {
+        penalty += 16;
+        suggestions.unshift('A garbó önmagában képez elegáns bázist, galléros inget nem veszünk alá. Viseld a garbót önálló felsőként a zakó vagy kabát alatt!');
+        if (!fitMismatchWarning) {
+          fitMismatchWarning = '⚠️ Rétegezési hiba: Garbó alá nem veszünk galléros inget.';
+        }
+      }
+
+      // Warm weather boot warning
       if (hasBootInWarmWeather && !suggestions.some(s => s.toLowerCase().includes('loafer') || s.toLowerCase().includes('cipő') || s.toLowerCase().includes('csizma'))) {
         suggestions.unshift(`A(z) ${temp}°C-os meleg időben az őszi/téli bokacipő túl meleg lehet. Cseréld le egy szellősebb bőr loaferre vagy könnyű sneakerre!`);
+        if (!fitMismatchWarning) {
+          fitMismatchWarning = `⚠️ Hőmérsékleti észrevétel: A(z) ${temp}°C-os meleg időben a zárt őszi bokacipő/csizma helyett egy könnyű bőr loafer vagy szellős félcipő kényelmesebb és stílusosabb.`;
+        }
       }
+
       if (suggestions.length === 0) {
         suggestions.push('Viseld magabiztosan, a szett elemei jól kiegészítik egymást!');
       }
 
-      let fitMismatchWarning = parsed?.fitMismatchWarning || null;
-      if (hasBootInWarmWeather && !fitMismatchWarning) {
-        fitMismatchWarning = `⚠️ Hőmérsékleti észrevétel: A(z) ${temp}°C-os meleg időben a zárt őszi bokacipő/csizma helyett egy könnyű bőr loafer vagy szellős félcipő kényelmesebb és stílusosabb.`;
-      }
+      const calculatedScore = Math.max(45, Math.min(100, (typeof parsed?.score === 'number' ? parsed.score : 85) - penalty));
 
       return {
         ...parsed,
-        score: typeof parsed?.score === 'number' ? Math.min(100, Math.max(0, parsed.score)) : 85,
-        verdict: parsed?.verdict || 'Harmonikus Összeállítás',
+        score: calculatedScore,
+        verdict: penalty > 0 && calculatedScore < 75 ? 'Korrekciót Igénylő Összeállítás' : (parsed?.verdict || 'Harmonikus Összeállítás'),
         strengths,
         suggestions,
         fitMismatchWarning
@@ -1317,6 +1538,7 @@ export async function chatWithMasterStylist({ messages = [], wardrobe = [], styl
     const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
       ? styleProfile.customStylingRules
       : [];
+    const dynamicSartorialRules = formatRulesForPrompt();
 
     const wardrobeInventory = wardrobe.map(w => ({
       id: w.id,
@@ -1348,6 +1570,9 @@ FELHASZNÁLÓ STÍLUSPROFILJA:
 
 🚫 FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI (MINDIG SZIGORÚAN TARTSD BE!):
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön tiltások rögzítve.'}
+
+👔 AKTÍV SARTORIAL HARMÓNIA- ÉS RÉTEGEZÉSI SZABÁLYZAT (AUTONOMIKUSAN KUTATOTT & BESPOKE SZABÁLYOK):
+${dynamicSartorialRules}
 
 AKTUÁLIS IDŐJÁRÁS:
 Helyszín: ${weather?.city || 'Budapest'}, Hőmérséklet: ${weather?.temperature ?? 21}°C, Körülmények: ${weather?.condition || 'Kellemes'}

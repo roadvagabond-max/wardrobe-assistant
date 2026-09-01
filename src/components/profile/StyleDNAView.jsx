@@ -1,10 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Compass, Sparkles, Edit3, Check, Palette, PieChart, Award, Camera, Upload, Loader2, Cloud, CloudOff, Layers, Link as LinkIcon, Plus, X, Trash2, Sliders, BookOpen, ShieldAlert } from 'lucide-react';
+import { 
+  User, Compass, Sparkles, Edit3, Check, Palette, PieChart, Award, Camera, Upload, 
+  Loader2, Cloud, CloudOff, Layers, Link as LinkIcon, Plus, X, Trash2, Sliders, 
+  BookOpen, ShieldAlert, Globe, RefreshCw, Search, CheckCircle2, ShieldCheck, 
+  ExternalLink, ToggleLeft, ToggleRight, Filter
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeColorSeason } from '../../services/gemini';
 import { ensureBase64Image } from '../../services/imageOptimizer';
 import { normalizeBrandName } from '../../services/webshop';
 import { INITIAL_USER_PROFILE } from '../../data/mockWardrobe';
+import { SARTORIAL_CATEGORIES } from '../../services/sartorialRules';
+import confetti from 'canvas-confetti';
 
 const ALL_STYLE_ARCHETYPES = [
   'Klasszikus & Időtlen',
@@ -17,16 +24,55 @@ const ALL_STYLE_ARCHETYPES = [
 ];
 
 export default function StyleDNAView() {
-  const { profile, updateProfile, wardrobe, currentUser, isDemoMode } = useAuth();
+  const { 
+    profile, 
+    updateProfile, 
+    wardrobe, 
+    currentUser, 
+    isDemoMode,
+    sartorialRules = [],
+    isMiningRules,
+    mineNewRules,
+    toggleRule,
+    deleteSartorialRule
+  } = useAuth();
+  
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(profile);
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
   const [colorSeasonResult, setColorSeasonResult] = useState(null);
   const [newRuleInput, setNewRuleInput] = useState('');
 
+  // Sartorial Rules Hub States
+  const [selectedSartorialCat, setSelectedSartorialCat] = useState('all');
+  const [customMiningTopic, setCustomMiningTopic] = useState('');
+  const [miningSuccessMsg, setMiningSuccessMsg] = useState(null);
+
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const avatarInputRef = useRef(null);
+
+  const handleMineRulesNow = async (e) => {
+    if (e) e.preventDefault();
+    try {
+      setMiningSuccessMsg(null);
+      const res = await mineNewRules(customMiningTopic.trim());
+      if (res && res.success) {
+        setMiningSuccessMsg(`Sikeres kutatás! +${res.newRulesCount} új sartorial szabály került beépítésre a döntési motorba.`);
+        setCustomMiningTopic('');
+        try {
+          confetti({
+            particleCount: 55,
+            spread: 65,
+            origin: { y: 0.65 },
+            colors: ['#d4af37', '#10b981', '#f3e5ab']
+          });
+        } catch (_) {}
+      }
+    } catch (err) {
+      alert(`Nem sikerült a webes szabálykutatás: ${err.message}`);
+    }
+  };
 
   // Sync formData whenever cloud profile updates
   useEffect(() => {
@@ -710,6 +756,232 @@ export default function StyleDNAView() {
           <span>
             <strong>Valós idejű szinkron:</strong> A szabályok mentés után azonnal beépülnek az esemény-stylist, a kapszula-gap és a vásárlási döntéstámogató motorba.
           </span>
+        </div>
+      </div>
+
+      {/* 🌐 AUTONÓM SARTORIAL TUDÁSBÁZIS & 7-NAPOS PERIODIKUS WEBES SZABÁLYKUTATÓ */}
+      <div className="glass-card p-6 sm:p-7 border-[var(--border-gold)] space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="badge badge-gold text-[10px] flex items-center gap-1">
+                <Globe className="w-3 h-3 text-[var(--accent-gold)] animate-pulse" />
+                <span>Autonóm Sartorial Motor</span>
+              </span>
+              <span className="badge badge-emerald text-[10px]">
+                7 napos ciklikus kutatás aktív
+              </span>
+              <span className="badge badge-subtle text-[10px] text-white">
+                {sartorialRules.length} kutatott & bespoke szabály
+              </span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
+              Élő Sartorial Szabálytár & Webes AI Kutató
+            </h3>
+            <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-3xl leading-relaxed">
+              A rendszer 7 naponta automatikusan kimegy az internetre (Google Search Grounding segítségével), és a legelismertebb nemzetközi szabászati kódexekből (Savile Row, Pitti Uomo, Vogue, Permanent Style) feltárja az autentikus rétegezési, gallér-, ujj- és sziluettszabályokat, majd beépíti őket a döntési motorba.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleMineRulesNow}
+            disabled={isMiningRules}
+            className="btn-gold py-2.5 px-5 text-xs sm:text-sm font-semibold flex items-center gap-2 shrink-0 shadow-lg"
+          >
+            {isMiningRules ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-black" />
+                <span>Kutatás az interneten...</span>
+              </>
+            ) : (
+              <>
+                <Search className="w-4 h-4" />
+                <span>Új Szabályok Kutatása Most</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Custom topic search bar */}
+        <form onSubmit={handleMineRulesNow} className="flex gap-2">
+          <input
+            type="text"
+            value={customMiningTopic}
+            onChange={(e) => setCustomMiningTopic(e.target.value)}
+            placeholder="Opcionális téma: pl. Női blézer és maxiruha arányok VAGY Mandarin gallér és pulóver rétegződés..."
+            className="custom-input text-xs sm:text-sm flex-1"
+            disabled={isMiningRules}
+          />
+          <button
+            type="submit"
+            disabled={isMiningRules}
+            className="btn-secondary px-4 text-xs sm:text-sm flex items-center gap-1.5 shrink-0"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isMiningRules ? 'animate-spin' : ''}`} />
+            <span>Keresés Fókusszal</span>
+          </button>
+        </form>
+
+        {/* Mining Notification */}
+        {miningSuccessMsg && (
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between gap-3 animate-in fade-in duration-300">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{miningSuccessMsg}</span>
+            </div>
+            <button
+              onClick={() => setMiningSuccessMsg(null)}
+              className="text-emerald-400 hover:text-white text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Category Filter Tabs */}
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {SARTORIAL_CATEGORIES.map(cat => {
+            const count = cat.id === 'all' 
+              ? sartorialRules.length 
+              : sartorialRules.filter(r => r.category === cat.id).length;
+            const isSelected = selectedSartorialCat === cat.id;
+
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedSartorialCat(cat.id)}
+                className={`py-1.5 px-3 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-[var(--accent-gold)] text-black font-bold shadow-md shadow-[var(--accent-gold)]/20'
+                    : 'bg-white/5 border border-white/10 text-[var(--text-secondary)] hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-black/20 text-black' : 'bg-white/10 text-[var(--text-muted)]'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Rules Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2">
+          {sartorialRules
+            .filter(r => selectedSartorialCat === 'all' || r.category === selectedSartorialCat)
+            .map((rule) => {
+              const isEnabled = rule.enabled !== false;
+              const catObj = SARTORIAL_CATEGORIES.find(c => c.id === rule.category);
+
+              return (
+                <div
+                  key={rule.id}
+                  className={`rounded-2xl p-4 sm:p-5 border transition-all flex flex-col justify-between gap-3 relative ${
+                    isEnabled
+                      ? 'bg-black/40 border-white/10 hover:border-[var(--border-gold)]/60 shadow-sm'
+                      : 'bg-black/20 border-white/5 opacity-50'
+                  }`}
+                >
+                  <div className="space-y-2.5">
+                    {/* Header: Category + Badges + Toggle */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="badge badge-gold text-[10px] py-0.5 px-2">
+                          {catObj?.icon || '✨'} {catObj?.label || 'Sartorial'}
+                        </span>
+                        {rule.gender && rule.gender !== 'universal' && (
+                          <span className="badge badge-subtle text-[9px] py-0.5 px-1.5">
+                            {rule.gender === 'womenswear_specific' ? '👗 Női' : '👔 Férfi'}
+                          </span>
+                        )}
+                        {rule.severity === 'strict' && (
+                          <span className="badge badge-rose text-[9px] py-0.5 px-1.5">
+                            Kritikus
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => toggleRule(rule.id)}
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-lg border transition-all ${
+                            isEnabled 
+                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                              : 'bg-white/5 border-white/10 text-[var(--text-muted)] hover:text-white'
+                          }`}
+                          title={isEnabled ? 'Szabály kikapcsolása' : 'Szabály bekapcsolása'}
+                        >
+                          {isEnabled ? 'Aktív' : 'Inaktív'}
+                        </button>
+                        {rule.id.startsWith('mined-rule-') && (
+                          <button
+                            type="button"
+                            onClick={() => deleteSartorialRule(rule.id)}
+                            className="text-[var(--text-muted)] hover:text-rose-400 p-1 rounded hover:bg-white/5 transition-colors"
+                            title="Szabály törlése"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Title & Description */}
+                    <div>
+                      <h4 className="font-serif font-bold text-sm sm:text-base text-white leading-snug">
+                        {rule.title}
+                      </h4>
+                      <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">
+                        {rule.ruleDescription}
+                      </p>
+                    </div>
+
+                    {/* Dos & Don'ts */}
+                    <div className="space-y-1.5 pt-1">
+                      {rule.dont && (
+                        <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/25 text-[11px] text-rose-200 flex items-start gap-1.5">
+                          <span className="font-bold text-rose-400 shrink-0">❌ TILTOTT:</span>
+                          <span className="leading-tight">{rule.dont}</span>
+                        </div>
+                      )}
+                      {rule.do && (
+                        <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px] text-emerald-200 flex items-start gap-1.5">
+                          <span className="font-bold text-emerald-400 shrink-0">✅ HELYES:</span>
+                          <span className="leading-tight">{rule.do}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Footer: Source and Timestamp */}
+                  <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+                    <span className="truncate max-w-[220px]" title={rule.source}>
+                      {rule.source || 'Bespoke Sartorial Standard'}
+                    </span>
+                    <span>
+                      {rule.discoveredAt ? new Date(rule.discoveredAt).toLocaleDateString('hu-HU') : 'Bespoke kódex'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+
+        {/* Global info note */}
+        <div className="p-3.5 rounded-xl bg-[var(--accent-gold-glow)]/40 border border-[var(--border-gold)]/40 text-[11px] text-[var(--accent-gold-light)] flex items-start gap-2.5">
+          <ShieldCheck className="w-4 h-4 text-[var(--accent-gold)] shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <span className="font-semibold block text-white">
+              Automatikus Döntési Szinkronizáció
+            </span>
+            <p className="text-[var(--text-secondary)] leading-relaxed">
+              Minden itt szereplő aktív szabályt a Stylist Outfit Generátor, a Manuális Szett Auditáló, a Vásárlási Döntéstámogató és a Master Stylist Chat valós időben betölt és szigorúan alkalmaz.
+            </p>
+          </div>
         </div>
       </div>
 

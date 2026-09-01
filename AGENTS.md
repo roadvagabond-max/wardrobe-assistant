@@ -98,11 +98,20 @@ sequenceDiagram
 2. **Kulturális Tiltólisták Alkalmazása:**
    - Techno / Rave / Club esetén: Szigorúan kizárja a formális zakókat, nyakkendőket és öltönynadrágokat.
    - Formális esemény esetén: Kizárja a lezser sportos és játszós/kopott darabokat.
-3. **Kötelező Bázisréteg & Anatómiai Rétegezés (Sartorial Blueprint):**
-   - **Bázisréteg (Base Layer):** Minden szett kötelezően tartalmaz egy bőrön hordható felsőt (`tops`: ing vagy prémium pamut póló). Szigorúan tilos pulóvert vagy zakót bázis felső nélkül ajánlani! Zakóhoz kötelező galléros ing.
+3. **👔 Sartorial Gallér- és Ujj-Harmónia Rendszer (Collar & Sleeve Layering Matrix):**
+   - **Állógalléros ing (Mandarin / Band / Grandad / Mao):** Szigorúan tilos zárt kötött pulóverrel (Crewneck/V-neck) vagy hagyományos hajtókás zakóval párosítani! Kizárólag önmagában vagy nyitott kardigánnal / gallér nélküli dzsekivel viselhető.
+   - **Garbó (Turtleneck):** Sosem veszünk alá inget; a garbó önmagában képez bázist zakó vagy kabát alatt.
+   - **Rövid ujjú kötöttáru (Short sleeve knitwear):** Szigorúan tilos alá rövid ujjú pólót rétegezni (kettős ujjvég és gyűrődés megelőzése). Bőrön vagy ujjatlan bázissal hordandó.
+   - **Kötött mellény (Sweater vest):** Alá kizárólag hosszú ujjú felső vagy ing illik.
+   - **Zakó / Blézer:** Kötelező a hosszú ujjú ing a mandzsetta kilátszódásához és a belső béléskomforthoz.
+4. **⚖️ Sziluett, Térfogat & Női/Férfi Arányok (Volume Balance):**
+   - Bő felsőhöz szűkített alsó; bő alsóhoz vagy A-vonalú szoknyához feszes, betűrt felső és deréköv.
+   - Női ruhák (Midi/Maxi): derékban szabott/rövidített (Cropped) blézerrel és derékövvel rétegezendők.
+5. **Kötelező Bázisréteg & Anatómiai Rétegezés (Sartorial Blueprint):**
+   - **Bázisréteg (Base Layer):** Minden szett kötelezően tartalmaz egy bőrön hordható felsőt (`tops`: ing vagy prémium pamut póló; garbó vagy kötött póló esetén az maga a bázis). Szigorúan tilos pulóvert vagy zakót bázis felső nélkül ajánlani!
    - **Köztes & Külső Réteg (Mid & Outer Layers):** A pulóver (`knitwear`) és zakó (`outerwear`) az ingre rétegződik.
    - **Téli / Hideg Idő (< 12°C):** Kettős külső réteg engedélyezett és támogatott: a zakó (`blazer`) fölé rétegződhet a téli szövetkabát / nagykabát (`overcoat` / `coat`).
-4. **Időjárás & Hőmérsékleti Dinamika (Szezonális Lábbeli és Réteg Védelem):**
+6. **Időjárás & Hőmérsékleti Dinamika (Szezonális Lábbeli és Réteg Védelem):**
    - **Meleg időben (>= 19°C / Nyári meleg):**
      * **Szigorúan KIZÁRT:** Őszi/téli bokacipők, bokacsizmák, Chelsea csizmák, Chukka, bélelt bakancsok, vastag télikabátok és vastag téli garbók.
      * **Kizárólag engedélyezett lábbelik:** Bőr penny/tassel loafer, mokaszin, szellős tiszta bőr sneaker, elegáns derbi/oxford félcipő.
@@ -110,8 +119,8 @@ sequenceDiagram
    - **Hűvös/hideg időben (< 14°C):**
      * Csizmák, chelsea csizmák, bélelt elegáns lábbelik, téli szövetkabátok és flanelnadrágok támogatottak.
    - Felkészít a beltéri fűtésre/klímára és az esti lehűlésre: a felső réteg levehető, és az alatta lévő ing/póló önmagában is elegáns és önazonos megjelenést biztosít. Részletes rétegezési tanácsot ad (`layeringAdvice`).
-5. **3 Hiteles Szettvariáció:**
-   - Generál 3 komplett szettet (ing + nadrág + lábbeli + rétegek), és a kártyákon megjeleníti az esemény-összhang indoklását (`culturalFitReasoning`) és a rétegezési útmutatót.
+7. **3 Hiteles Szettvariáció:**
+   - Generál 3 komplett szettet (ing + nadrág + lábbeli + öv + opc. rétegek), és a kártyákon megjeleníti az esemény-összhang indoklását (`culturalFitReasoning`) és a rétegezési útmutatót.
 
 ---
 
@@ -176,6 +185,19 @@ sequenceDiagram
 
 ---
 
+### 🌐 Workflow 10: Autonóm Sartorial Tudásbázis & 7-Napos Periodikus Webes Szabálykutató
+1. **Google Search Grounding Kutató Motor (`mineSartorialRulesFromWeb`):**
+   - A rendszer nemzetközi divatkódexekből és szabászati stílusirányzatokból (Savile Row, Pitti Uomo, Vogue, Permanent Style, Die Workwear) kinyeri az autentikus rétegezési, gallér-, ujj- és sziluettszabályokat.
+2. **7-Napos Ciklikus Háttér-Szinkronizáció (`checkAndAutoSyncSartorialRules`):**
+   - 7 naponta automatikusan lefut a háttérben anélkül, hogy a felhasználói felületet lassítaná.
+   - Intelligensen deduplikál és frissíti a felhő/helyi szabálytárat.
+3. **Keresztfunkciós Alkalmazás:**
+   - Minden kutatott szabály azonnal beépül az összes döntési modulba (Outfit Generátor, Manuális Audit, Vásárlási Tanácsadó, Master Stylist Chat).
+4. **UI Szabálytár Hub (`StyleDNAView.jsx`):**
+   - Részletes szabálykártyák (❌ Don't / ✅ Do, forrás, dátum), kategóriaszűrés és manuális kutatásindítás fókuszált témákkal.
+
+---
+
 ### 🔍 Univerzális Kép- és Ruha Lightbox Betekintő (`GarmentLightboxModal`)
 - Minden szettkártyán és csevegésben lévő kisméretű ruhafotóra kattintva egy nagyfelbontású, arany-üveg keretes felugró ablak nyílik meg.
 - Teljes lapozási támogatás (⬅️ / ➡️ nyilak, billentyűzet, swipe), ruha-metaadatok és egygombos Lookbook magazin-áttekintő nézet.
@@ -198,12 +220,16 @@ sequenceDiagram
 - **Cél:** Szabási eltérések detektálása (Slim vs Regular vs Oversized), testalkati arányok és gyártói méretmátrix kezelése.
 - **Fő fájlok:** `src/services/gemini.js`, `src/components/advisor/PurchaseAdvisorView.jsx`, `src/components/profile/StyleDNAView.jsx`
 
-### 4. `webshop-sku-engine`
+### 4. `sartorial-rule-miner`
+- **Cél:** Autonóm internetes szabálykutatás Google Search Groundinggal, 7 napos háttér-szinkronizáció, strukturált gallér-, ujj- és sziluettszabályok kezelése.
+- **Fő fájlok:** `src/services/sartorialRules.js`, `src/context/AuthContext.jsx`, `src/components/profile/StyleDNAView.jsx`
+
+### 5. `webshop-sku-engine`
 - **Cél:** Termékkódok (Next Direct, Zara, Reserved, Massimo Dutti, H&M) felismerése, élő CDN képérvényesítés és metadata kinyerés.
 - **Fő fájlok:** `src/services/webshop.js`
 - **Szabályok:** Fast-path közvetlen kódoknál (0 ms felesleges scraping), párhuzamos lekérés 1.8s timeouttal.
 
-### 5. `cloud-state-synchronizer`
+### 6. `cloud-state-synchronizer`
 - **Cél:** Real-time szinkronizáció a mobil és asztali böngésző között, automatikus háttér-optimalizálás.
 - **Fő fájlok:** `src/context/AuthContext.jsx`, `src/services/firebase.js`
 - **Szabályok:** `onSnapshot` real-time listeners, `setDoc(..., { merge: true })`, idle-time képtömörítés a meglévő darabokra.
