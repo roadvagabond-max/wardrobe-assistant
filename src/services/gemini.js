@@ -308,7 +308,8 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 }
 
 /**
- * Helper to ensure complet// Helper: Is this a warm/heavy boot or autumn/winter ankle boot?
+ * Helper: Is this a warm/heavy boot or autumn/winter ankle boot?
+ */
 export function isHeavyBoot(item) {
   if (!item) return false;
   const cat = (item.category || '').toLowerCase();
@@ -331,6 +332,9 @@ export function isHeavyBoot(item) {
   );
 }
 
+/**
+ * Helper to ensure complete anatomical layering for an outfit across all modules
+ */
 export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], candidateItem = null, weather = null) {
   let items = [...rawItems];
   if (candidateItem && !items.some(i => i.id === candidateItem.id)) {
