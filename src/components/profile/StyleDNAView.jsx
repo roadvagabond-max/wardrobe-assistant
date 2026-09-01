@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   User, Compass, Sparkles, Edit3, Check, Palette, PieChart, Award, Camera, Upload, 
-  Loader2, Cloud, CloudOff, Layers, Link as LinkIcon, Plus, X, Trash2, Sliders, 
+  Loader2, Cloud, CloudOff, Layers, Link as LinkIcon, Plus, X, Trash2, SlidersHorizontal as Sliders, 
   BookOpen, ShieldAlert, Globe, RefreshCw, Search, CheckCircle2, ShieldCheck, 
   ExternalLink, ToggleLeft, ToggleRight, Filter, ChevronDown
 } from 'lucide-react';

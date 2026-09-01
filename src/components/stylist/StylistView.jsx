@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, CloudSun, Calendar, Compass, ArrowRight, Bookmark, Check, RefreshCw, 
   Loader2, Plus, X, Layers, Lock, Unlock, MessageSquare, CheckCircle2, ShieldAlert,
-  Maximize2, Grid, ChevronRight, Feather, Sliders
+  Maximize2, Grid, ChevronRight, Feather, SlidersHorizontal as Sliders
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { generateEventOutfits, auditManualOutfit } from '../../services/gemini';
