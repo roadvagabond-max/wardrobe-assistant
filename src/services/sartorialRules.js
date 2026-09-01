@@ -80,6 +80,19 @@ export const INITIAL_SARTORIAL_RULES = [
     enabled: true,
     discoveredAt: '2026-09-01T00:00:00.000Z'
   },
+  {
+    id: 'rule-shacket-overshirt-no-shirt',
+    category: 'collar_harmony',
+    title: 'Ingdzseki (Shacket / Overshirt) rétegezése: nincs alatta ing',
+    ruleDescription: 'Az ingdzseki (shacket / overshirt) már eleve inggallérral, mellzsebekkel és elülső gomboláspánttal rendelkezik. Hagyományos galléros inget alávéve a két gallér mereven egymásra torlódik és összeakad (kettős inggallér és kettős gombsor stílushiba).',
+    dont: 'Ingdzseki / Shacket + alatta hagyományos galléros ing (Kettős inggallér és kettős gombpánt)',
+    do: 'Ingdzseki / Shacket + alatta tiszta prémium pamut póló, vékony merinó garbó vagy kereknyakú finomkötött felső',
+    gender: 'universal',
+    severity: 'strict',
+    source: 'Modern Sartorial Code & Die Workwear Layering Principles',
+    enabled: true,
+    discoveredAt: '2026-09-01T00:00:00.000Z'
+  },
 
   // 2. Sleeve Hierarchy
   {

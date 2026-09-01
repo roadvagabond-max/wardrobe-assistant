@@ -99,6 +99,7 @@ sequenceDiagram
    - Techno / Rave / Club esetén: Szigorúan kizárja a formális zakókat, nyakkendőket és öltönynadrágokat.
    - Formális esemény esetén: Kizárja a lezser sportos és játszós/kopott darabokat.
 3. **👔 Sartorial Gallér- és Ujj-Harmónia Rendszer (Collar & Sleeve Layering Matrix):**
+   - **Ingdzseki (Shacket / Overshirt):** Szigorúan tilos alá hagyományos galléros inget rétegezni (kettős inggallér és kettős gombsor stílushiba). Kizárólag prémium pamut pólóval, vékony finomkötött kereknyakúval vagy merinó garbóval viselendő!
    - **Állógalléros ing (Mandarin / Band / Grandad / Mao):** Szigorúan tilos zárt kötött pulóverrel (Crewneck/V-neck) vagy hagyományos hajtókás zakóval párosítani! Kizárólag önmagában vagy nyitott kardigánnal / gallér nélküli dzsekivel viselhető.
    - **Garbó (Turtleneck):** Sosem veszünk alá inget; a garbó önmagában képez bázist zakó vagy kabát alatt.
    - **Rövid ujjú kötöttáru (Short sleeve knitwear):** Szigorúan tilos alá rövid ujjú pólót rétegezni (kettős ujjvég és gyűrődés megelőzése). Bőrön vagy ujjatlan bázissal hordandó.

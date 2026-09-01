@@ -402,6 +402,34 @@ export function isClosedSweater(item) {
   return isKnit && !isCardigan(item) && !isTurtleneck(item);
 }
 
+export function isShacket(item) {
+  if (!item) return false;
+  const text = `${item.name || ''} ${item.subCategory || ''} ${(item.tags || []).join(' ')}`.toLowerCase();
+  return (
+    text.includes('shacket') ||
+    text.includes('overshirt') ||
+    text.includes('ingdzseki') ||
+    text.includes('ingkabát') ||
+    text.includes('ing kabát') ||
+    text.includes('shirt jacket')
+  );
+}
+
+export function isCollaredShirt(item) {
+  if (!item) return false;
+  const cat = (item.category || '').toLowerCase();
+  const sub = (item.subCategory || '').toLowerCase();
+  const name = (item.name || '').toLowerCase();
+  if (isShacket(item) || isTurtleneck(item)) return false;
+  return (
+    (cat === 'tops' || sub === 'shirt') &&
+    (name.includes('ing') || sub === 'shirt') &&
+    !name.includes('póló') &&
+    !name.includes('t-shirt') &&
+    !name.includes('trikó')
+  );
+}
+
 /**
  * Helper to ensure complete anatomical layering and strict sartorial harmony for an outfit across all modules
  */
@@ -516,6 +544,31 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   // Under a short sleeve knitwear, do NOT layer a short sleeve t-shirt!
   if (hasShortSleeveKnit) {
     items = items.filter(i => !(isBaseTop(i) && isShortSleeve(i) && i.category !== 'knitwear'));
+  }
+
+  // D. Shacket / Overshirt Resolution:
+  // Under a shacket or overshirt, do NOT layer a collared dress shirt (Double collar & Double placket clash)!
+  // Replace with a clean t-shirt, fine knit top, or turtleneck.
+  const hasShacket = items.some(i => isShacket(i));
+  const hasCollaredShirt = items.some(i => isCollaredShirt(i));
+  if (hasShacket && hasCollaredShirt) {
+    const tShirtOrKnit = wardrobe.find(w => 
+      !isCollaredShirt(w) && 
+      !isShacket(w) && 
+      (isBaseTop(w) || isTurtleneck(w)) && 
+      w.condition !== 'Lecserélendő' && 
+      !items.some(i => i.id === w.id)
+    ) || wardrobe.find(w => 
+      !isCollaredShirt(w) && 
+      !isShacket(w) && 
+      (isBaseTop(w) || isTurtleneck(w)) && 
+      !items.some(i => i.id === w.id)
+    );
+    if (tShirtOrKnit) {
+      items = items.map(i => isCollaredShirt(i) ? tShirtOrKnit : i);
+    } else {
+      items = items.filter(i => !isCollaredShirt(i));
+    }
   }
 
   // 2. Check if the outfit has a valid Base Top (ing vagy póló) unless turtleneck is already present
@@ -1490,6 +1543,17 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         suggestions.unshift('A garbó önmagában képez elegáns bázist, galléros inget nem veszünk alá. Viseld a garbót önálló felsőként a zakó vagy kabát alatt!');
         if (!fitMismatchWarning) {
           fitMismatchWarning = '⚠️ Rétegezési hiba: Garbó alá nem veszünk galléros inget.';
+        }
+      }
+
+      // Shacket / Overshirt + collared shirt clash
+      const hasShacketInAudit = items.some(i => isShacket(i));
+      const hasCollaredShirtInAudit = items.some(i => isCollaredShirt(i));
+      if (hasShacketInAudit && hasCollaredShirtInAudit) {
+        penalty += 15;
+        suggestions.unshift('Ingdzseki (Shacket / Overshirt) alá nem veszünk fel még egy hagyományos galléros inget (kettős inggallér és gombsor stílushiba). Cseréld az inget prémium pamut pólóra, vékony finomkötött kereknyakúra vagy merinó garbóra!');
+        if (!fitMismatchWarning) {
+          fitMismatchWarning = '⚠️ Kettős inggallér hiba: Ingdzseki alá nem illik klasszikus galléros ing.';
         }
       }
 
