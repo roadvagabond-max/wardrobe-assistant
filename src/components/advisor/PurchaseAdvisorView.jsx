@@ -26,13 +26,6 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
     isOpen: false,
     items: [],
     initialIndex: 0,
-    outfitTitle: ''
-  });
-
-  const [lightboxData, setLightboxData] = useState({
-    isOpen: false,
-    items: [],
-    initialIndex: 0,
     outfitTitle: '',
     defaultView: 'lookbook'
   });
