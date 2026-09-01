@@ -1,26 +1,31 @@
 {
+  "id": "/",
   "short_name": "Wardrobe",
   "name": "Sartorial Wardrobe Assistant AI",
   "description": "Intelligens személyes stílustanácsadó, digitális gardrób és vásárlási döntéstámogató",
   "icons": [
     {
-      "src": "./icon-192.svg",
+      "src": "/icon-192.svg",
       "type": "image/svg+xml",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
-      "src": "./icon-512.svg",
+      "src": "/icon-512.svg",
       "type": "image/svg+xml",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
-  "start_url": "./",
+  "start_url": "/",
+  "scope": "/",
   "background_color": "#0b0d13",
   "theme_color": "#0b0d13",
   "display": "standalone",
   "orientation": "portrait",
+  "categories": ["lifestyle", "shopping"],
   "share_target": {
-    "action": "./",
+    "action": "/",
     "method": "GET",
     "enctype": "application/x-www-form-urlencoded",
     "params": {
