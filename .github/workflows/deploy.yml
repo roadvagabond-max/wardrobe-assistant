@@ -29,11 +29,8 @@ jobs:
         run: npm run build
 
       - name: Deploy to Firebase Hosting
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting --project wardrobe-assistant-48e01
         env:
-          SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
-        run: |
-          cat << 'EOF' > "$RUNNER_TEMP/sa_key.json"
-          ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
-          EOF
-          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa_key.json"
-          npx firebase-tools deploy --only hosting --project wardrobe-assistant-48e01 --non-interactive
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
