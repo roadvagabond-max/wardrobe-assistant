@@ -23,15 +23,15 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install --include=dev
+        run: npm install
 
       - name: Build project
         run: npm run build
 
       - name: Deploy to Firebase Hosting
-        env:
-          SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
-        run: |
-          echo "$SERVICE_ACCOUNT_KEY" > /tmp/sa-key.json
-          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa-key.json
-          npx --yes firebase-tools deploy --only hosting --project wardrobe-assistant-48e01
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
+          channelId: live
+          projectId: wardrobe-assistant-48e01
