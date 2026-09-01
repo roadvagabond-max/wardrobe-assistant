@@ -96,7 +96,7 @@ function safeParseJson(rawText) {
  * Universal Gemini API caller with fast-timeout fallback and robust JSON parsing
  */
 async function callGeminiApi({ apiKey, contents, preferredModels = FAST_MODELS, timeoutMs = 8000, maxOutputTokens = 8192, temperature = 0.2, tools = null, expectJson = true }) {
-  const cleanKey = cleanApiKey(apiKey);
+  const cleanKey = (apiKey || '').trim();
   if (!cleanKey) {
     throw new Error('Nincs érvényes Google Gemini API kulcs! Kérlek add meg a Beállítások menüben.');
   }
