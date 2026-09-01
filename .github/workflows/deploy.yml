@@ -28,10 +28,11 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Deploy to Firebase Hosting
+      - name: Deploy to Firebase Hosting & Security Rules
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-key.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-key.json"
-          npx firebase-tools deploy --only hosting --project wardrobe-assistant-48e01 --non-interactive
+          npx firebase-tools deploy --only hosting,firestore:rules,storage --project wardrobe-assistant-48e01 --non-interactive
+

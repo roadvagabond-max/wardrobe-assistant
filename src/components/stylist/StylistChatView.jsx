@@ -157,6 +157,21 @@ export default function StylistChatView({ weather }) {
     setIsLightboxOpen(true);
   };
 
+  // Safe HTML sanitizer and bold formatter to prevent XSS
+  const sanitizeAndFormat = (text = '') => {
+    if (!text) return '';
+    // 1. Strictly escape raw HTML characters to prevent XSS injection
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    // 2. Safely transform markdown bold (**text**) to safe <strong> tags
+    return escaped.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
+  };
+
   // Rich text / markdown renderer with JSON auto-formatting
   const renderFormattedContent = (rawContent) => {
     const formattedContent = formatStylistJsonToMarkdown(rawContent);
@@ -184,7 +199,7 @@ export default function StylistChatView({ weather }) {
               <ul key={pIdx} className="space-y-1.5 pl-4 list-disc text-white/90">
                 {items.map((itm, iIdx) => (
                   <li key={iIdx} dangerouslySetInnerHTML={{ 
-                    __html: itm.replace(/^[•\-\*]\s*/, '').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>') 
+                    __html: sanitizeAndFormat(itm.replace(/^[•\-\*]\s*/, ''))
                   }} />
                 ))}
               </ul>
@@ -198,7 +213,7 @@ export default function StylistChatView({ weather }) {
               <ol key={pIdx} className="space-y-1.5 pl-4 list-decimal text-white/90">
                 {items.map((itm, iIdx) => (
                   <li key={iIdx} dangerouslySetInnerHTML={{ 
-                    __html: itm.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>') 
+                    __html: sanitizeAndFormat(itm.replace(/^\d+\.\s*/, ''))
                   }} />
                 ))}
               </ol>
@@ -208,7 +223,7 @@ export default function StylistChatView({ weather }) {
           // Regular paragraph with bold support
           return (
             <p key={pIdx} className="text-white/90" dangerouslySetInnerHTML={{ 
-              __html: trimmed.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>') 
+              __html: sanitizeAndFormat(trimmed).replace(/\n/g, '<br/>')
             }} />
           );
         })}
