@@ -29,6 +29,14 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
     outfitTitle: ''
   });
 
+  const [lightboxData, setLightboxData] = useState({
+    isOpen: false,
+    items: [],
+    initialIndex: 0,
+    outfitTitle: '',
+    defaultView: 'lookbook'
+  });
+
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
@@ -284,14 +292,14 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <span className="badge badge-gold">Vásárlási Döntéstámogató</span>
-          <span className="badge badge-emerald">3 Döntési Pillér</span>
+          <span className="badge badge-gold">Vásárlási Tanácsadó</span>
+          <span className="badge badge-emerald">4 Döntési Pillér</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
-          Megvegyem ezt a ruhadarabot?
+          Vásárlási Döntésteszt
         </h2>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Fotózd le a próbafülkében vagy másold be a webshop linket. Az AI ellenőrzi a <strong>Kombinálhatóságot</strong>, a <strong>Változatosságot</strong> és a <strong>Személyes Illeszkedést & Szabályokat</strong>!
+        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
+          Fotózd le a próbafülkében vagy illeszd be a webshop linket a kombinálhatósági és minőségi auditáláshoz.
         </p>
         {profile.customStylingRules && profile.customStylingRules.length > 0 && (
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -912,6 +920,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
         items={lightboxData.items}
         initialIndex={lightboxData.initialIndex}
         outfitTitle={lightboxData.outfitTitle}
+        defaultView={lightboxData.defaultView}
       />
 
     </div>

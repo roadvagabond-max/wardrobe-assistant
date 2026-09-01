@@ -11,21 +11,18 @@ export default function Header({ onOpenSettings, onOpenAuth, weather }) {
         
         {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#8c6b12] flex items-center justify-center shadow-lg shadow-[#d4af37]/20">
-            <Sparkles className="w-5 h-5 text-[#0a0b0e]" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c8a97e] to-[#8a6a42] flex items-center justify-center shadow-lg shadow-[#c8a97e]/20">
+            <Sparkles className="w-5 h-5 text-[#12100e]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg sm:text-xl font-bold tracking-tight font-serif gold-gradient-text">
-                WARDROBE ASSISTANT
+                SARTORIAL WARDROBE
               </h1>
-              <span className="hidden sm:inline-block px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-gold-light)] border border-[var(--border-gold)]">
-                AI Stylist
+              <span className="hidden sm:inline-block px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-gold-light)] border border-[var(--border-gold)]">
+                AI Assistant
               </span>
             </div>
-            <p className="text-[11px] text-[var(--text-muted)] hidden xs:block">
-              Személyes gardrób & 3-outfit döntéstámogató
-            </p>
           </div>
         </div>
 

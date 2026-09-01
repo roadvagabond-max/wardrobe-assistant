@@ -67,8 +67,19 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     isOpen: false,
     items: [],
     initialIndex: 0,
-    outfitTitle: ''
+    outfitTitle: '',
+    defaultView: 'lookbook'
   });
+
+  const openLightbox = (items, initialIndex = 0, outfitTitle = '', defaultView = 'lookbook') => {
+    setLightboxData({
+      isOpen: true,
+      items: items || [],
+      initialIndex: initialIndex >= 0 ? initialIndex : 0,
+      outfitTitle: outfitTitle || '',
+      defaultView: items && items.length > 1 ? defaultView : 'single'
+    });
+  };
 
   // Recent Events History
   const [recentEvents, setRecentEvents] = useState(() => {
@@ -268,12 +279,13 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     setIsManualSaved(true);
   };
 
-  const openLightbox = (items, index, title) => {
+  const openLightbox = (items, index = 0, title = '', defaultView = 'lookbook') => {
     setLightboxData({
       isOpen: true,
       items: items || [],
       initialIndex: index || 0,
-      outfitTitle: title || ''
+      outfitTitle: title || '',
+      defaultView: items && items.length > 1 ? defaultView : 'single'
     });
   };
 
@@ -285,10 +297,10 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text">
-              AI Outfit Ajánló & Sartorial Stylist
+              Outfit Stylist
             </h2>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">
-              Személyre szabott szettek, saját összeállítások AI auditja és közvetlen stílustanácsadás.
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
+              Alkalomhoz és időjáráshoz hangolt szettajánlások és stílusellenőrzés
             </p>
           </div>
 
@@ -1108,6 +1120,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         items={lightboxData.items}
         initialIndex={lightboxData.initialIndex}
         outfitTitle={lightboxData.outfitTitle}
+        defaultView={lightboxData.defaultView}
       />
 
     </div>

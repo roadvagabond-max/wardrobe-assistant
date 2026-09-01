@@ -3,16 +3,16 @@ import { Layers, Sparkles, ShoppingBag, PlusCircle, UserCheck } from 'lucide-rea
 
 export default function DesktopTabs({ activeTab, setActiveTab }) {
   const tabs = [
-    { id: 'wardrobe', label: 'Ruhatáram', icon: Layers, desc: 'Katalógus & darabok' },
-    { id: 'stylist', label: 'AI Outfit Stylist', icon: Sparkles, desc: 'Esemény & időjárás ajánló' },
-    { id: 'advisor', label: 'Vásárlás Előtti Tanácsadó', icon: ShoppingBag, desc: '„Megvegyem?” 3-Outfit teszt', badge: 'Új' },
-    { id: 'missing', label: 'Hiányzó Darabok', icon: PlusCircle, desc: 'Gardrób-gap elemzés' },
-    { id: 'profile', label: 'Személyes Stílus DNA', icon: UserCheck, desc: 'Preferenciák & testalkat' }
+    { id: 'wardrobe', label: 'Gardróbom', icon: Layers },
+    { id: 'stylist', label: 'Outfit Stylist', icon: Sparkles },
+    { id: 'advisor', label: 'Vásárlási Tanácsadó', icon: ShoppingBag, badge: '3-Outfit' },
+    { id: 'missing', label: 'Kapszula Elemzés', icon: PlusCircle },
+    { id: 'profile', label: 'Stílus Profil', icon: UserCheck }
   ];
 
   return (
-    <div className="hidden lg:flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/60 backdrop-blur-md px-8 py-2">
-      <div className="max-w-7xl mx-auto w-full flex items-center gap-2">
+    <div className="hidden lg:flex items-center justify-between border-b border-[var(--border-subtle)] bg-[#171411]/70 backdrop-blur-md px-8 py-2">
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-center gap-2">
         {tabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -21,21 +21,18 @@ export default function DesktopTabs({ activeTab, setActiveTab }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-3 px-5 py-2.5 rounded-xl text-sm font-medium transition-all relative ${
+              className={`flex items-center gap-2.5 px-5 py-2 rounded-xl text-xs font-medium tracking-wide transition-all relative ${
                 isActive
-                  ? 'bg-white/10 text-white border border-[var(--border-gold)] shadow-md shadow-black/20'
+                  ? 'bg-white/10 text-white border border-[var(--border-gold)] shadow-sm'
                   : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
               }`}
             >
               <Icon className={`w-4 h-4 ${isActive ? 'text-[var(--accent-gold)]' : 'text-[var(--text-muted)]'}`} />
               <span>{tab.label}</span>
               {tab.badge && (
-                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-[var(--accent-gold)] text-black">
+                <span className="px-1.5 py-0.2 text-[8px] font-bold rounded-full bg-[var(--accent-gold)] text-black">
                   {tab.badge}
                 </span>
-              )}
-              {isActive && (
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-[var(--accent-gold)] rounded-full"></span>
               )}
             </button>
           );

@@ -79,14 +79,14 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="badge badge-gold">Kapszula Ruhatár Elemzés</span>
-            <span className="badge badge-emerald">Dinamikus AI Gap Analysis</span>
+            <span className="badge badge-gold">Kapszula Audit</span>
+            <span className="badge badge-emerald">AI Gap Elemzés</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
-            Hiányzó Stratégiai Kulcsdarabok
+            Hiányzó Kulcsdarabok
           </h2>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Az AI azonosítja a ruhatárad prioritásos hiánypontjait és a legnagyobb variációs értéket adó kulcsdarabokat.
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
+            A ruhatárad variálhatóságát leginkább növelő és hiányzó kulcselemek listája.
           </p>
           {profile.customStylingRules && profile.customStylingRules.length > 0 && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">

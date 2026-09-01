@@ -6,17 +6,24 @@ export default function GarmentLightboxModal({
   initialIndex = 0, 
   isOpen, 
   onClose, 
-  outfitTitle = '' 
+  outfitTitle = '',
+  defaultView = null
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [viewMode, setViewMode] = useState('single'); // 'single' | 'lookbook'
+  const [viewMode, setViewMode] = useState('lookbook'); // 'lookbook' | 'single'
 
   useEffect(() => {
     if (isOpen) {
-      setCurrentIndex(Math.max(0, Math.min(initialIndex, items.length - 1)));
-      setViewMode('single');
+      const validIndex = Math.max(0, Math.min(initialIndex, items.length - 1));
+      setCurrentIndex(validIndex);
+      if (defaultView) {
+        setViewMode(defaultView);
+      } else {
+        // If multiple items, default to Lookbook so all clothes appear immediately without scrolling
+        setViewMode(items.length > 1 ? 'lookbook' : 'single');
+      }
     }
-  }, [isOpen, initialIndex, items.length]);
+  }, [isOpen, initialIndex, items.length, defaultView]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -70,17 +77,17 @@ export default function GarmentLightboxModal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/90 backdrop-blur-lg animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-xl animate-fade-in"
     >
-      <div className="relative w-full max-w-4xl bg-[#090c12] border border-[var(--border-gold)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-scale-up">
+      <div className="relative w-full max-w-4xl bg-[#161310] border border-[var(--border-gold)]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up">
         
         {/* Modal Top Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/10 bg-black/40">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/10 bg-[#1c1814]/80 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <span className="badge badge-gold text-xs">
-              {outfitTitle ? outfitTitle : 'Ruhadarab & Szett Betekintő'}
+            <span className="badge badge-gold text-xs font-semibold">
+              {outfitTitle ? outfitTitle : (items.length > 1 ? `Komplett Szett (${items.length} darab)` : 'Ruhadarab Betekintő')}
             </span>
-            {items.length > 1 && (
+            {items.length > 1 && viewMode === 'single' && (
               <span className="text-xs text-[var(--text-muted)] font-mono">
                 {currentIndex + 1} / {items.length}
               </span>
@@ -90,37 +97,37 @@ export default function GarmentLightboxModal({
           <div className="flex items-center gap-2">
             {/* View Mode Toggle */}
             {items.length > 1 && (
-              <div className="flex items-center bg-black/60 rounded-lg p-0.5 border border-white/10">
+              <div className="flex items-center bg-black/50 rounded-xl p-0.5 border border-white/10">
+                <button
+                  onClick={() => setViewMode('lookbook')}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                    viewMode === 'lookbook'
+                      ? 'bg-[var(--accent-gold)] text-[#12100e] font-bold shadow'
+                      : 'text-[var(--text-secondary)] hover:text-white'
+                  }`}
+                  title="Összes ruha egyben"
+                >
+                  <Grid className="w-3.5 h-3.5" />
+                  <span>Lookbook ({items.length})</span>
+                </button>
                 <button
                   onClick={() => setViewMode('single')}
-                  className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-all ${
+                  className={`px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
                     viewMode === 'single'
-                      ? 'bg-[var(--accent-gold)] text-black font-semibold shadow'
+                      ? 'bg-[var(--accent-gold)] text-[#12100e] font-bold shadow'
                       : 'text-[var(--text-secondary)] hover:text-white'
                   }`}
                   title="Egyedi nagyított nézet"
                 >
                   <Maximize2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Kiemelt</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('lookbook')}
-                  className={`px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1.5 transition-all ${
-                    viewMode === 'lookbook'
-                      ? 'bg-[var(--accent-gold)] text-black font-semibold shadow'
-                      : 'text-[var(--text-secondary)] hover:text-white'
-                  }`}
-                  title="Teljes szett Lookbook nézet"
-                >
-                  <Grid className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Lookbook ({items.length})</span>
+                  <span>Kiemelt</span>
                 </button>
               </div>
             )}
 
             <button 
               onClick={onClose}
-              className="p-1.5 sm:p-2 rounded-full text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-full text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors"
               title="Bezárás (Esc)"
             >
               <X className="w-5 h-5" />
@@ -129,26 +136,83 @@ export default function GarmentLightboxModal({
         </div>
 
         {/* Content Body */}
-        {viewMode === 'single' ? (
+        {viewMode === 'lookbook' ? (
+          /* LOOKBOOK GRID VIEW: All garments in the outfit rendered immediately without scrolling */
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-white/5">
+              <div>
+                <h4 className="text-sm sm:text-base font-serif font-bold text-white">
+                  {outfitTitle || 'Komplett Szett Összeállítás'}
+                </h4>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Minden ruha pontos rétege és anyaga. Kattints bármelyikre a nagyításhoz!
+                </p>
+              </div>
+              <span className="badge badge-subtle text-[10px]">
+                {items.length} kombinált darab
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {items.map((itm, idx) => (
+                <div 
+                  key={idx}
+                  onClick={() => {
+                    setCurrentIndex(idx);
+                    setViewMode('single');
+                  }}
+                  className="cursor-pointer group p-3 rounded-2xl bg-[#1e1a16] border border-white/5 hover:border-[var(--border-gold)] hover:bg-[#25201b] transition-all flex flex-col justify-between shadow-sm hover:shadow-lg hover:shadow-black/40"
+                >
+                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-[#12100e] border border-white/5 p-2 flex items-center justify-center relative mb-2.5">
+                    <img 
+                      src={itm.imageUrl} 
+                      alt={itm.name} 
+                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300" 
+                    />
+                    <span className="absolute bottom-1.5 left-1.5 text-[9px] bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-md text-white font-medium border border-white/10">
+                      {getRoleLabel(itm).split(' ')[0]} {getRoleLabel(itm).split(' ')[1] || ''}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h5 className="text-xs font-semibold text-white line-clamp-1 group-hover:text-[var(--accent-gold-light)] transition-colors">
+                      {itm.name}
+                    </h5>
+                    <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+                      <span className="truncate max-w-[100px]">{itm.brand || itm.category}</span>
+                      {itm.size && <span className="font-mono font-bold text-[var(--accent-gold)]">{itm.size}</span>}
+                    </div>
+                    {itm.material && (
+                      <span className="text-[9px] text-[var(--text-secondary)] block truncate">
+                        🧵 {itm.material}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* SINGLE ITEM ZOOM VIEW: Compact, perfectly proportioned view */
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
             
-            {/* Left/Main: Enlarged Photo Showcase with Navigation Controls */}
-            <div className="md:col-span-7 flex flex-col items-center justify-center relative">
-              <div className="w-full aspect-square max-h-[55vh] md:max-h-[60vh] rounded-xl overflow-hidden bg-[#04060a] border border-white/10 p-3 sm:p-4 flex items-center justify-center relative shadow-inner group">
+            {/* Left/Main: Enlarged Photo Showcase */}
+            <div className="md:col-span-6 flex flex-col items-center justify-center relative">
+              <div className="w-full aspect-[4/3] sm:aspect-square max-h-[38vh] sm:max-h-[46vh] rounded-2xl overflow-hidden bg-[#12100e] border border-white/10 p-3 sm:p-4 flex items-center justify-center relative shadow-inner group">
                 <img 
                   src={currentItem.imageUrl} 
                   alt={currentItem.name}
-                  className="max-h-full max-w-full object-contain rounded-lg drop-shadow-2xl transition-transform duration-300 group-hover:scale-105"
+                  className="max-h-full max-w-full object-contain rounded-xl drop-shadow-2xl transition-transform duration-300 group-hover:scale-105"
                 />
 
                 {/* Layer Badge on image */}
-                <div className="absolute top-3 left-3 bg-black/85 backdrop-blur-md px-2.5 py-1 rounded-md text-xs text-white font-medium border border-white/15 flex items-center gap-1.5 shadow-lg">
+                <div className="absolute top-3 left-3 bg-black/85 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs text-white font-medium border border-white/15 flex items-center gap-1.5 shadow-lg">
                   <span>{getRoleLabel(currentItem)}</span>
                 </div>
 
                 {/* Brand watermark if available */}
                 {currentItem.brand && (
-                  <div className="absolute bottom-3 right-3 bg-black/85 backdrop-blur-md px-2 py-0.5 rounded text-[11px] text-[var(--accent-gold)] font-serif font-bold border border-white/10">
+                  <div className="absolute bottom-3 right-3 bg-black/85 backdrop-blur-md px-2.5 py-0.5 rounded-md text-[11px] text-[var(--accent-gold)] font-serif font-bold border border-white/10">
                     {currentItem.brand}
                   </div>
                 )}
@@ -156,13 +220,13 @@ export default function GarmentLightboxModal({
 
               {/* Prev / Next Controls for Carousel */}
               {items.length > 1 && (
-                <div className="flex items-center justify-between w-full mt-3 px-2">
+                <div className="flex items-center justify-between w-full mt-3 px-1">
                   <button
                     onClick={handlePrev}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white text-xs font-medium border border-white/10 transition-all active:scale-95"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-white text-xs font-medium border border-white/10 transition-all active:scale-95"
                   >
                     <ChevronLeft className="w-4 h-4 text-[var(--accent-gold)]" />
-                    <span>Előző darab</span>
+                    <span className="hidden xs:inline">Előző</span>
                   </button>
 
                   {/* Thumbnail Strip */}
@@ -171,22 +235,22 @@ export default function GarmentLightboxModal({
                       <button
                         key={idx}
                         onClick={() => setCurrentIndex(idx)}
-                        className={`w-9 h-9 shrink-0 rounded-lg overflow-hidden border p-0.5 transition-all ${
+                        className={`w-9 h-9 shrink-0 rounded-xl overflow-hidden border p-0.5 transition-all ${
                           idx === currentIndex
                             ? 'border-[var(--accent-gold)] ring-2 ring-[var(--accent-gold-glow)] scale-105'
                             : 'border-white/10 opacity-50 hover:opacity-100'
                         }`}
                       >
-                        <img src={itm.imageUrl} alt={itm.name} className="w-full h-full object-contain bg-[#06080e] rounded" />
+                        <img src={itm.imageUrl} alt={itm.name} className="w-full h-full object-contain bg-[#12100e] rounded-lg" />
                       </button>
                     ))}
                   </div>
 
                   <button
                     onClick={handleNext}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-white text-xs font-medium border border-white/10 transition-all active:scale-95"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-white text-xs font-medium border border-white/10 transition-all active:scale-95"
                   >
-                    <span>Következő darab</span>
+                    <span className="hidden xs:inline">Következő</span>
                     <ChevronRight className="w-4 h-4 text-[var(--accent-gold)]" />
                   </button>
                 </div>
@@ -194,35 +258,34 @@ export default function GarmentLightboxModal({
             </div>
 
             {/* Right: Rich Metadata & Sartorial Attributes */}
-            <div className="md:col-span-5 space-y-4 self-start">
-              
+            <div className="md:col-span-6 space-y-3.5 self-start">
               <div>
-                <span className="text-[11px] text-[var(--accent-gold)] font-mono uppercase tracking-wider block mb-1">
+                <span className="text-[10px] text-[var(--accent-gold)] font-mono uppercase tracking-wider block mb-1">
                   {currentItem.category?.toUpperCase() || 'RUHATÁR ELEM'}
                 </span>
-                <h3 className="text-xl sm:text-2xl font-serif font-bold text-white leading-tight">
+                <h3 className="text-lg sm:text-xl font-serif font-bold text-white leading-tight">
                   {currentItem.name}
                 </h3>
               </div>
 
               {/* Attribute Grid */}
-              <div className="grid grid-cols-2 gap-2.5 text-xs">
+              <div className="grid grid-cols-2 gap-2 text-xs">
                 {currentItem.brand && (
-                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                  <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
                     <span className="text-[10px] text-[var(--text-muted)] block">Márka</span>
                     <span className="font-semibold text-white">{currentItem.brand}</span>
                   </div>
                 )}
 
                 {currentItem.size && (
-                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                  <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
                     <span className="text-[10px] text-[var(--text-muted)] block">Méret</span>
                     <span className="font-mono font-bold text-[var(--accent-gold)]">{currentItem.size}</span>
                   </div>
                 )}
 
                 {currentItem.color && (
-                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                  <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
                     <span className="text-[10px] text-[var(--text-muted)] block">Szín</span>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {currentItem.colorHex && (
@@ -234,7 +297,7 @@ export default function GarmentLightboxModal({
                 )}
 
                 {currentItem.material && (
-                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                  <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
                     <span className="text-[10px] text-[var(--text-muted)] block flex items-center gap-1">
                       <Feather className="w-3 h-3 text-[var(--accent-gold)]" />
                       <span>Anyag</span>
@@ -244,28 +307,28 @@ export default function GarmentLightboxModal({
                 )}
 
                 {currentItem.condition && (
-                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
+                  <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
                     <span className="text-[10px] text-[var(--text-muted)] block">Állapot</span>
                     <span className="font-medium text-emerald-400">{currentItem.condition}</span>
                   </div>
                 )}
 
-                {currentItem.formality && (
-                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/5">
-                    <span className="text-[10px] text-[var(--text-muted)] block">Formális szint</span>
-                    <span className="font-medium text-white">{currentItem.formality}</span>
+                {currentItem.styleArchetype && (
+                  <div className="p-2.5 rounded-xl bg-black/30 border border-white/5">
+                    <span className="text-[10px] text-[var(--text-muted)] block">Stílus</span>
+                    <span className="font-medium text-white">{currentItem.styleArchetype}</span>
                   </div>
                 )}
               </div>
 
               {/* Styling Tips & Advice */}
               {(currentItem.stylingTip || currentItem.stylingAdvice) && (
-                <div className="p-3.5 rounded-xl bg-gradient-to-r from-[var(--accent-gold-glow)] to-black/40 border border-[var(--border-gold)] text-xs space-y-1.5">
+                <div className="p-3 rounded-xl bg-gradient-to-r from-[var(--accent-gold-glow)]/40 to-black/30 border border-[var(--border-gold)]/50 text-xs space-y-1">
                   <div className="flex items-center gap-1.5 font-bold text-[var(--accent-gold-light)]">
                     <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                    <span>Stylist Tanács & Hordhatóság:</span>
+                    <span>Stylist Tanács:</span>
                   </div>
-                  <p className="text-[var(--text-secondary)] leading-relaxed">
+                  <p className="text-[var(--text-secondary)] leading-relaxed text-[11px]">
                     {currentItem.stylingTip || currentItem.stylingAdvice}
                   </p>
                 </div>
@@ -273,61 +336,15 @@ export default function GarmentLightboxModal({
 
               {/* Tags */}
               {Array.isArray(currentItem.tags) && currentItem.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
                   {currentItem.tags.map((tag, tIdx) => (
-                    <span key={tIdx} className="px-2 py-0.5 rounded-full text-[10px] bg-white/5 text-[var(--text-secondary)] border border-white/10">
+                    <span key={tIdx} className="px-2 py-0.5 rounded-full text-[10px] bg-white/5 text-[var(--text-secondary)] border border-white/5">
                       #{tag}
                     </span>
                   ))}
                 </div>
               )}
 
-            </div>
-          </div>
-        ) : (
-          /* Lookbook Flat-lay View of the entire outfit */
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-            <div className="text-center space-y-1 pb-2 border-b border-white/10">
-              <h4 className="text-lg font-serif font-bold text-white">
-                {outfitTitle || 'Teljes Szett Összeállítás'}
-              </h4>
-              <p className="text-xs text-[var(--text-muted)]">
-                Kattints bármelyik darabra a részletes kiemelt megtekintéshez!
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-              {items.map((itm, idx) => (
-                <div 
-                  key={idx}
-                  onClick={() => {
-                    setCurrentIndex(idx);
-                    setViewMode('single');
-                  }}
-                  className="cursor-pointer group p-2.5 rounded-xl bg-black/40 border border-white/10 hover:border-[var(--accent-gold)] hover:bg-black/60 transition-all text-left flex flex-col justify-between"
-                >
-                  <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#05070c] border border-white/5 p-1.5 flex items-center justify-center relative mb-2">
-                    <img 
-                      src={itm.imageUrl} 
-                      alt={itm.name} 
-                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" 
-                    />
-                    <span className="absolute bottom-1 left-1 text-[8px] bg-black/85 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
-                      {getRoleLabel(itm).split(' ')[0]} {getRoleLabel(itm).split(' ')[1] || ''}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h5 className="text-xs font-semibold text-white line-clamp-1 group-hover:text-[var(--accent-gold)] transition-colors">
-                      {itm.name}
-                    </h5>
-                    <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] mt-0.5">
-                      <span>{itm.brand || itm.category}</span>
-                      {itm.size && <span className="font-mono text-[var(--accent-gold)]">{itm.size}</span>}
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         )}

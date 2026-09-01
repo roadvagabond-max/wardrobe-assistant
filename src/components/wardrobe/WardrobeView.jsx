@@ -76,10 +76,10 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text">
-            Digitális Gardróbom
+            Gardróbom
           </h2>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
-            {wardrobe.length} prémium ruhadarab rendszerezve, állapot és stílus szerint címkézve.
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
+            {wardrobe.length} rögzített ruhadarab és kiegészítő
           </p>
         </div>
 

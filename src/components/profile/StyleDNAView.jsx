@@ -269,12 +269,12 @@ export default function StyleDNAView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <span className="badge badge-gold">Személyes Stílustérkép</span>
+          <span className="badge badge-gold">Stílusprofil</span>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
-            Stílus DNA & Profil
+            Stílus DNA
           </h2>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Az AI a fizikai adottságaidból, bőrtónusodból és a ruhatárad valós darabjaiból tanul.
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
+            Testalkati adottságok, színtípus, mérettérkép és egyéni szabályok.
           </p>
         </div>
 
