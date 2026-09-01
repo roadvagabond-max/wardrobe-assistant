@@ -1,6 +1,7 @@
 {
   "short_name": "Wardrobe",
-  "name": "Wardrobe Assistant AI",
+  "name": "Sartorial Wardrobe Assistant AI",
+  "description": "Intelligens személyes stílustanácsadó, digitális gardrób és vásárlási döntéstámogató",
   "icons": [
     {
       "src": "./icon-192.svg",
@@ -17,5 +18,14 @@
   "background_color": "#0b0d13",
   "theme_color": "#0b0d13",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

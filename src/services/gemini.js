@@ -308,16 +308,30 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 }
 
 /**
- * Helper to ensure complete anatomical layering for an outfit across all modules
- * 1: Tops (Bázis ing/póló közvetlenül a bőrön)
- * 2: Knitwear (Köztes pulóver/kötöttáru)
- * 3: Blazer (Zakó)
- * 4: Coat (Nagykabát/Télikabát)
- * 5: Bottoms (Nadrág)
- * 6: Shoes (Lábbeli)
- * 7: Accessories (Kiegészítő)
- */
-export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], candidateItem = null) {
+ * Helper to ensure complet// Helper: Is this a warm/heavy boot or autumn/winter ankle boot?
+export function isHeavyBoot(item) {
+  if (!item) return false;
+  const cat = (item.category || '').toLowerCase();
+  const sub = (item.subCategory || '').toLowerCase();
+  const name = (item.name || '').toLowerCase();
+  const seasons = Array.isArray(item.season) ? item.season : [item.season].filter(Boolean);
+  const isWinterOnly = seasons.length > 0 && seasons.every(s => s === 'tel' || s === 'osz');
+
+  return (
+    sub === 'boots' ||
+    name.includes('bokacipő') ||
+    name.includes('bokacsizma') ||
+    name.includes('csizma') ||
+    name.includes('bakancs') ||
+    name.includes('chelsea') ||
+    name.includes('chukka') ||
+    name.includes('boka') ||
+    name.includes('boot') ||
+    (cat === 'shoes' && isWinterOnly && !name.includes('loafer') && !name.includes('sneaker') && !name.includes('félcipő'))
+  );
+}
+
+export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], candidateItem = null, weather = null) {
   let items = [...rawItems];
   if (candidateItem && !items.some(i => i.id === candidateItem.id)) {
     items.unshift(candidateItem);
@@ -373,6 +387,9 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     return sub === 'belt' || name.includes('öv') || name.includes('bőröv');
   };
 
+  const temperature = typeof weather?.temperature === 'number' ? weather.temperature : 22;
+  const isWarmWeather = temperature >= 19;
+
   // 1. Check if the outfit has a valid Base Top (ing vagy póló)
   const hasBaseTop = items.some(i => isBaseTop(i));
   if (!hasBaseTop) {
@@ -387,17 +404,34 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   const hasBottom = items.some(i => isBottom(i));
   if (!hasBottom) {
     const bottom = wardrobe.find(w => isBottom(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-                   wardrobe.find(w => isBottom(w) && !items.some(i => i.id === w.id));
+                    wardrobe.find(w => isBottom(w) && !items.some(i => i.id === w.id));
     if (bottom) {
       items.push(bottom);
     }
   }
 
-  // 3. Check if the outfit has Shoes (lábbeli)
-  const hasShoe = items.some(i => isShoe(i));
-  if (!hasShoe) {
-    const shoe = wardrobe.find(w => isShoe(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-                 wardrobe.find(w => isShoe(w) && !items.some(i => i.id === w.id));
+  // 3. Check if the outfit has Shoes (lábbeli) & Enforce Temperature Appropriateness
+  const currentShoeIndex = items.findIndex(i => isShoe(i));
+  if (currentShoeIndex !== -1) {
+    const currentShoe = items[currentShoeIndex];
+    // If it's warm weather (>= 19°C) and the shoe is a heavy boot/autumn-winter ankle boot, replace with summer shoe if available
+    if (isWarmWeather && isHeavyBoot(currentShoe)) {
+      const summerAlternative = wardrobe.find(w => isShoe(w) && !isHeavyBoot(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+                                 wardrobe.find(w => isShoe(w) && !isHeavyBoot(w) && !items.some(i => i.id === w.id));
+      if (summerAlternative) {
+        items[currentShoeIndex] = summerAlternative;
+      }
+    }
+  } else {
+    // If missing shoe, select temperature-appropriate shoe
+    const shoe = isWarmWeather
+      ? (wardrobe.find(w => isShoe(w) && !isHeavyBoot(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+         wardrobe.find(w => isShoe(w) && !isHeavyBoot(w) && !items.some(i => i.id === w.id)) ||
+         wardrobe.find(w => isShoe(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+         wardrobe.find(w => isShoe(w) && !items.some(i => i.id === w.id)))
+      : (wardrobe.find(w => isShoe(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
+         wardrobe.find(w => isShoe(w) && !items.some(i => i.id === w.id)));
+
     if (shoe) {
       items.push(shoe);
     }
@@ -796,9 +830,32 @@ export async function generateEventOutfits({ eventName, weather, anchorItemIds =
   if (apiKey && wardrobe.length > 0) {
     try {
       const isFormalEvent = /üzleti|tárgyalás|esküvő|gála|színház|ünnepi|formal|opera|vacsora/i.test(eventName);
+      const temperature = typeof weather?.temperature === 'number' ? weather.temperature : 22;
+      const isWarmWeather = temperature >= 19;
+      const isColdWeather = temperature < 14;
+
       const availableWardrobe = wardrobe.filter(w => {
         if (w.condition === 'Lecserélendő' || w.condition === 'Javításra vár') return false;
         if (isFormalEvent && w.condition === 'Játszós / Kopott') return false;
+
+        // Temperature & Seasonal Filtering
+        if (isWarmWeather) {
+          // In warm weather (>= 19°C), exclude heavy winter coats
+          const sub = (w.subCategory || '').toLowerCase();
+          const name = (w.name || '').toLowerCase();
+          const isHeavyCoat = sub === 'overcoat' || sub === 'coat' || name.includes('télikabát') || name.includes('nagykabát') || name.includes('téli kabát');
+          if (isHeavyCoat) return false;
+
+          // In warm weather (>= 19°C), exclude heavy boots/autumn-winter ankle boots if summer/low shoes exist
+          if (isHeavyBoot(w)) {
+            const hasSummerShoes = wardrobe.some(sw => {
+              const sc = (sw.category || '').toLowerCase();
+              return sc === 'shoes' && !isHeavyBoot(sw) && sw.condition !== 'Lecserélendő';
+            });
+            if (hasSummerShoes) return false;
+          }
+        }
+
         return true;
       });
 
@@ -837,38 +894,41 @@ FELHASZNÁLÓ STÍLUSPROFILJA:
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
 
 ESEMÉNY / ALKALOM: "${eventName}"
-HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${weather?.temperature}°C, ${weather?.condition}
+HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${temperature}°C, ${weather?.condition || 'Kellemes'}
 ${anchorItems.length > 0 ? `KÖTELEZŐ KULCSDARABOK (Anchor Items): ${JSON.stringify(anchorItems.map(a => ({ id: a.id, name: a.name, category: a.category, color: a.color })))}` : ''}
 
 Ruhatár (${richWardrobe.length} elérhető darab gazdag metaadatokkal):
 ${JSON.stringify(richWardrobe)}
 
-SARTORIAL BLUEPRINT & ANATÓMIAI RÉTEGEZÉSI SZABÁLYOK:
+SARTORIAL BLUEPRINT & ANATÓMIAI RÉTEGEZÉSI & IDŐJÁRÁSI SZABÁLYOK:
 
 1. 👔 KÖTELEZŐ ELEMEK MINDEN SZETTBEN:
    - 👔 Bázis felső ('tops' - ing vagy minőségi pamut póló közvetlenül a bőrön; szabadon válassz a ruhatárból a szett hangulatához illő felsőt, ne fixen ugyanazt).
    - 👖 Alsó ('bottoms' - pontosan 1 db nadrág / chino / flanelnadrág / farmer a ruhatárból).
-   - 👞 Lábbeli ('shoes' - pontosan 1 pár cipő / csizma / loafer / sneaker a ruhatárból).
+   - 👞 Lábbeli ('shoes' - pontosan 1 pár cipő / loafer / sneaker / félcipő a ruhatárból).
    - 🎗️ Öv ('accessories' - a cipővel harmonizáló bőröv a ruhatárból, kötelező kiegészítő).
 
-2. 🧥 OPCIONÁLIS RÉTEGEK (Időjárás, esemény és stílus szerint):
+2. ☀️ HŐMÉRSÉKLETI ÉS LÁBBELI DRESS CODE SZABÁLYOK (${temperature}°C):
+   - ☀️ MELEG IDŐ (${temperature}°C >= 19°C):
+     * SZIGORÚAN KIZÁRT: Őszi/téli bokacipő, bokacsizma, Chelsea csizma, Chukka, bélelt bakancs, vastag télikabát és vastag kötött garbó!
+     * KIZÁRÓLAG NYÁRI / KÖNNYŰ LÁBBELI ENGEDÉLYEZETT: Bőr penny/tassel loafer, mokaszin, tiszta bőr sneaker, szellős derbi/oxford félcipő!
+     * FELSŐRÉTEG: Könnyű pamut/len ing + laza zakó (opcionális).
+   - ❄️ HŰVÖS / HIDEG IDŐ (${temperature}°C < 14°C):
+     * Bokacsizma, chelsea csizma, bélelt elegáns lábbeli, téli szövetkabát és meleg flanelnadrág preferált.
+
+3. 🧥 OPCIONÁLIS RÉTEGEK (Időjárás, esemény és stílus szerint):
    - Kötöttáru / Pulóver ('knitwear'): Opcionálisan 0 vagy 1 db pulóver/kardigán az ingre/pólóra rétegezve.
    - Zakó ('outerwear' / 'blazer'): Opcionális zakó / dzseki a bázisra/pulóverre.
    - ❄️ TÉLI / HIDEG IDŐ (< 12°C vagy Téli esemény):
      * KETTŐS KÜLSŐ RÉTEG ENGEDÉLYEZETT: A zakó ('blazer') FÖLÉ mehet a téli szövetkabát / nagykabát ('overcoat' / 'coat')!
-     * Teljes luxus téli rétegezés: Ing + Pulóver + Zakó + Nagykabát + Nadrág + Öv + Bőrcipő/Csizma.
-   - ☀️ MELEG / NYÁR (20°C+): Könnyű len/pamut ing vagy felső + nadrág + öv + loafer/sneaker. Vastag télikabát és vastag kötött pulóver SZIGORÚAN TILOS!
-
-3. ✦ TOVÁBBI KIEGÉSZÍTŐK:
-   - Az AI stílusérzéke szerint opcionálisan bevonhatók további kiegészítők a ruhatárból (pl. díszzsebkendő zakóhoz, sál hidegben, óra, napszemüveg).
 
 4. 3 KÜLÖNBÖZŐ SZEMÉLYES HANGULAT AZ ESEMÉNYRE:
    - Készíts 3 olyan komplett szettet, amelyek a fenti rétegezési szabályok szerint épülnek fel, de 3 különböző stílusárnyalatot képviselnek.
 
 🚫 CSENDES SZABÁLYBETARTÁS (Silent Rule Enforcement):
 - A felhasználó egyéni szabályait és tiltásait (pl. nem hord pólóinget, nem vesz fel joggert inggel stb.) KÖTELEZŐEN A HÁTTÉRBEN, CSENDBEN TARTSD BE a szettek összeállításakor!
-- SZIGORÚAN TILOS a kimeneti szövegekben (stylingNotes, culturalFitReasoning, layeringAdvice) megemlíteni vagy magyarázni a felhasználó saját szabályait (pl. TILOS leírni, hogy "szabályaid szerint nem választottunk pólóinget", "betartva az ing+jogger tiltást" stb.)!
-- A felhasználó tisztában van a saját szabályaival; a leírás KIZÁRÓLAG a szett esztétikájára, a színek és anyagok kifinomult harmóniájára és az esemény dress code-jára fókuszáljon!
+- SZIGORÚAN TILOS a kimeneti szövegekben (stylingNotes, culturalFitReasoning, layeringAdvice) megemlíteni vagy magyarázni a felhasználó saját szabályait!
+- A leírás KIZÁRÓLAG a szett esztétikájára, a színek és anyagok kifinomult harmóniájára és az esemény dress code-jára fókuszáljon!
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
 [
@@ -881,7 +941,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
     "stylingNotes": "Személyre szabott stylist tanács a viseléshez és a darabok összhangjához",
     "layeringAdvice": "Gyakorlati rétegezési útmutató",
     "culturalFitReasoning": "Hogyan érvényesül a felhasználó személyes stílusa és az esemény összhangja ebben a szettben",
-    "weatherSuitability": "Időjárási és hőmérsékleti megfelelés (${weather?.temperature || 20}°C)",
+    "weatherSuitability": "Időjárási és hőmérsékleti megfelelés (${temperature}°C)",
     "itemIds": ["bázis_ing_id", "opcionalis_pulover_id", "opcionalis_zako_id", "opcionalis_teli_kabat_id", "nadrag_id", "cipo_id", "ov_id"]
   }
 ]`;
@@ -899,7 +959,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
           const rawItems = (p.itemIds || [])
             .map(id => wardrobe.find(w => w.id === id))
             .filter(Boolean);
-          const fullEnforcedItems = enforceAnatomicalOutfitLayers(rawItems, availableWardrobe, null);
+          const fullEnforcedItems = enforceAnatomicalOutfitLayers(rawItems, availableWardrobe, null, weather);
 
           return {
             id: p.id || `outfit-${Date.now()}-${idx}`,
@@ -910,7 +970,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
             stylingNotes: p.stylingNotes || "Harmonikus összeállítás a gardróbodból.",
             layeringAdvice: p.layeringAdvice || "Funkcionálisan rétegezett összeállítás, amely a belső térben és hűvösebb időben is jól alkalmazkodik.",
             culturalFitReasoning: p.culturalFitReasoning || "Tökéletesen igazodik az esemény dress code-jához és atmoszférájához.",
-            weatherSuitability: p.weatherSuitability || `Ideális a(z) ${weather?.temperature || 20}°C-os időjáráshoz.`,
+            weatherSuitability: p.weatherSuitability || `Ideális a(z) ${temperature}°C-os időjáráshoz.`,
             items: fullEnforcedItems
           };
         }).filter(o => o.items.length > 0);
@@ -1120,4 +1180,220 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT (6-8 darabbal):
     if ((rulesLower.includes('pólóing') || rulesLower.includes('polo')) && g.id?.includes('polo')) return false;
     return true;
   });
+}
+
+/**
+ * 5. Saját Szett Összeállítása & Sartorial AI Audit (Manual Outfit Auditor)
+ */
+export async function auditManualOutfit({ items = [], eventName = 'Általános Megjelenés', weather = null, styleProfile = {} }) {
+  const apiKey = getGeminiApiKey();
+
+  if (apiKey && items.length > 0) {
+    try {
+      const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
+        ? styleProfile.customStylingRules
+        : [];
+
+      const compactItems = items.map(w => ({
+        id: w.id,
+        name: w.name,
+        category: w.category,
+        subCategory: w.subCategory || '',
+        material: w.material || '',
+        season: w.season || [],
+        pattern: w.pattern || '',
+        color: w.color,
+        formality: w.formality,
+        fit: w.fit || '',
+        brand: w.brand || '',
+        condition: w.condition,
+        style: w.styleArchetype
+      }));
+
+      const prompt = `Te egy mester személyi stylist, szín- és aránytanácsadó, valamint sartorial szakértő vagy.
+A felhasználó saját maga állított össze egy szettet a meglévő ruhatárából az alábbi alkalomra és időjárási körülményekre.
+
+A FELADATOD: Végezz szigorú, mégis építő jellegű, professzionális Stílus- és Összhang Auditot a szettre a klasszikus sartorial elvek és a felhasználó személyes Stílus DNS-e alapján!
+
+FELHASZNÁLÓ STÍLUSPROFILJA:
+- Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura'])}
+- Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
+- Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
+- Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
+
+🚫 FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI (Ha a felhasználó által választott szettben ezek bármelyike sérül, jelezd a figyelmeztetésben és a tanácsokban!):
+${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
+
+ESEMÉNY / ALKALOM: "${eventName}"
+HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${weather?.temperature}°C, ${weather?.condition || 'Kellemes'}
+
+A FELHASZNÁLÓ ÁLTAL ÖSSZEVÁLOGATOTT DARABOK (${compactItems.length} db):
+${JSON.stringify(compactItems, null, 2)}
+
+SZEMPONTOK AZ AUDITHOZ:
+1. 🎯 Esemény & Dress Code összhang: Illik-e a választott szett az esemény kulturális és formai elvárásaihoz?
+2. 🎨 Színharmónia & Kontraszt: Hogyan illeszkednek egymáshoz a színek és a bőrtónushoz? Érvényesül-e a 3-szín szabály?
+3. 🧵 Anyagok & Textúrák szinergiája: Természetes szálak találkozása (pl. gyapjú flanel, len, pamut twill, sima vagy velúrbőr).
+4. 🧥 Anatómiai rétegezés & Időjárási alkalmasság: Van-e megfelelő bázisréteg (ing a zakó alatt)? Megfelelő-e a ${weather?.temperature || 20}°C-os hőmérséklethez?
+5. ⚖️ Szabások & Arányok összhangja: Nem ütközik-e laza és túlzottan szűk szabás?
+
+VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
+{
+  "score": 88,
+  "verdict": "Kifejezetten Kifinomult Smart Casual / Apró Korrekciót Igénylő Összeállítás / Kiváló Sprezzatura Harmónia",
+  "eventAlignment": "Részletes, szabatos indoklás arról, hogy az esemény dress code-jához hogyan passzol ez a szett",
+  "colorHarmony": "A színek és tónusok kölcsönhatásának szakmai értékelése",
+  "fabricSynergy": "Az anyagok, szövések és textúrák találkozásának értékelése",
+  "layeringEvaluation": "A rétegezés, bázisréteg és hőmérsékleti komfort elemzése a megadott időjáráshoz",
+  "bodyFitVerdict": "Hogyan támogatja a szett a testalkatot és a személyes arányokat",
+  "strengths": [
+    "A sötétkék zakó és a törtfehér ing kontrasztja azonnali időtlen eleganciát ad",
+    "A cipő és az öv bőrszínének harmóniája stabilizálja az alsó sziluettet"
+  ],
+  "suggestions": [
+    "Ha hűvösebbre fordulna az este, vegyél fel egy vékony merinógyapjú pulóvert a zakó alá",
+    "A barna bőröv még jobban összekötné a nadrágot a felsővel"
+  ],
+  "fitMismatchWarning": null
+}`;
+
+      const contents = [{ parts: [{ text: prompt }] }];
+      const parsed = await callGeminiApi({
+        apiKey,
+        contents,
+        preferredModels: REASONING_MODELS,
+        timeoutMs: 22000
+      });
+
+      const temp = typeof weather?.temperature === 'number' ? weather.temperature : 22;
+      const hasBootInWarmWeather = temp >= 19 && items.some(i => isHeavyBoot(i));
+
+      const strengths = Array.isArray(parsed?.strengths) && parsed.strengths.length > 0 
+        ? parsed.strengths 
+        : ['Jól megválasztott alapdarabok a gardróbodból.'];
+
+      const suggestions = Array.isArray(parsed?.suggestions) ? [...parsed.suggestions] : [];
+      if (hasBootInWarmWeather && !suggestions.some(s => s.toLowerCase().includes('loafer') || s.toLowerCase().includes('cipő') || s.toLowerCase().includes('csizma'))) {
+        suggestions.unshift(`A(z) ${temp}°C-os meleg időben az őszi/téli bokacipő túl meleg lehet. Cseréld le egy szellősebb bőr loaferre vagy könnyű sneakerre!`);
+      }
+      if (suggestions.length === 0) {
+        suggestions.push('Viseld magabiztosan, a szett elemei jól kiegészítik egymást!');
+      }
+
+      let fitMismatchWarning = parsed?.fitMismatchWarning || null;
+      if (hasBootInWarmWeather && !fitMismatchWarning) {
+        fitMismatchWarning = `⚠️ Hőmérsékleti észrevétel: A(z) ${temp}°C-os meleg időben a zárt őszi bokacipő/csizma helyett egy könnyű bőr loafer vagy szellős félcipő kényelmesebb és stílusosabb.`;
+      }
+
+      return {
+        ...parsed,
+        score: typeof parsed?.score === 'number' ? Math.min(100, Math.max(0, parsed.score)) : 85,
+        verdict: parsed?.verdict || 'Harmonikus Összeállítás',
+        strengths,
+        suggestions,
+        fitMismatchWarning
+      };
+    } catch (e) {
+      console.error('Hiba a manuális szett auditálásakor:', e);
+      throw e;
+    }
+  }
+
+  throw new Error('Nincs beállítva Gemini API kulcs vagy üres a szett!');
+}
+
+/**
+ * 6. Szabad Szöveges Személyes AI Master Stylist Chat
+ */
+export async function chatWithMasterStylist({ messages = [], wardrobe = [], styleProfile = {}, weather = null }) {
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    throw new Error('Nincs beállítva Gemini API kulcs! Kérlek add meg a Beállításokban.');
+  }
+
+  try {
+    const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
+      ? styleProfile.customStylingRules
+      : [];
+
+    const wardrobeInventory = wardrobe.map(w => ({
+      id: w.id,
+      name: w.name,
+      category: w.category,
+      subCategory: w.subCategory || '',
+      material: w.material || '',
+      color: w.color,
+      brand: w.brand || '',
+      size: w.size || '',
+      condition: w.condition || '',
+      formality: w.formality || '',
+      style: w.styleArchetype || '',
+      tags: w.tags || []
+    }));
+
+    const systemInstruction = `Te egy világklasszis, közvetlen, diszkrét és rendkívül művelt Mester Személyi Stylist (Master Sartorial Consultant) vagy.
+A felhasználóval beszélgetsz, aki tanácsot kérhet tőled szettekről, konkrét ruhadarabjainak viseléséről, stílustrendekről, gardrób-bővítésről vagy esemény-specifikus megjelenésről.
+
+A LEGFONTOSABB SZUPERERŐD:
+Teljes mélységében ismered a felhasználó SAJÁT DIGITÁLIS RUHATÁRÁT, SZEMÉLYES STÍLUS DNS-ÉT, EGYÉNI SZABÁLYAIT ÉS AZ AKTUÁLIS IDŐJÁRÁST!
+
+FELHASZNÁLÓ STÍLUSPROFILJA:
+- Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura'])}
+- Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
+- Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
+- Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
+- Cipőméret & Ruhaméret: ${styleProfile.shoeSize || '42.5'}, Felső: ${styleProfile.topSize || 'M / 50'}, Nadrág: ${styleProfile.pantSize || '32/32'}
+
+🚫 FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI (MINDIG SZIGORÚAN TARTSD BE!):
+${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön tiltások rögzítve.'}
+
+AKTUÁLIS IDŐJÁRÁS:
+Helyszín: ${weather?.city || 'Budapest'}, Hőmérséklet: ${weather?.temperature ?? 21}°C, Körülmények: ${weather?.condition || 'Kellemes'}
+
+A FELHASZNÁLÓ TELJES RUHATÁRA (${wardrobeInventory.length} db darab):
+${JSON.stringify(wardrobeInventory, null, 2)}
+
+STÍLUS ÉS KOMMUNIKÁCIÓS IRÁNYELVEK:
+1. Válaszolj közvetlen, barátságos, magabiztos és kifinomult magyar nyelven.
+2. Amikor konkrét összeállítást javasolsz, MINDIG a felhasználó valós ruhatárából válassz konkrét darabokat a pontos nevükkel!
+3. Ha a felhasználó egy új darab vásárlásáról vagy hiányzó ruháról kérdez, javasolj valódi kapszula hiánypótló darabot a meglévő ruhatára alapján.
+4. Ha a felhasználó egy szettet kérdez tőled, használd a sartorial rétegezési szabályokat (Bázis ing + Nadrág + Cipő + Öv + opcionális Pulóver / Zakó / Kabát).
+5. Használj elegáns markdown formázást (félkövér kiemelések, felsorolások).`;
+
+    // Convert chat history into Gemini contents format
+    const contents = [
+      {
+        role: 'user',
+        parts: [{ text: `[KONTEXTUS ÉS RENDSZER UTASÍTÁS]:\n${systemInstruction}\n\nKérlek erősítsd meg, hogy felkészültél a személyes stílustanácsadásra!` }]
+      },
+      {
+        role: 'model',
+        parts: [{ text: 'Természetesen! Teljes mélységében áttekintettem a ruhatáradat, a stílusprofilodat és a személyes preferenciáidat. Készen állok, miben segíthetek ma?' }]
+      }
+    ];
+
+    for (const msg of messages) {
+      contents.push({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      });
+    }
+
+    const response = await callGeminiApi({
+      apiKey,
+      contents,
+      temperature: 0.35,
+      preferredModels: REASONING_MODELS,
+      timeoutMs: 25000
+    });
+
+    if (typeof response === 'string') return response;
+    if (response && response.text) return response.text;
+    if (response && response.content) return response.content;
+    return typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response);
+  } catch (e) {
+    console.error('Hiba a Master Stylist chat során:', e);
+    throw e;
+  }
 }

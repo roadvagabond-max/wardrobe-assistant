@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard, Feather, ShieldAlert, Layers, Compass } from 'lucide-react';
+import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard, Feather, ShieldAlert, Layers, Compass, Maximize2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { optimizeImageForUpload, getSmartGarmentImage, ensureBase64Image } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
+import GarmentLightboxModal from '../common/GarmentLightboxModal';
 
 export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
   const { wardrobe, profile, addItem } = useAuth();
@@ -20,19 +21,56 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [addedToWardrobe, setAddedToWardrobe] = useState(false);
 
+  // Lightbox Modal State
+  const [lightboxData, setLightboxData] = useState({
+    isOpen: false,
+    items: [],
+    initialIndex: 0,
+    outfitTitle: ''
+  });
+
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
-  // Handle prefill data from missing pieces view
+  // Handle prefill data from missing pieces view or mobile share target
   useEffect(() => {
     if (prefillData) {
-      setItemName(prefillData.title || prefillData.name || '');
-      setItemPrice(prefillData.estimatedPrice || '');
-      setEvaluationResult(null);
-      setAnalysisError(null);
-      setAddedToWardrobe(false);
+      if (typeof prefillData === 'string' && (prefillData.startsWith('http://') || prefillData.startsWith('https://'))) {
+        setWebshopUrl(prefillData);
+        setActiveTab('link');
+        handleDirectLinkAnalysis(prefillData);
+      } else if (prefillData.url || prefillData.sharedUrl) {
+        const targetUrl = prefillData.url || prefillData.sharedUrl;
+        setWebshopUrl(targetUrl);
+        setActiveTab('link');
+        handleDirectLinkAnalysis(targetUrl);
+      } else {
+        setItemName(prefillData.title || prefillData.name || '');
+        setItemPrice(prefillData.estimatedPrice || '');
+        setEvaluationResult(null);
+        setAnalysisError(null);
+        setAddedToWardrobe(false);
+      }
     }
   }, [prefillData]);
+
+  const handleDirectLinkAnalysis = async (url) => {
+    if (!url) return;
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    try {
+      const data = await extractWebshopData(url.trim());
+      const chosenImg = data.imageUrl || (data.images && data.images[0]) || '';
+      setImagePreview(chosenImg);
+      setWebshopContext(data);
+      if (data.title) setItemName(data.title);
+      if (data.price) setItemPrice(data.price);
+    } catch (err) {
+      console.warn('Webshop link auto-kinyerés hiba:', err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   // Global window paste listener for Advisor View
   useEffect(() => {
@@ -816,18 +854,27 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                         const isCandidateItem = item.id === 'candidate-item' || item.name === evaluationResult.extractedItem?.name;
 
                         return (
-                          <div key={iIdx} className="space-y-1 group relative">
+                          <div 
+                            key={iIdx} 
+                            onClick={() => setLightboxData({
+                              isOpen: true,
+                              items: outfit.items || [],
+                              initialIndex: iIdx,
+                              outfitTitle: outfit.title || 'Vásárlási Outfit Teszt'
+                            })}
+                            className="space-y-1 group relative cursor-pointer"
+                          >
                             <div className={`aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center border relative transition-all ${
                               isCandidateItem
                                 ? 'border-[var(--accent-gold)] ring-1 ring-[var(--accent-gold-glow)] shadow-md shadow-[var(--accent-gold)]/10'
-                                : 'border-white/10 group-hover:border-white/30'
+                                : 'border-white/10 group-hover:border-[var(--accent-gold)]'
                             }`}>
                               <img
                                 src={item.imageUrl}
                                 alt={item.name}
                                 loading="lazy"
                                 decoding="async"
-                                className="max-h-full max-w-full object-contain rounded"
+                                className="max-h-full max-w-full object-contain rounded group-hover:scale-105 transition-transform duration-300"
                               />
                               {isCandidateItem && (
                                 <span className="absolute top-1 right-1 bg-[var(--accent-gold)] text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
@@ -838,7 +885,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                                 {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') ? '🎗️ Öv' : item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Kiegészítő'}
                               </span>
                             </div>
-                            <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5">
+                            <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5 group-hover:text-white transition-colors">
                               {item.name}
                             </p>
                           </div>
@@ -858,6 +905,16 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
         </div>
       )}
 
+      {/* Universal Garment Lightbox Modal */}
+      <GarmentLightboxModal
+        isOpen={lightboxData.isOpen}
+        onClose={() => setLightboxData(prev => ({ ...prev, isOpen: false }))}
+        items={lightboxData.items}
+        initialIndex={lightboxData.initialIndex}
+        outfitTitle={lightboxData.outfitTitle}
+      />
+
     </div>
   );
 }
+

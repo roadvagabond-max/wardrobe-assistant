@@ -102,9 +102,14 @@ sequenceDiagram
    - **Bázisréteg (Base Layer):** Minden szett kötelezően tartalmaz egy bőrön hordható felsőt (`tops`: ing vagy prémium pamut póló). Szigorúan tilos pulóvert vagy zakót bázis felső nélkül ajánlani! Zakóhoz kötelező galléros ing.
    - **Köztes & Külső Réteg (Mid & Outer Layers):** A pulóver (`knitwear`) és zakó (`outerwear`) az ingre rétegződik.
    - **Téli / Hideg Idő (< 12°C):** Kettős külső réteg engedélyezett és támogatott: a zakó (`blazer`) fölé rétegződhet a téli szövetkabát / nagykabát (`overcoat` / `coat`).
-4. **Időjárás & Hőmérsékleti Dinamika (Moduláris rétegek):**
+4. **Időjárás & Hőmérsékleti Dinamika (Szezonális Lábbeli és Réteg Védelem):**
+   - **Meleg időben (>= 19°C / Nyári meleg):**
+     * **Szigorúan KIZÁRT:** Őszi/téli bokacipők, bokacsizmák, Chelsea csizmák, Chukka, bélelt bakancsok, vastag télikabátok és vastag téli garbók.
+     * **Kizárólag engedélyezett lábbelik:** Bőr penny/tassel loafer, mokaszin, szellős tiszta bőr sneaker, elegáns derbi/oxford félcipő.
+     * A rendszer mind az AI promptban, mind a gardrób szűrésben és az anatómiai rétegezési motorban (`enforceAnatomicalOutfitLayers`) szigorúan kizárja a meleg lábbeliket.
+   - **Hűvös/hideg időben (< 14°C):**
+     * Csizmák, chelsea csizmák, bélelt elegáns lábbelik, téli szövetkabátok és flanelnadrágok támogatottak.
    - Felkészít a beltéri fűtésre/klímára és az esti lehűlésre: a felső réteg levehető, és az alatta lévő ing/póló önmagában is elegáns és önazonos megjelenést biztosít. Részletes rétegezési tanácsot ad (`layeringAdvice`).
-   - 20°C felett a vastag téli kabát és meleg kötött pulóver szigorúan tiltott.
 5. **3 Hiteles Szettvariáció:**
    - Generál 3 komplett szettet (ing + nadrág + lábbeli + rétegek), és a kártyákon megjeleníti az esemény-összhang indoklását (`culturalFitReasoning`) és a rétegezési útmutatót.
 
@@ -141,6 +146,42 @@ sequenceDiagram
 
 ---
 
+### 👔 Workflow 7: Saját Szett Összeállítása & Sartorial AI Audit
+1. **Interaktív Szettépítő Slotok:**
+   - A felhasználó kategóriánként válogathatja össze a darabjait (Felső, Pulóver, Zakó/Kabát, Nadrág, Cipő, Öv/Kiegészítő).
+2. **AI Stílus- és Összhang Audit (`auditManualOutfit`):**
+   - **Dress Code & Esemény Összhang:** Illik-e a választott szett az esemény kulturális és formai elvárásaihoz.
+   - **Színharmónia & Kontraszt:** Árnyalatok, 3-szín szabály, hideg/meleg tónusok.
+   - **Anyagok & Textúrák Találkozása:** Természetes szálak és textúrák egymásra hatása (pl. gyapjú flanel + len ing + sima bőrcipő).
+   - **Rétegezés & Időjárási Dinamika:** Anatómiai bázisréteg ellenőrzése és hőmérsékleti komfort a helyi időjáráshoz.
+   - **Strengths & Suggestions:** Konkrét erősségek és azonnal alkalmazható stílustuning / cserejavaslatok pontszámmal (0-100%).
+3. **Mentés:** Az auditált szett egyetlen kattintással elmenthető a kedvencekhez.
+
+---
+
+### 💬 Workflow 8: Szabad Szöveges Személyes AI Stylist Csevegés (Master Stylist Chat)
+1. **Teljes Kontextus-Ismeret:**
+   - A Gemini 3.x modell közvetlen beszélgetésben áll a felhasználóval, és **teljes mélységében ismeri** a ruhatár összes darabját, a Stílus DNS-t, a kedvenc színeket, testalkatot, méreteket, egyéni szabályokat és az aktuális időjárást.
+2. **Sartorial Tanácsadás & Képi Hivatkozások:**
+   - Bármilyen stíluskérdésre (pl. alkalmi viselet, rétegezés, hiányzó kulcsdarab, szett-ötlet) személyre szabott választ ad, a ruhatár darabjaira pontos névvel hivatkozva.
+   - Az említett ruhák automatikusan interaktív kártyaként jelennek meg a válasz alatt, és kattintásra megnyílnak a Lightboxban.
+
+---
+
+### 📱 Workflow 9: Mobil Web Share Target & Facebook In-App Browser Vásárlási Check
+1. **Web Share Target API:**
+   - Mobilon (Chrome, Safari, Android rendszer-megosztás) és Facebook In-App Browserből a webshop oldalán a „Megosztás” gombra kattintva a **Wardrobe Assistant** közvetlenül megjelenik célalkalmazásként.
+2. **Azonnali Elemzés Indítása:**
+   - Az app megnyitáskor automatikusan kiszűri a terméklinket (Facebook előtagok és szövegek közül is), átvált a Vásárlási Tanácsadó (`advisor`) nézetre, és azonnal elindítja a 4-pilléres vásárlási döntési tesztet.
+
+---
+
+### 🔍 Univerzális Kép- és Ruha Lightbox Betekintő (`GarmentLightboxModal`)
+- Minden szettkártyán és csevegésben lévő kisméretű ruhafotóra kattintva egy nagyfelbontású, arany-üveg keretes felugró ablak nyílik meg.
+- Teljes lapozási támogatás (⬅️ / ➡️ nyilak, billentyűzet, swipe), ruha-metaadatok és egygombos Lookbook magazin-áttekintő nézet.
+
+---
+
 ## 🧰 Beépített Skillek (Custom Skills)
 
 ### 1. `garment-vision-analyzer`
@@ -150,7 +191,7 @@ sequenceDiagram
 
 ### 2. `cultural-stylist-curator`
 - **Cél:** Kulturális, zenei és esemény-specifikus szettek összeállítása a felhasználó Stílus DNS-ével harmonizálva.
-- **Fő fájlok:** `src/services/gemini.js`, `src/components/stylist/StylistView.jsx`
+- **Fő fájlok:** `src/services/gemini.js`, `src/components/stylist/StylistView.jsx`, `src/components/stylist/StylistChatView.jsx`
 - **Szabályok:** Szubkulturális dress code tiltólisták, önazonos adaptáció, kötelező kulcsdarab (anchor item) támogatás.
 
 ### 3. `fit-intelligence-auditor`
@@ -177,3 +218,4 @@ sequenceDiagram
 
 ---
 *Készült a Google Antigravity Agentic Framework segítségével.*
+

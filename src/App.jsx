@@ -27,13 +27,43 @@ export default function App() {
   const [initialAnchorItem, setInitialAnchorItem] = useState(null);
   const [advisorPrefill, setAdvisorPrefill] = useState(null);
 
-  // Load weather initially
+  // Load weather initially & detect Web Share Target query params (?url=..., ?text=...)
   useEffect(() => {
     async function initWeather() {
       const data = await fetchCurrentWeather('Budapest');
       setWeather(data);
     }
     initWeather();
+
+    // Check for incoming Web Share Target (e.g. from Mobile Browser or Facebook Share Sheet)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sharedUrl = params.get('url');
+      const sharedText = params.get('text');
+      const sharedTitle = params.get('title');
+
+      let candidateUrl = '';
+      if (sharedUrl && (sharedUrl.startsWith('http://') || sharedUrl.startsWith('https://'))) {
+        candidateUrl = sharedUrl;
+      } else if (sharedText) {
+        // Extract URL from shared text (handles Facebook/Messenger share payloads)
+        const urlMatch = sharedText.match(/https?:\/\/[^\s]+/i);
+        if (urlMatch) {
+          candidateUrl = urlMatch[0];
+        }
+      }
+
+      if (candidateUrl) {
+        setAdvisorPrefill({ url: candidateUrl, title: sharedTitle || '' });
+        setActiveTab('advisor');
+
+        // Clean up URL query params from address bar
+        const cleanUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    } catch (e) {
+      console.warn('Share target param feldolgozási figyelmeztetés:', e);
+    }
   }, []);
 
   const handleTestInAdvisor = (gapItem) => {
