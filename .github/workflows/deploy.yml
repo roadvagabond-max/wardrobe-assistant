@@ -23,10 +23,10 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --include=dev
 
       - name: Build project
-        run: npm run build
+        run: npx vite build 2>&1
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
