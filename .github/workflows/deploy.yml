@@ -20,18 +20,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+        run: npm install
 
       - name: Build project
-        run: npx vite build
+        run: npm run build
 
       - name: Deploy to Firebase Hosting
         env:
           SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
         run: |
-          echo "$SERVICE_ACCOUNT_KEY" > "$HOME/sa-key.json"
-          export GOOGLE_APPLICATION_CREDENTIALS="$HOME/sa-key.json"
+          echo "$SERVICE_ACCOUNT_KEY" > /tmp/sa-key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa-key.json
           npx --yes firebase-tools deploy --only hosting --project wardrobe-assistant-48e01 --debug
