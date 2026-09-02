@@ -161,7 +161,9 @@ export default function GarmentLightboxModal({
                     setCurrentIndex(idx);
                     setViewMode('single');
                   }}
-                  className="cursor-pointer group p-3 rounded-2xl bg-[#1e1a16] border border-white/5 hover:border-[var(--border-gold)] hover:bg-[#25201b] transition-all flex flex-col justify-betwee                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-[#12100e] border border-white/5 p-2 flex items-center justify-center relative mb-2.5">
+                  className="cursor-pointer group p-3 rounded-2xl bg-[#1e1a16] border border-white/5 hover:border-[var(--border-gold)] hover:bg-[#25201b] transition-all flex flex-col justify-between shadow-sm hover:shadow-lg hover:shadow-black/40"
+                >
+                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-[#12100e] border border-white/5 p-2 flex items-center justify-center relative mb-2.5">
                     <img 
                       src={itm.imageUrl} 
                       alt={itm.name} 
@@ -244,7 +246,6 @@ export default function GarmentLightboxModal({
                         }`}
                       >
                         <img src={itm.imageUrl} alt={itm.name} width="36" height="36" className="w-full h-full object-contain bg-[#12100e] rounded-lg" />
-                      </button>object-contain bg-[#12100e] rounded-lg" />
                       </button>
                     ))}
                   </div>
