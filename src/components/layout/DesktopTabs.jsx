@@ -11,7 +11,7 @@ export default function DesktopTabs({ activeTab, setActiveTab }) {
   ];
 
   return (
-    <div className="hidden lg:flex items-center justify-between border-b border-[var(--border-subtle)] bg-[#171411]/70 backdrop-blur-md px-8 py-2">
+    <div className="hidden lg:flex items-center justify-between border-b border-[var(--border-subtle)] bg-[#101b30]/75 backdrop-blur-md px-8 py-2">
       <div className="max-w-7xl mx-auto w-full flex items-center justify-center gap-2">
         {tabs.map(tab => {
           const Icon = tab.icon;

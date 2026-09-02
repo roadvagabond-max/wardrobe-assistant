@@ -11,8 +11,8 @@ export default function Header({ onOpenSettings, onOpenAuth, weather }) {
         
         {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c8a97e] to-[#8a6a42] flex items-center justify-center shadow-lg shadow-[#c8a97e]/20">
-            <Sparkles className="w-5 h-5 text-[#12100e]" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#f59e0b] to-[#b45309] flex items-center justify-center shadow-lg shadow-[#f59e0b]/25">
+            <Sparkles className="w-5 h-5 text-[#080e1a]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
