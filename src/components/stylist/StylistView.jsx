@@ -279,16 +279,6 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     setIsManualSaved(true);
   };
 
-  const openLightbox = (items, index = 0, title = '', defaultView = 'lookbook') => {
-    setLightboxData({
-      isOpen: true,
-      items: items || [],
-      initialIndex: index || 0,
-      outfitTitle: title || '',
-      defaultView: items && items.length > 1 ? defaultView : 'single'
-    });
-  };
-
   return (
     <div className="space-y-6 animate-slide-up">
       
