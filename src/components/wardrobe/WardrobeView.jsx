@@ -189,7 +189,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
             >
               <div>
                 {/* Image Container (Uncropped, Proportional object-contain) */}
-                <div className="relative aspect-[4/3] bg-[#07090e] p-2 flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-[4/3] w-full bg-[#07090e] p-2 flex items-center justify-center overflow-hidden">
                   <img
                     src={item.imageUrl}
                     alt={item.name}
@@ -197,7 +197,8 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
                     decoding="async"
                     width="320"
                     height="240"
-                    className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
+                    style={{ aspectRatio: '4 / 3' }}
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                   />
                   
                   {/* Category Badge */}

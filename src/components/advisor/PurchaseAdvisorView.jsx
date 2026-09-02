@@ -894,7 +894,8 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                                 decoding="async"
                                 width="160"
                                 height="120"
-                                className="max-h-full max-w-full object-contain rounded group-hover:scale-105 transition-transform duration-300"
+                                style={{ aspectRatio: '4 / 3' }}
+                                className="w-full h-full object-contain rounded group-hover:scale-105 transition-transform duration-300"
                               />
                               {isCandidateItem && (
                                 <span className="absolute top-1 right-1 bg-[var(--accent-gold)] text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow">

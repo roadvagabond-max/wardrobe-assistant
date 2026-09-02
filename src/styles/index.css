@@ -42,6 +42,14 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+img {
+  max-width: 100%;
+}
+
+img[loading="lazy"] {
+  content-visibility: auto;
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);

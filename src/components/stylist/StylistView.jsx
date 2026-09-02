@@ -407,7 +407,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 <div className="flex flex-wrap gap-2">
                   {anchorItems.map(item => (
                     <div key={item.id} className="flex items-center gap-2 p-2 rounded-xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-xs">
-                      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="28" height="28" className="w-7 h-7 rounded-lg object-contain bg-black" />
+                      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="28" height="28" style={{ aspectRatio: '1 / 1' }} className="w-7 h-7 rounded-lg object-contain bg-black" />
                       <span className="font-semibold text-white truncate max-w-[180px]">{item.name}</span>
                       <button
                         type="button"
@@ -568,7 +568,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                             className="space-y-1 group relative cursor-pointer"
                           >
                             <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] border border-white/10 group-hover:border-[var(--accent-gold)] p-1 flex items-center justify-center relative transition-all">
-                              <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="160" height="120" className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300" />
+                              <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="160" height="120" style={{ aspectRatio: '4 / 3' }} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
                               <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
                                 {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') ? '🎗️ Öv' : item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Kiegészítő'}
                               </span>
@@ -1083,7 +1083,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     }`}
                   >
                     <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center mb-1.5">
-                      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="120" height="90" className="max-h-full max-w-full object-contain" />
+                      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="120" height="90" style={{ aspectRatio: '4 / 3' }} className="w-full h-full object-contain" />
                     </div>
                     <p className="text-[11px] font-medium text-white line-clamp-1">{item.name}</p>
                     <span className="text-[9px] text-[var(--text-muted)] block">{item.category}</span>

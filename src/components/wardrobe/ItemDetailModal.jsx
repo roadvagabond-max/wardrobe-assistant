@@ -277,7 +277,8 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
                   decoding="async"
                   width="400"
                   height="300"
-                  className="max-h-full max-w-full object-contain rounded-lg" 
+                  style={{ aspectRatio: '4 / 3' }}
+                  className="w-full h-full object-contain rounded-lg" 
                 />
                 <div className="absolute bottom-3 right-3 flex items-center gap-2">
                   <button
@@ -500,7 +501,8 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
                   decoding="async" 
                   width="500"
                   height="375"
-                  className="max-h-full max-w-full object-contain rounded-lg shadow-md" 
+                  style={{ aspectRatio: '4 / 3' }}
+                  className="w-full h-full object-contain rounded-lg shadow-md" 
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-white/40">
