@@ -446,21 +446,41 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // 🔄 Load Global Admin Whitelist from Firestore on start
+  useEffect(() => {
+    if (!db || !isFirebaseConfigured) return;
+    getDoc(doc(db, 'system', 'admin_config')).then((snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (Array.isArray(data.adminEmails) && data.adminEmails.length > 0) {
+          setAdminEmails(data.adminEmails);
+          localStorage.setItem('admin_whitelist_emails', JSON.stringify(data.adminEmails));
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
   const addAdminEmail = async (newEmail) => {
     const clean = (newEmail || '').toLowerCase().trim();
     if (!clean || adminEmails.includes(clean)) return;
     const updated = [...adminEmails, clean];
     setAdminEmails(updated);
     localStorage.setItem('admin_whitelist_emails', JSON.stringify(updated));
+
     if (currentUser && db && isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+          adminEmails: updated,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (_) {}
+
       try {
         await setDoc(doc(db, 'system', 'admin_config'), {
           adminEmails: updated,
           updatedAt: new Date().toISOString()
         }, { merge: true });
-      } catch (e) {
-        console.warn('Admin emails Firestore mentési hiba:', e);
-      }
+      } catch (_) {}
     }
   };
 
@@ -469,15 +489,21 @@ export function AuthProvider({ children }) {
     const updated = adminEmails.filter(e => e.toLowerCase().trim() !== clean);
     setAdminEmails(updated);
     localStorage.setItem('admin_whitelist_emails', JSON.stringify(updated));
+
     if (currentUser && db && isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+          adminEmails: updated,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (_) {}
+
       try {
         await setDoc(doc(db, 'system', 'admin_config'), {
           adminEmails: updated,
           updatedAt: new Date().toISOString()
         }, { merge: true });
-      } catch (e) {
-        console.warn('Admin emails Firestore mentési hiba:', e);
-      }
+      } catch (_) {}
     }
   };
 
