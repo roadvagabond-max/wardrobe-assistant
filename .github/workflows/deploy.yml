@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
@@ -28,10 +28,10 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Authenticate to Google Cloud / Firebase
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
+
       - name: Deploy to Firebase Hosting
-        run: |
-          cat << 'EOF' > "$RUNNER_TEMP/firebase-key.json"
-          ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
-          EOF
-          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-key.json"
-          npx --yes firebase-tools deploy --only hosting --project wardrobe-assistant-48e01 --non-interactive
+        run: npx --yes firebase-tools deploy --only hosting --project wardrobe-assistant-48e01 --non-interactive
