@@ -15,10 +15,35 @@ export const getGeminiApiKey = () => {
   return (localKey && !localKey.startsWith('AQ.')) ? localKey : (envKey && !envKey.startsWith('AQ.')) ? envKey : '';
 };
 
-export const isGeminiConfigured = () => {
-  const key = getGeminiApiKey();
-  return Boolean(key && (key.startsWith('AIzaSy') || key.length > 25));
+export const isGeminiConfigured = (providedKey = null) => {
+  const key = (providedKey || getGeminiApiKey() || '').trim();
+  return Boolean(key && !key.startsWith('AQ.') && (key.startsWith('AIzaSy') || key.length > 25));
 };
+
+/**
+ * Test a Gemini API key with a fast ping to verify credentials
+ */
+export async function testGeminiApiKey(testKey) {
+  const cleanKey = (testKey || getGeminiApiKey() || '').trim();
+  if (!cleanKey) {
+    return { success: false, message: 'Nincs megadva API kulcs!' };
+  }
+  if (cleanKey.startsWith('AQ.')) {
+    return { success: false, message: 'Érvénytelen OAuth token formátum! Google AI Studio kulcs szükséges (AIzaSy... kezdetű).' };
+  }
+  try {
+    const res = await callGeminiApi({
+      apiKey: cleanKey,
+      contents: [{ role: 'user', parts: [{ text: 'Ping! Respond in JSON: {"status": "ok"}' }] }],
+      preferredModels: FAST_MODELS,
+      timeoutMs: 6000,
+      expectJson: true
+    });
+    return { success: true, message: '✓ Sikeres kapcsolat a Google Gemini AI-val!' };
+  } catch (err) {
+    return { success: false, message: err.message || 'Nem sikerült csatlakozni a Geminihez.' };
+  }
+}
 
 // Google Gemini official 2026 models in order of stability & speed
 export const FAST_MODELS = [
@@ -1615,12 +1640,14 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 /**
  * 6. Szabad Szöveges Személyes AI Master Stylist Chat
  */
-export async function chatWithMasterStylist({ messages = [], wardrobe = [], styleProfile = {}, weather = null }) {
-  const apiKey = getGeminiApiKey();
+export async function chatWithMasterStylist({ messages = [], wardrobe = [], styleProfile = {}, weather = null, apiKey = null }) {
+  const cleanKey = (apiKey || getGeminiApiKey() || '').trim();
 
-  if (!apiKey) {
-    throw new Error('Nincs beállítva Gemini API kulcs! Kérlek add meg a Beállításokban.');
+  if (!cleanKey || cleanKey.startsWith('AQ.')) {
+    throw new Error('Nincs érvényes Gemini API kulcs! Kérlek add meg a Beállításokban.');
   }
+
+  const activeApiKey = cleanKey;
 
   try {
     const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
@@ -1696,7 +1723,7 @@ STÍLUS ÉS KOMMUNIKÁCIÓS IRÁNYELVEK:
     }
 
     const response = await callGeminiApi({
-      apiKey,
+      apiKey: activeApiKey,
       contents,
       temperature: 0.65,
       expectJson: false,

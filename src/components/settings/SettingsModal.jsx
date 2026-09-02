@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Database, Sparkles, RotateCcw, Download, Check } from 'lucide-react';
+import { X, Key, Database, Sparkles, RotateCcw, Download, Check, Eye, EyeOff, Play, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { isFirebaseConfigured } from '../../services/firebase';
-import { isGeminiConfigured } from '../../services/gemini';
+import { isGeminiConfigured, testGeminiApiKey } from '../../services/gemini';
 
 export default function SettingsModal({ isOpen, onClose }) {
   const { wardrobe, resetToDemoData, geminiApiKey: contextGeminiKey, saveGeminiApiKey } = useAuth();
@@ -11,6 +11,8 @@ export default function SettingsModal({ isOpen, onClose }) {
     const raw = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
     return raw.startsWith('AQ.') ? '' : raw;
   });
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [testStatus, setTestStatus] = useState({ testing: false, message: '', success: null });
   const [firebaseApiKey, setFirebaseApiKey] = useState(() => localStorage.getItem('VITE_FIREBASE_API_KEY') || '');
   const [firebaseProjectId, setFirebaseProjectId] = useState(() => localStorage.getItem('VITE_FIREBASE_PROJECT_ID') || '');
   const [firebaseAuthDomain, setFirebaseAuthDomain] = useState(() => localStorage.getItem('VITE_FIREBASE_AUTH_DOMAIN') || '');
@@ -24,11 +26,20 @@ export default function SettingsModal({ isOpen, onClose }) {
       setFirebaseApiKey(localStorage.getItem('VITE_FIREBASE_API_KEY') || '');
       setFirebaseProjectId(localStorage.getItem('VITE_FIREBASE_PROJECT_ID') || '');
       setFirebaseAuthDomain(localStorage.getItem('VITE_FIREBASE_AUTH_DOMAIN') || '');
+      setTestStatus({ testing: false, message: '', success: null });
       setSavedSuccess(false);
     }
   }, [isOpen, contextGeminiKey]);
 
   if (!isOpen) return null;
+
+  const handleTestKey = async () => {
+    const clean = geminiKey.trim();
+    if (!clean) return;
+    setTestStatus({ testing: true, message: '', success: null });
+    const result = await testGeminiApiKey(clean);
+    setTestStatus({ testing: false, message: result.message, success: result.success });
+  };
 
   const handleSaveKeys = async (e) => {
     e.preventDefault();
@@ -43,7 +54,7 @@ export default function SettingsModal({ isOpen, onClose }) {
     setTimeout(() => {
       setSavedSuccess(false);
       onClose();
-    }, 800);
+    }, 1000);
   };
 
   const handleExportData = () => {
@@ -55,6 +66,8 @@ export default function SettingsModal({ isOpen, onClose }) {
     downloadAnchor.click();
     downloadAnchor.remove();
   };
+
+  const isKeyActive = isGeminiConfigured(geminiKey);
 
   return (
     <div className="modal-backdrop">
@@ -75,29 +88,87 @@ export default function SettingsModal({ isOpen, onClose }) {
         <form onSubmit={handleSaveKeys} className="space-y-4">
           
           {/* Gemini API Key */}
-          <div className="space-y-1.5">
+          <div className="space-y-2 bg-[#07090e]/60 p-3.5 rounded-xl border border-white/5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-white flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
                 <span>Google Gemini API Kulcs</span>
               </label>
-              <span className={`text-[10px] ${isGeminiConfigured() ? 'text-emerald-400 font-bold' : 'text-[var(--text-muted)]'}`}>
-                {isGeminiConfigured() ? '✓ Aktív' : 'Beépített AI motor fut'}
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                isKeyActive 
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              }`}>
+                {isKeyActive ? '✓ Aktív Kulcs' : '⚠️ Nincs Beállítva'}
               </span>
             </div>
-            <input
-              type="password"
-              id="settings-gemini-key-input"
-              name="geminiApiKey"
-              aria-label="Google Gemini API Kulcs"
-              placeholder="AIzaSy..."
-              value={geminiKey}
-              onChange={(e) => setGeminiKey(e.target.value)}
-              className="custom-input text-xs font-mono"
-            />
-            <p className="text-[10px] text-[var(--text-muted)]">
-              Képfelismeréshez és egyedi stíluselemzéshez (ingyenesen lekérhető: aistudio.google.com).
-            </p>
+
+            <div className="relative">
+              <input
+                type={showGeminiKey ? "text" : "password"}
+                id="settings-gemini-key-input"
+                name="geminiApiKey"
+                aria-label="Google Gemini API Kulcs"
+                placeholder="AIzaSy..."
+                value={geminiKey}
+                onChange={(e) => {
+                  setGeminiKey(e.target.value);
+                  setTestStatus({ testing: false, message: '', success: null });
+                }}
+                className="custom-input text-xs font-mono pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowGeminiKey(prev => !prev)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-white transition-colors"
+                title={showGeminiKey ? "Kulcs elrejtése" : "Kulcs megjelenítése"}
+              >
+                {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {/* Live Format & Test Button Row */}
+            <div className="flex items-center justify-between gap-2 pt-0.5">
+              <div className="text-[10px]">
+                {geminiKey.startsWith('AIzaSy') ? (
+                  <span className="text-emerald-400 font-medium flex items-center gap-1">✓ AI Studio formátum</span>
+                ) : geminiKey.startsWith('AQ.') ? (
+                  <span className="text-rose-400 font-medium">❌ Érvénytelen (AIzaSy... szükséges)</span>
+                ) : geminiKey ? (
+                  <span className="text-amber-400 font-medium">⚠️ Ellenőrizd a kulcsot</span>
+                ) : (
+                  <a 
+                    href="https://aistudio.google.com/apikey" 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="text-[var(--accent-gold-light)] hover:underline"
+                  >
+                    Ingyenes kulcs igénylése ↗
+                  </a>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTestKey}
+                disabled={!geminiKey || testStatus.testing}
+                className="text-[10px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/90 hover:text-white border border-white/10 disabled:opacity-30 flex items-center gap-1 transition-all"
+              >
+                {testStatus.testing ? <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-gold)]" /> : <Play className="w-3 h-3 text-[var(--accent-gold)]" />}
+                <span>{testStatus.testing ? 'Tesztelés...' : 'Kapcsolat Tesztelése'}</span>
+              </button>
+            </div>
+
+            {/* Test Status Feedback */}
+            {testStatus.message && (
+              <div className={`p-2 rounded-lg text-[11px] border leading-relaxed ${
+                testStatus.success 
+                  ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-200' 
+                  : 'bg-rose-950/50 border-rose-500/40 text-rose-200'
+              }`}>
+                {testStatus.message}
+              </div>
+            )}
           </div>
 
           {/* Firebase Keys */}

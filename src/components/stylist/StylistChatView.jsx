@@ -13,7 +13,7 @@ const QUICK_PROMPTS = [
 ];
 
 export default function StylistChatView({ weather }) {
-  const { wardrobe, profile } = useAuth();
+  const { wardrobe, profile, geminiApiKey } = useAuth();
   
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem('stylist_chat_history');
@@ -88,7 +88,8 @@ export default function StylistChatView({ weather }) {
         messages: apiMessages,
         wardrobe,
         styleProfile: profile,
-        weather
+        weather,
+        apiKey: geminiApiKey
       });
 
       setMessages(prev => [
@@ -263,7 +264,7 @@ export default function StylistChatView({ weather }) {
       </div>
 
       {/* Banner if Gemini is not yet configured */}
-      {!isGeminiConfigured() && (
+      {!isGeminiConfigured(geminiApiKey) && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-200 shrink-0 shadow-lg">
           <div className="flex items-center gap-2.5">
             <Sparkles className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
