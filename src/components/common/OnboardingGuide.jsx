@@ -16,6 +16,19 @@ export default function OnboardingGuide({ onNavigateTab, onOpenAddModal }) {
     return localStorage.getItem('sartorial_onboarding_hidden') === 'true';
   });
 
+  React.useEffect(() => {
+    const handleShowOnboarding = () => {
+      setIsHidden(false);
+      setIsCollapsed(false);
+      try {
+        localStorage.removeItem('sartorial_onboarding_hidden');
+        localStorage.removeItem('sartorial_onboarding_collapsed');
+      } catch (_) {}
+    };
+    window.addEventListener('show-onboarding', handleShowOnboarding);
+    return () => window.removeEventListener('show-onboarding', handleShowOnboarding);
+  }, []);
+
   // Dynamic step completion logic
   const isStep1Done = Boolean(profile.avatarUrl || (profile.skinTone && !profile.skinTone.includes('Közép tónus')));
   const isStep2Done = (wardrobe || []).length >= 3;
