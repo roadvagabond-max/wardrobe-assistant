@@ -255,6 +255,11 @@ sequenceDiagram
 - **Fő fájlok:** `.agents/skills/mobile-ui-designer/SKILL.md`, `src/App.jsx`, `src/components/layout/BottomNav.jsx`, `src/components/stylist/StylistView.jsx`
 - **Szabályok:** `stopPropagation` kártyagomboknál, `pb-28` lebegő alsó margó, `min-w-0` a flexbox szövegeknél, uncropped `aspect-[4/3]` képarányok.
 
+### 8. `brand-sizing-auditor`
+- **Cél:** Márkánkénti méretprofil, kanonikus márka-alias összefűzés, kategóriánkénti bázisméretek és vásárlás előtti méretválasztási tanácsadás (Fit & Sizing Intelligence).
+- **Fő fájlok:** `.agents/skills/brand-sizing-auditor/SKILL.md`, `src/services/webshop.js`, `src/services/gemini.js`, `src/components/profile/StyleDNAView.jsx`, `src/components/advisor/PurchaseAdvisorView.jsx`
+- **Szabályok:** Kanonizált márkanévtér (`normalizeBrandName`), szabási eltérések detektálása (`fitMismatchWarning`), konkrét méretválasztási javaslat (`sizingAdvice`).
+
 ---
 
 ## ⚡ Minőségi & Sebesség-szabályok
