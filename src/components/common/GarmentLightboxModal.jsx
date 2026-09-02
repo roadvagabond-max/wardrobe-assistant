@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Sparkles, Tag, ShieldCheck, Layers, Grid, Maximize2, Feather, Calendar } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Sparkles, Tag, ShieldCheck, Layers, Grid, Maximize2, Feather, Calendar, RefreshCw } from 'lucide-react';
 
 export default function GarmentLightboxModal({ 
   items = [], 
@@ -7,7 +7,8 @@ export default function GarmentLightboxModal({
   isOpen, 
   onClose, 
   outfitTitle = '',
-  defaultView = null
+  defaultView = null,
+  onSwapItem = null
 }) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [viewMode, setViewMode] = useState('lookbook'); // 'lookbook' | 'single'
@@ -177,9 +178,26 @@ export default function GarmentLightboxModal({
                   </div>
 
                   <div className="space-y-1">
-                    <h5 className="text-xs font-semibold text-white line-clamp-1 group-hover:text-[var(--accent-gold-light)] transition-colors">
-                      {itm.name}
-                    </h5>
+                    <div className="flex items-center justify-between gap-1">
+                      <h5 className="text-xs font-semibold text-white truncate flex-1 min-w-0 group-hover:text-[var(--accent-gold-light)] transition-colors">
+                        {itm.name}
+                      </h5>
+                      {onSwapItem && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onClose();
+                            onSwapItem(itm);
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-[var(--accent-gold)]/20 hover:bg-[var(--accent-gold)] text-[var(--accent-gold)] hover:text-black border border-[var(--border-gold)]/50 text-[9px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-xs active:scale-95 transition-all"
+                          title={`Darab cseréje (${itm.name})`}
+                        >
+                          <RefreshCw className="w-2.5 h-2.5" />
+                          <span>Csere</span>
+                        </button>
+                      )}
+                    </div>
                     <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                       <span className="truncate max-w-[100px]">{itm.brand || itm.category}</span>
                       {itm.size && <span className="font-mono font-bold text-[var(--accent-gold)]">{itm.size}</span>}
@@ -203,7 +221,7 @@ export default function GarmentLightboxModal({
               <div className="w-full aspect-[4/3] sm:aspect-square max-h-[38vh] sm:max-h-[46vh] rounded-2xl overflow-hidden bg-[#12100e] border border-white/10 p-3 sm:p-4 flex items-center justify-center relative shadow-inner group">
                 <img 
                   src={currentItem.imageUrl} 
-                  alt={currentItem.name}
+                  alt={currentItem.name} 
                   width="400"
                   height="300"
                   className="max-h-full max-w-full object-contain rounded-xl drop-shadow-2xl transition-transform duration-300 group-hover:scale-105"
@@ -346,6 +364,23 @@ export default function GarmentLightboxModal({
                       #{tag}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {/* Garment Swap Action Button in Single View */}
+              {onSwapItem && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onSwapItem(currentItem);
+                    }}
+                    className="btn-gold w-full py-2.5 text-xs font-bold flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Ruha cseréje ebben a szettben</span>
+                  </button>
                 </div>
               )}
 

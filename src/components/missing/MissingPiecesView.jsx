@@ -107,10 +107,10 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
             loadGaps(true);
           }}
           disabled={isLoading}
-          className="btn-secondary text-xs self-start sm:self-center flex items-center gap-1.5"
+          className="btn-secondary text-xs self-start sm:self-center flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[var(--accent-gold)]' : ''}`} />
-          <span>Újraelemzés</span>
+          <span>{isLoading ? 'Elemzés folyamatban...' : 'Újraelemzés'}</span>
         </button>
       </div>
 

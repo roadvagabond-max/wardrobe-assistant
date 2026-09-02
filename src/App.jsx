@@ -14,10 +14,33 @@ import SettingsModal from './components/settings/SettingsModal';
 import { fetchCurrentWeather } from './services/weather';
 import { useAuth } from './context/AuthContext';
 
+const VALID_TABS = ['wardrobe', 'stylist', 'advisor', 'missing', 'profile'];
+
+const getInitialTab = () => {
+  try {
+    const hash = window.location.hash.replace('#', '').trim();
+    if (VALID_TABS.includes(hash)) return hash;
+    const saved = localStorage.getItem('sartorial_active_tab');
+    if (VALID_TABS.includes(saved)) return saved;
+  } catch (_) {}
+  return 'wardrobe';
+};
+
 export default function App() {
   const { wardrobe, addItem } = useAuth();
-  const [activeTab, setActiveTab] = useState('wardrobe');
+  const [activeTab, setActiveTabState] = useState(getInitialTab);
   const [weather, setWeather] = useState(null);
+
+  const setActiveTab = (tab) => {
+    if (!VALID_TABS.includes(tab)) return;
+    setActiveTabState(tab);
+    try {
+      localStorage.setItem('sartorial_active_tab', tab);
+      if (window.location.hash !== `#${tab}`) {
+        window.history.replaceState(null, document.title, `#${tab}`);
+      }
+    } catch (_) {}
+  };
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -26,6 +49,21 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [initialAnchorItem, setInitialAnchorItem] = useState(null);
   const [advisorPrefill, setAdvisorPrefill] = useState(null);
+
+  // Sync hash changes (e.g. mobile back button or direct bookmark)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (VALID_TABS.includes(hash)) {
+        setActiveTabState(hash);
+        try {
+          localStorage.setItem('sartorial_active_tab', hash);
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Load weather initially & detect Web Share Target query params (?url=..., ?text=...)
   useEffect(() => {
@@ -58,7 +96,7 @@ export default function App() {
         setActiveTab('advisor');
 
         // Clean up URL query params from address bar
-        const cleanUrl = window.location.pathname + window.location.hash;
+        const cleanUrl = window.location.pathname + `#advisor`;
         window.history.replaceState({}, document.title, cleanUrl);
       }
     } catch (e) {
@@ -96,8 +134,8 @@ export default function App() {
       {/* Desktop Tabs */}
       <DesktopTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      {/* Main Content Area with BottomNav clearance padding */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-28 sm:pb-24">
         {activeTab === 'wardrobe' && (
           <WardrobeView
             onAddNewItem={() => setIsAddModalOpen(true)}

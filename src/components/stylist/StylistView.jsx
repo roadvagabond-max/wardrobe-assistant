@@ -97,16 +97,18 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     items: [],
     initialIndex: 0,
     outfitTitle: '',
-    defaultView: 'lookbook'
+    defaultView: 'lookbook',
+    outfitContext: null // { outfitIndex, outfit }
   });
 
-  const openLightbox = (items, initialIndex = 0, outfitTitle = '', defaultView = 'lookbook') => {
+  const openLightbox = (items, initialIndex = 0, outfitTitle = '', defaultView = 'lookbook', outfitContext = null) => {
     setLightboxData({
       isOpen: true,
       items: items || [],
       initialIndex: initialIndex >= 0 ? initialIndex : 0,
       outfitTitle: outfitTitle || '',
-      defaultView: items && items.length > 1 ? defaultView : 'single'
+      defaultView: items && items.length > 1 ? defaultView : 'single',
+      outfitContext: outfitContext || null
     });
   };
 
@@ -701,7 +703,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                           {/* Lookbook Fullscreen Inspector Button */}
                           <button
                             type="button"
-                            onClick={() => openLightbox(outfit.items, 0, outfit.title)}
+                            onClick={() => openLightbox(outfit.items, 0, outfit.title, 'lookbook', { outfitIndex: index, outfit })}
                             className="p-2 rounded-xl bg-white/5 text-[var(--text-secondary)] hover:text-white hover:bg-white/10 transition-all"
                             title="Szett megtekintése nagyban (Lookbook)"
                           >
@@ -742,10 +744,10 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                           return (
                             <div 
                               key={iIdx} 
-                              className="space-y-1 group relative"
+                              className="space-y-1.5 group relative"
                             >
                               <div 
-                                onClick={() => openLightbox(outfit.items, iIdx, outfit.title)}
+                                onClick={() => openLightbox(outfit.items, iIdx, outfit.title, 'lookbook', { outfitIndex: index, outfit })}
                                 className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] border border-white/10 group-hover:border-[var(--accent-gold)] p-1 flex items-center justify-center relative transition-all cursor-pointer"
                               >
                                 <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="160" height="120" style={{ aspectRatio: '4 / 3' }} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
@@ -755,21 +757,24 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                                   {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') ? '🎗️ Öv' : item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Kiegészítő'}
                                 </span>
 
-                                {/* Garment Swap / Replace Button in Top-Right */}
+                                {/* Garment Swap / Replace Button in Top-Right with clear touch area */}
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setItemSwapModal({ outfitIndex: index, item, outfit });
                                   }}
+                                  onTouchEnd={(e) => {
+                                    e.stopPropagation();
+                                  }}
                                   disabled={isThisSwapping}
-                                  className="absolute top-1 right-1 p-1.5 rounded-lg bg-black/80 hover:bg-[var(--accent-gold)] text-[var(--accent-gold)] hover:text-black border border-[var(--border-gold)]/50 opacity-90 group-hover:opacity-100 transition-all shadow-md z-10"
+                                  className="absolute top-1 right-1 w-7 h-7 rounded-lg bg-black/90 hover:bg-[var(--accent-gold)] text-[var(--accent-gold)] hover:text-black border border-[var(--border-gold)]/60 flex items-center justify-center shadow-lg transition-all z-20 active:scale-95 cursor-pointer"
                                   title={`Darab cseréje a szettben (${item.name})`}
                                 >
                                   {isThisSwapping ? (
-                                    <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-gold)]" />
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent-gold)]" />
                                   ) : (
-                                    <RefreshCw className="w-3 h-3" />
+                                    <RefreshCw className="w-3.5 h-3.5" />
                                   )}
                                 </button>
 
@@ -781,10 +786,11 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                                 )}
                               </div>
 
-                              <div className="flex items-center justify-between px-0.5 gap-1">
+                              {/* Title & Swap Action Row - min-w-0 prevents flexbox overflow on mobile */}
+                              <div className="flex items-center justify-between px-0.5 gap-1.5 min-w-0">
                                 <p 
-                                  onClick={() => openLightbox(outfit.items, iIdx, outfit.title)}
-                                  className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium group-hover:text-white transition-colors cursor-pointer flex-1"
+                                  onClick={() => openLightbox(outfit.items, iIdx, outfit.title, 'lookbook', { outfitIndex: index, outfit })}
+                                  className="text-[10px] text-[var(--text-secondary)] truncate font-medium group-hover:text-white transition-colors cursor-pointer flex-1 min-w-0"
                                   title={item.name}
                                 >
                                   {item.name}
@@ -795,9 +801,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                                     e.stopPropagation();
                                     setItemSwapModal({ outfitIndex: index, item, outfit });
                                   }}
-                                  className="text-[9px] text-[var(--accent-gold)] hover:underline shrink-0 font-semibold cursor-pointer"
+                                  disabled={isThisSwapping}
+                                  className="px-1.5 py-0.5 rounded bg-[var(--accent-gold)]/20 hover:bg-[var(--accent-gold)] text-[var(--accent-gold)] hover:text-black border border-[var(--border-gold)]/50 text-[9px] font-bold flex items-center gap-1 shrink-0 cursor-pointer shadow-xs active:scale-95 transition-all"
+                                  title={`Ruha cseréje (${item.name})`}
                                 >
-                                  Csere
+                                  <RefreshCw className="w-2.5 h-2.5" />
+                                  <span>Csere</span>
                                 </button>
                               </div>
                             </div>
@@ -1506,6 +1515,11 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         initialIndex={lightboxData.initialIndex}
         outfitTitle={lightboxData.outfitTitle}
         defaultView={lightboxData.defaultView}
+        onSwapItem={lightboxData.outfitContext ? (item) => setItemSwapModal({ 
+          outfitIndex: lightboxData.outfitContext.outfitIndex, 
+          item, 
+          outfit: lightboxData.outfitContext.outfit 
+        }) : null}
       />
 
     </div>
