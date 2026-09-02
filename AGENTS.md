@@ -4,6 +4,21 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** alkalmazás agent archite
 
 ---
 
+## 🛑 KÖTELEZŐ ÉRVÉNYŰ SZABÁLYOK AZ EGÉSZ PROJEKTRE (GOLDEN RULES)
+
+1. **Szigorúan Tilos Önhatalmú Funkció- és Logika-Módosítás:**
+   - **Kifejezett felhasználói utasítás nélkül TILOS bármilyen meglévő funkciót átalakítani, lecserélni vagy megváltoztatni!**
+   - **Szigorúan TILOS heurisztikus, mock, szimulált vagy nem-AI alapú "fallback" megoldásokat építeni az alkalmazásba.**
+   - Minden elemzésnek és generálásnak **100%-ban valódi Google Gemini neurális modellen** kell futnia.
+
+2. **Tiszta Hibakezelés (Zero Mock Guarantee):**
+   - Ha egy API hívás sikertelen (pl. lejárt kulcs, hálózati hiba, 401 Auth Error), a rendszer a valós hibát jelzi a felhasználónak. Szigorúan tilos a háttérben kamu szetteket vagy kitalált válaszokat generálni az AI helyett!
+
+3. **AQ. Kezdetű Kulcsok Teljes Jogúsága:**
+   - Az `AQ...` formátumú Google Antigravity / Gemini kulcsok a rendszer hivatalos kulcsai. Tilos bármilyen prefix-szűrést (`startsWith('AIzaSy')`, `!startsWith('AQ.')`) vagy kulcstörlést alkalmazni.
+
+---
+
 ## 🏛️ Rendszer Áttekintés & Architektúra
 
 A **Sartorial Wardrobe Assistant** egy modern, mesterséges intelligenciával támogatott személyes stílustanácsadó és ruhatár-menedzsment rendszer. Az alkalmazás célja az önazonos, kifinomult öltözködés támogatása, a kapszula ruhatár tudatos építése és az impulzusvásárlások megelőzése.
