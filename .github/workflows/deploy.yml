@@ -6,13 +6,6 @@ on:
       - main
   workflow_dispatch:
 
-permissions:
-  contents: read
-  checks: write
-  id-token: write
-  deployments: write
-  pull-requests: write
-
 concurrency:
   group: 'deploy-firebase'
   cancel-in-progress: false
@@ -27,20 +20,18 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
-        run: npm install --include=dev
+        run: npm install --legacy-peer-deps
 
       - name: Build project
-        run: npx vite build
+        run: npm run build
 
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
-          channelId: live
-          projectId: wardrobe-assistant-48e01
-
-
+        run: |
+          cat << 'EOF' > "$RUNNER_TEMP/firebase-key.json"
+          ${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}
+          EOF
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-key.json"
+          npx --yes firebase-tools deploy --only hosting --project wardrobe-assistant-48e01 --non-interactive
