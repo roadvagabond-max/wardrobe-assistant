@@ -373,6 +373,97 @@ export async function loadSartorialRulesFromCloud(uid) {
 }
 
 /**
+ * Constructs targeted, style-grounded sartorial mining topics based on the user's
+ * explicit Style DNA (preferredStyles, dislikedStyles, custom rules, gender) AND
+ * their actual wardrobe distribution (dominant garment categories and style archetypes).
+ */
+export function constructPersonalizedMiningTopics(styleProfile = {}, wardrobe = [], customFocus = '') {
+  if (customFocus && customFocus.trim()) {
+    return customFocus.trim();
+  }
+
+  const preferredStyles = Array.isArray(styleProfile?.preferredStyles) && styleProfile.preferredStyles.length > 0
+    ? styleProfile.preferredStyles
+    : ['Klasszikus & Időtlen', 'Olasz Sprezzatura'];
+
+  const customRules = Array.isArray(styleProfile?.customStylingRules)
+    ? styleProfile.customStylingRules
+    : [];
+
+  // Analyze wardrobe counts & dominant archetypes
+  const categoryCounts = (wardrobe || []).reduce((acc, item) => {
+    const cat = item.category || 'other';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {});
+
+  const archetypeCounts = (wardrobe || []).reduce((acc, item) => {
+    if (item.styleArchetype) {
+      acc[item.styleArchetype] = (acc[item.styleArchetype] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const dominantArchetypes = Object.entries(archetypeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(e => e[0]);
+
+  // Combine explicit preferred styles with wardrobe's dominant archetypes
+  const allActiveStyles = Array.from(new Set([...preferredStyles, ...dominantArchetypes]));
+
+  const topics = [];
+
+  // 1. Classic Menswear / Sprezzatura / Old Money
+  if (allActiveStyles.some(s => s.includes('Klasszikus') || s.includes('Sprezzatura') || s.includes('Old Money') || s.includes('Quiet Luxury'))) {
+    topics.push(`- Classic Menswear, Italian Sprezzatura & Quiet Luxury tailoring etiquette:
+  * Pocket square independence rules (Drake's London, Simon Crompton: pocket square must never match tie pattern/fabric directly)
+  * Suit jacket sleeve length, shirt cuff exposure (1.0 - 1.5 cm cuff rule) and double breasted vs single breasted buttoning
+  * Trouser break proportions (No Break for loafers and monkstraps vs Half Break for Oxfords and Derbies - Crockett & Jones, Edward Green)
+  * Lapel width vs tie width vs collar point proportions (Savile Row & Milanese tailoring standard)
+  * Sock color rules with tailored trousers (matching trouser tone vs contrast, no white socks with suits, invisible socks with loafers)`);
+  }
+
+  // 2. Smart Urban / Minimalist
+  if (allActiveStyles.some(s => s.includes('Smart Urban') || s.includes('Minimalista'))) {
+    topics.push(`- Smart Urban & Minimalist contemporary tailoring & casual smart layering:
+  * Shacket / Overshirt layering rules (crewneck t-shirt or merino turtleneck base vs collar clash prevention - Die Workwear)
+  * Monochromatic tonal layering and contrast ratio (Alan Flusser & Scandinavian minimalist tailoring)
+  * Tailored relaxed trousers with minimalist leather sneakers (hem length, ankle exposure, clean silhouette balance)
+  * Fine-gauge knitwear layering under unstructured jackets and lightweight blousons`);
+  }
+
+  // 3. Streetwear / Vintage / Retro
+  if (allActiveStyles.some(s => s.includes('Streetwear') || s.includes('Vintage') || s.includes('Retro'))) {
+    topics.push(`- Streetwear, Heritage & Vintage silhouette and texture balance:
+  * Heavyweight hoodie under wool overcoat proportions and collar drape
+  * Wide-leg / relaxed pant break with chunky loafers, boots and retro sneakers
+  * Boxy overshirt vs fitted base layer volume balance and raw denim care`);
+  }
+
+  // 4. Womenswear (Dresses, Skirts, or Female profile)
+  const hasWomenswear = (categoryCounts.dresses > 0 || categoryCounts.skirts > 0 || (styleProfile?.title || '').toLowerCase().includes('női') || (styleProfile?.name || '').toLowerCase().includes('nő'));
+  if (hasWomenswear || allActiveStyles.some(s => s.toLowerCase().includes('női') || s.toLowerCase().includes('chic') || s.toLowerCase().includes('french'))) {
+    topics.push(`- Womenswear proportions, neckline and silhouette balance (Vogue Styling Masterclass, Harper's Bazaar):
+  * Midi/maxi dress layering with cropped structured blazers and waist belt positioning
+  * Boatneck, asymmetric neckline and pussy-bow blouse layering without bunched collars
+  * Shoe vamp depth, pointed vs rounded toe proportions with wide-leg vs tapered trousers`);
+  }
+
+  // 5. Universal Leather & Metal and Fabric Synergy
+  topics.push(`- Universal fabric synergy & hardware coordination:
+  * Leather tone matching (shoe and belt color harmony: cognac with cognac, black with black, espresso with dark brown)
+  * Metal hardware harmony (watch case, belt buckle, metal buttons: silver/steel with silver, brass/gold with warm tones)
+  * Worsted wool vs denim/linen texture compatibility (Loro Piana fabric synergy code: avoid high-shine Super 130s jackets with rough denim)`);
+
+  // 6. User's specific negative constraints / prohibitions
+  if (customRules.length > 0) {
+    topics.push(`- Custom personal style constraints to respect: ${customRules.join('; ')}`);
+  }
+
+  return topics.join('\n\n');
+}
+
+/**
  * Get formatted rules for Gemini prompts
  */
 export function formatRulesForPrompt(category = null) {
@@ -380,60 +471,65 @@ export function formatRulesForPrompt(category = null) {
   const filtered = category ? allRules.filter(r => r.category === category) : allRules;
 
   return filtered.map((r, idx) => {
-    return `${idx + 1}. [${r.title}]: ❌ TILTOTT: ${r.dont} | ✅ HELYES: ${r.do} (${r.ruleDescription})`;
+    const styleTag = r.targetStyles && r.targetStyles.length > 0 ? ` [${r.targetStyles.join(', ')}]` : '';
+    return `${idx + 1}. [${r.title}]${styleTag}: ❌ TILTOTT: ${r.dont} | ✅ HELYES: ${r.do} (${r.ruleDescription})`;
   }).join('\n');
 }
 
 /**
  * Autonomous Web-Grounded Sartorial Intelligence Miner
  * Uses Google Gemini 3.x with Google Search Grounding to discover real-world sartorial rules
+ * grounded in the user's specific Style DNA and wardrobe makeup.
  */
-export async function mineSartorialRulesFromWeb({ apiKey = null, userUid = null, focusTopic = '' } = {}) {
+export async function mineSartorialRulesFromWeb({ 
+  apiKey = null, 
+  userUid = null, 
+  styleProfile = null, 
+  wardrobe = [], 
+  focusTopic = '' 
+} = {}) {
   const key = apiKey || getGeminiApiKey();
   if (!key) {
     throw new Error('Nincs érvényes Gemini API kulcs a webes szabálykutatáshoz!');
   }
 
   const currentRules = getStoredSartorialRules();
+  const searchTopics = constructPersonalizedMiningTopics(styleProfile, wardrobe, focusTopic);
 
-  const searchTopics = focusTopic || `
-- Classic and modern bespoke tailoring layering rules (Savile Row, Milanese tailoring, Pitti Uomo, Die Workwear, Permanent Style)
-- Menswear collar vs lapel vs knitwear pairing mistakes (stand collar, mandarin collar, turtleneck, crewneck, shacket overshirt)
-- Trouser break proportions (No Break vs Quarter Break vs Full Break) with loafers, monkstraps, derbies and oxfords (Crockett & Jones, Edward Green, Parisian Gentleman)
-- Sock etiquette (trouser-matching, white sock prohibition with suits, invisible socks with loafers)
-- Leather & metal coordination (shoe and belt tone matching, watch metal vs belt buckle harmony, black vs brown separation)
-- Three-color rule and contrast ratio in tailoring (Alan Flusser, Johannes Itten color theory)
-- Worsted wool vs denim/tweed texture pairing (Loro Piana fabric synergy, GSM weight balance, suede weather protection)
-- Blazer buttoning etiquette (always-never rule) and independent pocket square styling (Drake's London, Rubinacci)
-- Womenswear neckline, collar, sleeve layering and silhouette volume balance rules (Vogue Styling Masterclass, Harper's Bazaar)
-`;
+  const activeStylesList = Array.isArray(styleProfile?.preferredStyles) && styleProfile.preferredStyles.length > 0
+    ? styleProfile.preferredStyles.join(', ')
+    : 'Klasszikus & Időtlen, Olasz Sprezzatura, Smart Urban';
 
   const prompt = `Te egy világklasszis Sartorial Kutató és Szabályalkotó AI vagy (Master Sartorial Intelligence & Rule Mining Engine).
-A FELADATOD: Használd a Google Keresést, és kutass fel 4–7 VALÓDI, MEGDÖNTHETETLEN, AUTENTIKUS szabászati és stílusszabályt a nemzetközi divat- és szabászat-tudományból (férfi és női öltözködés vegyesen)!
+A FELADATOD: Használd a Google Keresést, és kutass fel 4–7 VALÓDI, MEGDÖNTHETETLEN, AUTENTIKUS szabászati és stílusszabályt a nemzetközi divat- és szabászat-tudományból, KIFEJEZETTEN a felhasználó alábbi stílusprofiljához és ruhatári összetételéhez igazítva!
 
-KUTATÁSI FÓKUSZ:
+FELHASZNÁLÓ STÍLUSPROFILJA & PREFERENCIÁI:
+${activeStylesList}
+
+KUTATÁSI FÓKUSZ & TÉMAKÖRÖK:
 ${searchTopics}
 
 SZABÁLYKÖVETELMÉNYEK:
-1. Konkrét, strukturális és esztétikai DOs and DONTs (ne általános közhelyek legyenek, hanem pontos gallér-, ujj-, sziluett-, arány-, cipő-, zokni-, fém- vagy anyag-szabályok)!
-2. Keress olyan szabályokat is, amelyek a rétegezés fizikai/geometriai hibáit (pl. gyűrődés, kettős ujjvég, gallér-összeakadás, aránytalan sziluett, hibás gombolás) küszöbölik ki!
+1. Konkrét, strukturális és esztétikai DOs and DONTs (ne általános közhelyek legyenek, hanem pontos gallér-, ujj-, sziluett-, arány-, cipő-, zokni-, díszzsebkendő-, fém- vagy anyag-szabályok)!
+2. A szabályok illeszkedjenek a felhasználó stílusirányzataihoz (pl. elegáns férfinál díszzsebkendő, nadrághossz, zakógombok; női chic-nél midi ruha, blézer, dekoltázs; smart urban-nél overshirt, monokróm rétegzés)!
 3. Megbízható forrásokat jelölj meg (pl. Bespoke Tailoring Guides, Savile Row Code, Vogue Styling Masterclass, Pitti Uomo Standards, Die Workwear, Permanent Style, Crockett & Jones, Parisian Gentleman, Drake's London).
 
 A MEGLÉVŐ SZABÁLYAINK (${currentRules.length} db):
-${currentRules.slice(0, 10).map(r => `• ${r.title}`).join('\n')}
+${currentRules.slice(0, 12).map(r => `• ${r.title}`).join('\n')}
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
 [
   {
-    "id": "egyedi-angol-azonosito (pl. rule-crewneck-shirt-collar-proportions)",
-    "category": "collar_harmony" | "sleeve_hierarchy" | "silhouette_balance" | "fabric_synergy" | "womenswear_specific" | "footwear_and_proportions",
-    "title": "Tömör, kifejező magyar cím (pl. 'Inggallér és kereknyakú pulóver aránya')",
-    "ruleDescription": "Részletes szakmai indoklás arról, miért működik így a rétegezés vagy szabás",
+    "id": "egyedi-angol-azonosito (pl. rule-pocket-square-independence)",
+    "category": "collar_harmony" | "sleeve_hierarchy" | "silhouette_balance" | "fabric_synergy" | "color_and_contrast" | "footwear_and_proportions" | "leather_and_metals" | "finishing_touches" | "womenswear_specific",
+    "title": "Tömör, kifejező magyar cím (pl. 'Díszzsebkendő és nyakkendő függetlenségi szabálya')",
+    "ruleDescription": "Részletes szakmai indoklás arról, miért működik így a rétegezés, szabás vagy kiegészítő",
     "dont": "Konkrétan mi a hiba / tiltott összeállítás (❌ Don't)",
     "do": "Konkrétan mi a helyes és elegáns viselési mód (✅ Do)",
+    "targetStyles": ["Klasszikus & Időtlen", "Olasz Sprezzatura", "Old Money & Quiet Luxury"],
     "gender": "universal" | "menswear_specific" | "womenswear_specific",
     "severity": "strict" | "high" | "moderate",
-    "source": "A forrás vagy stílusirányzat neve (pl. Permanent Style & Savile Row Bespoke Code)"
+    "source": "A forrás vagy stílusirányzat neve (pl. Drake's London & Permanent Style Sartorial Code)"
   }
 ]`;
 
@@ -444,7 +540,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
       tools: [{ googleSearch: {} }],
       preferredModels: FAST_MODELS,
       temperature: 0.2,
-      timeoutMs: 25000
+      timeoutMs: 28000
     });
 
     if (Array.isArray(parsed) && parsed.length > 0) {
@@ -455,6 +551,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
         ruleDescription: item.ruleDescription || '',
         dont: item.dont || '',
         do: item.do || '',
+        targetStyles: Array.isArray(item.targetStyles) ? item.targetStyles : [activeStylesList.split(',')[0].trim()],
         gender: item.gender || 'universal',
         severity: item.severity || 'high',
         source: item.source ? `🌐 ${item.source}` : '🌐 Web Research (Google Search Grounded)',
@@ -467,7 +564,6 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
       currentRules.forEach(r => existingMap.set(r.id, r));
       
       newDiscoveredRules.forEach(r => {
-        // If not matching any existing title loosely
         const exists = currentRules.some(ex => 
           ex.title.toLowerCase().includes(r.title.toLowerCase().slice(0, 15)) ||
           r.title.toLowerCase().includes(ex.title.toLowerCase().slice(0, 15))
@@ -498,8 +594,9 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
 
 /**
  * Check if 7 days have passed since last mining, and if so, run background mining
+ * with the user's active Style Profile and Wardrobe context.
  */
-export async function checkAndAutoSyncSartorialRules(userUid = null) {
+export async function checkAndAutoSyncSartorialRules(userUid = null, styleProfile = null, wardrobe = []) {
   try {
     const lastMining = localStorage.getItem(STORAGE_KEY_LAST_MINING);
     const now = Date.now();
@@ -513,9 +610,9 @@ export async function checkAndAutoSyncSartorialRules(userUid = null) {
 
     const lastTime = new Date(lastMining).getTime();
     if (now - lastTime >= AUTO_SYNC_INTERVAL_MS) {
-      console.log(`Sartorial Auto-Sync: Eltelt 7 nap (${Math.round((now - lastTime) / (24 * 3600 * 1000))} nap), automatikus webes kutatás indítása a háttérben...`);
-      const res = await mineSartorialRulesFromWeb({ userUid });
-      console.log(`Sartorial Auto-Sync: Sikeres! +${res.newRulesCount} új szabály kutatva és beépítve.`);
+      console.log(`Sartorial Auto-Sync: Eltelt 7 nap (${Math.round((now - lastTime) / (24 * 3600 * 1000))} nap), személyre szabott webes kutatás indítása a háttérben...`);
+      const res = await mineSartorialRulesFromWeb({ userUid, styleProfile, wardrobe });
+      console.log(`Sartorial Auto-Sync: Sikeres! +${res.newRulesCount} új személyre szabott szabály kutatva és beépítve.`);
       return res;
     } else {
       const daysLeft = Math.ceil((AUTO_SYNC_INTERVAL_MS - (now - lastTime)) / (24 * 3600 * 1000));

@@ -131,7 +131,7 @@ export function AuthProvider({ children }) {
       try {
         const loaded = await loadSartorialRulesFromCloud(currentUser?.uid);
         if (loaded) setSartorialRules(loaded);
-        const res = await checkAndAutoSyncSartorialRules(currentUser?.uid);
+        const res = await checkAndAutoSyncSartorialRules(currentUser?.uid, profile, wardrobe);
         if (res && res.success) {
           setSartorialRules(getStoredSartorialRules());
         }
@@ -331,6 +331,8 @@ export function AuthProvider({ children }) {
     try {
       const res = await mineSartorialRulesFromWeb({ 
         userUid: currentUser?.uid,
+        styleProfile: profile,
+        wardrobe,
         focusTopic 
       });
       setSartorialRules(getStoredSartorialRules());

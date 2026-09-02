@@ -33,9 +33,16 @@ Ez a skill a sartorial stílusszabályok, rétegezési normák, szín- és fémt
 ---
 
 ## 🔄 Munkafolyamatok:
-1. **Google Search Grounding Kutatás (`mineSartorialRulesFromWeb`):**
-   - A Gemini 3.x `tools: [{ googleSearch: {} }]` motorjával élőben kutat fel új, autentikus szabályokat strukturált JSON formátumban (❌ TILTOTT / ✅ HELYES, indoklás, forrás).
-2. **7-Napos Ciklikus Háttér-Szinkronizáció (`checkAndAutoSyncSartorialRules`):**
-   - 7 naponta automatikusan lefut a háttérben, intelligensen deduplikál, és frissíti a Cloud Firestore / LocalStorage szabálytárat.
-3. **Keresztfunkciós Alkalmazás:**
-   - Minden aktív szabály azonnal beépül az Outfit Generátorba, a Manuális Auditba, a Vásárlási Döntéstámogatóba és a Master Stylist Chatbe.
+1. **Személyre Szabott Stílus & Ruhatár Grounding (`constructPersonalizedMiningTopics`):**
+   - A rendszer a felhasználó explicit Stílus DNS-éből (`preferredStyles`, `stylePhilosophy`, `customStylingRules`, `gender`/`bodyType`) és a ruhatár valós darabjainak eloszlásából (`item.styleArchetype`, kategóriák) állítja össze a Google Search Grounding keresési fókuszait.
+   - **Több-stílusú párhuzamos lefedettség:**
+     * *Klasszikus & Sprezzatura:* Díszzsebkendő függetlensége a nyakkendőtől, zakógombok etikája, nadrághossz törések (No Break loaferhez, Half Break oxfordhoz), gallér-hajtóka arányok.
+     * *Smart Urban & Minimalista:* Shacket / overshirt rétegzés (kereknyakú vagy garbó bázis), monokróm tónusharmóniák, letisztult sneaker-nadrág szár arányok.
+     * *Streetwear & Vintage:* Hoodie + gyapjúkabát arányok, boxy sziluettek és relaxed nadrágszárak.
+     * *Női Viselet & Chic:* Midi ruha + derékban szabott blézer, dekoltázs és nyaklánc arányok, pussy-bow és csónaknyak harmóniák.
+2. **Google Search Grounding Kutatás (`mineSartorialRulesFromWeb`):**
+   - A Gemini 3.x `tools: [{ googleSearch: {} }]` motorjával élőben kutat fel új, autentikus szabályokat strukturált JSON formátumban (❌ TILTOTT / ✅ HELYES, `targetStyles` stíluscímkék, indoklás, forrás).
+3. **7-Napos Ciklikus Háttér-Szinkronizáció (`checkAndAutoSyncSartorialRules`):**
+   - 7 naponta automatikusan lefut a háttérben, átveszi az aktuális profilt és ruhatárat, intelligensen deduplikál, és frissíti a Cloud Firestore / LocalStorage szabálytárat.
+4. **Keresztfunkciós Alkalmazás:**
+   - Minden aktív szabály azonnal beépül az Outfit Generátorba, a Manuális Auditba, a Vásárlási Döntéstámogatóba és a Master Stylist Chatbe, a generált esemény stílusához igazítva.

@@ -872,6 +872,38 @@ export default function StyleDNAView() {
               </button>
             </div>
 
+            {/* Style-Grounded Dynamic Mining Focus */}
+            <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-300/90 flex items-center gap-1.5">
+                  <span>🎯</span>
+                  <span>Személyre szabott kutatási fókusz a profilod alapján:</span>
+                </span>
+                <span className="text-[10px] text-[var(--text-muted)]">
+                  Dinamikus Multi-Stílus Grounding
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {(profile?.preferredStyles && profile.preferredStyles.length > 0
+                  ? profile.preferredStyles 
+                  : ['Klasszikus & Időtlen', 'Olasz Sprezzatura', 'Smart Urban']
+                ).map((st, sIdx) => (
+                  <button
+                    key={sIdx}
+                    type="button"
+                    onClick={() => {
+                      setCustomMiningTopic(`${st} szabászati és rétegezési szabályok`);
+                    }}
+                    className="text-[11px] py-1 px-2.5 rounded-lg bg-[var(--accent-gold)]/10 hover:bg-[var(--accent-gold)]/25 border border-[var(--border-gold)]/40 text-[var(--accent-gold-light)] hover:text-white transition-all flex items-center gap-1.5 group"
+                    title={`Kattints a kereséshez: ${st}`}
+                  >
+                    <span className="text-[10px] text-[var(--accent-gold)] group-hover:scale-110 transition-transform">✦</span>
+                    <span className="font-medium">{st}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Custom topic search bar */}
             <form onSubmit={handleMineRulesNow} className="flex gap-2">
               <input
@@ -1006,6 +1038,20 @@ export default function StyleDNAView() {
                             {rule.ruleDescription}
                           </p>
                         </div>
+
+                        {/* Target Styles Badges */}
+                        {Array.isArray(rule.targetStyles) && rule.targetStyles.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-0.5">
+                            {rule.targetStyles.map((ts, tsIdx) => (
+                              <span 
+                                key={tsIdx} 
+                                className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-200/90 font-medium"
+                              >
+                                ✦ {ts}
+                              </span>
+                            ))}
+                          </div>
+                        )}
 
                         {/* Dos & Don'ts */}
                         <div className="space-y-1 pt-0.5">

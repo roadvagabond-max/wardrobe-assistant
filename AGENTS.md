@@ -201,16 +201,18 @@ sequenceDiagram
 
 ---
 
-### 🌐 Workflow 10: Autonóm Sartorial Tudásbázis & 7-Napos Periodikus Webes Szabálykutató
-1. **Google Search Grounding Kutató Motor (`mineSartorialRulesFromWeb`):**
-   - A rendszer nemzetközi divatkódexekből és szabászati stílusirányzatokból (Savile Row, Pitti Uomo, Vogue, Permanent Style, Die Workwear, Crockett & Jones, Alan Flusser, Drake's London, Loro Piana) kinyeri az autentikus rétegezési, gallér-, ujj-, sziluett-, nadrágtörési (trouser break), zokni-, bőr-fém és 3-színes harmóniaszabályokat.
-2. **7-Napos Ciklikus Háttér-Szinkronizáció (`checkAndAutoSyncSartorialRules`):**
-   - 7 naponta automatikusan lefut a háttérben anélkül, hogy a felhasználói felületet lassítaná.
-   - Intelligensen deduplikál és frissíti a felhő/helyi szabálytárat.
-3. **Keresztfunkciós Alkalmazás:**
-   - Minden kutatott szabály azonnal beépül az összes döntési modulba (Outfit Generátor, Manuális Audit, Vásárlási Tanácsadó, Master Stylist Chat).
-4. **UI Szabálytár Hub (`StyleDNAView.jsx`):**
-   - Részletes szabálykártyák (❌ Don't / ✅ Do, forrás, dátum), kategóriaszűrés (Gallérok, Ujjak, Sziluettek, Anyagok, Színharmónia, Lábbelik & Hossz, Bőrök & Fémek, Gombolás & Kiegészítők, Női szabályok) és manuális kutatásindítás fókuszált témákkal.
+### 🌐 Workflow 10: Autonóm Stílus-DNS Vezérelt Szabálykutató (Style-Grounded Rule Mining)
+1. **Személyre Szabott Stílus- & Ruhatár-Grounding (`constructPersonalizedMiningTopics`):**
+   - A kutatómotor a felhasználó explicit Stílus DNS-éből (`preferredStyles`, `stylePhilosophy`, `customStylingRules`, `gender`/`bodyType`) és a gardrób valós darabjainak stílusmegoszlásából (`item.styleArchetype`) dinamikusan állítja össze a Google Search Grounding keresési fókuszait.
+   - Párhuzamosan több stílusirányzatot fed le: Klasszikus/Sprezzatura (díszzsebkendő függetlensége a nyakkendőtől, zakógombok, nadrághossz törések), Smart Urban/Minimalista (overshirt bázisrétegek, monokróm tónusok, sneaker harmónia), Streetwear/Vintage (hoodie + kabát arányok, boxy szabások) és Női Chic (midi ruha + blézer, derékövezés, dekoltázs).
+2. **Google Search Grounding Kutató Motor (`mineSartorialRulesFromWeb`):**
+   - A rendszer nemzetközi divatkódexekből és szabászati stílusirányzatokból (Savile Row, Pitti Uomo, Vogue, Permanent Style, Die Workwear, Crockett & Jones, Alan Flusser, Drake's London, Loro Piana) kinyeri az autentikus szabályokat és `targetStyles` stíluscímkékkel látja el őket.
+3. **7-Napos Ciklikus Háttér-Szinkronizáció (`checkAndAutoSyncSartorialRules`):**
+   - 7 naponta automatikusan lefut a háttérben, átveszi a frissülő ruhatárat és profilt, intelligensen deduplikál és frissíti a Cloud Firestore / LocalStorage szabálytárat.
+4. **Keresztfunkciós Alkalmazás:**
+   - Minden kutatott szabály azonnal beépül az összes döntési modulba (Outfit Generátor, Manuális Audit, Vásárlási Tanácsadó, Master Stylist Chat), a generált alkalom stílusához igazítva.
+5. **UI Szabálytár Hub (`StyleDNAView.jsx`):**
+   - Részletes szabálykártyák (❌ Don't / ✅ Do, `targetStyles` címkék, forrás, dátum), kategóriaszűrés, dinamikus stílusfókusz csempék és manuális kutatásindítás.
 
 ---
 
@@ -237,7 +239,7 @@ sequenceDiagram
 - **Fő fájlok:** `src/services/gemini.js`, `src/components/advisor/PurchaseAdvisorView.jsx`, `src/components/profile/StyleDNAView.jsx`
 
 ### 4. `sartorial-rule-miner`
-- **Cél:** Autonóm internetes szabálykutatás Google Search Groundinggal, 7 napos háttér-szinkronizáció, strukturált gallér-, ujj-, sziluett-, lábbeli-, nadrághossz-, szín- és fémtónus-szabályok kezelése.
+- **Cél:** Autonóm internetes szabálykutatás Google Search Groundinggal a felhasználó Stílus DNS-e és ruhatári összetétele alapján, 7 napos háttér-szinkronizáció, több-stílusú szabálycímkézés és rétegezési harmónia felügyelet.
 - **Fő fájlok:** `src/services/sartorialRules.js`, `src/context/AuthContext.jsx`, `src/components/profile/StyleDNAView.jsx`
 
 ### 5. `webshop-sku-engine`
