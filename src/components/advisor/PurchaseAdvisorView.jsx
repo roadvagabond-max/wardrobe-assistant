@@ -367,6 +367,9 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
             >
               <input
                 type="file"
+                id="advisor-camera-input"
+                name="advisorCamera"
+                aria-label="Fotó készítése próbafülkében"
                 accept="image/*"
                 capture="environment"
                 ref={cameraInputRef}
@@ -414,6 +417,9 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
             >
               <input
                 type="file"
+                id="advisor-file-input"
+                name="advisorFile"
+                aria-label="Fotó feltöltése galériából"
                 accept="image/*"
                 ref={fileInputRef}
                 onChange={handleFileChange}
@@ -433,7 +439,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           {activeTab === 'link' && !imagePreview && (
             <form onSubmit={handleLinkInput} className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                <label htmlFor="advisor-webshop-url-input" className="block text-xs font-medium text-[var(--text-secondary)]">
                   Webshop terméklink VAGY Cikkszám / Termékkód (Next, Zara, Reserved stb.):
                 </label>
                 <span className="text-[10px] text-[var(--accent-gold)] font-medium">SKU Keresés Aktív</span>
@@ -441,6 +447,9 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
               <div className="flex gap-2">
                 <input
                   type="text"
+                  id="advisor-webshop-url-input"
+                  name="advisorWebshopUrl"
+                  aria-label="Webshop terméklink vagy cikkszám"
                   required
                   placeholder="pl. https://www.nextdirect.com/... VAGY csak cikkszám pl. AA6536"
                   value={webshopUrl}
@@ -500,6 +509,8 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                   <img 
                     src={imagePreview} 
                     alt="Preview" 
+                    width="400"
+                    height="300"
                     onError={() => setImagePreview(null)}
                     className="max-h-full max-w-full object-contain rounded-xl shadow-lg" 
                   />
@@ -547,11 +558,14 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  <label htmlFor="advisor-item-name-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                     Megnevezés (opcionális):
                   </label>
                   <input
                     type="text"
+                    id="advisor-item-name-input"
+                    name="advisorItemName"
+                    aria-label="Megnevezés"
                     placeholder="pl. Zöld Slim Fit Lenkeverék Zakó"
                     value={itemName}
                     onChange={(e) => setItemName(e.target.value)}
@@ -560,11 +574,14 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  <label htmlFor="advisor-item-price-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                     Ár (opcionális):
                   </label>
                   <input
                     type="text"
+                    id="advisor-item-price-input"
+                    name="advisorItemPrice"
+                    aria-label="Ár"
                     placeholder="pl. 38 000 Ft"
                     value={itemPrice}
                     onChange={(e) => setItemPrice(e.target.value)}
@@ -875,6 +892,8 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                                 alt={item.name}
                                 loading="lazy"
                                 decoding="async"
+                                width="160"
+                                height="120"
                                 className="max-h-full max-w-full object-contain rounded group-hover:scale-105 transition-transform duration-300"
                               />
                               {isCandidateItem && (

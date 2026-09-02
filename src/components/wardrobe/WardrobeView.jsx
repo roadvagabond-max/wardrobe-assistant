@@ -100,6 +100,9 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <input
             type="text"
+            id="wardrobe-search-input"
+            name="wardrobe-search"
+            aria-label="Keresés a gardróbban"
             placeholder="Keresés szín, anyag, márka vagy stílus szerint (pl. 'lenvászon', 'sötétkék', 'loafer')..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -192,6 +195,8 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
                     alt={item.name}
                     loading="lazy"
                     decoding="async"
+                    width="320"
+                    height="240"
                     className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
                   />
                   

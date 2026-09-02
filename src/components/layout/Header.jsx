@@ -60,7 +60,7 @@ export default function Header({ onOpenSettings, onOpenAuth, weather }) {
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-all"
             >
               {currentUser.photoURL ? (
-                <img src={currentUser.photoURL} alt="Avatar" className="w-5 h-5 rounded-full object-cover" />
+                <img src={currentUser.photoURL} alt="Avatar" width="20" height="20" className="w-5 h-5 rounded-full object-cover" />
               ) : (
                 <User className="w-4 h-4" />
               )}

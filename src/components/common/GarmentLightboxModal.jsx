@@ -161,12 +161,12 @@ export default function GarmentLightboxModal({
                     setCurrentIndex(idx);
                     setViewMode('single');
                   }}
-                  className="cursor-pointer group p-3 rounded-2xl bg-[#1e1a16] border border-white/5 hover:border-[var(--border-gold)] hover:bg-[#25201b] transition-all flex flex-col justify-between shadow-sm hover:shadow-lg hover:shadow-black/40"
-                >
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-[#12100e] border border-white/5 p-2 flex items-center justify-center relative mb-2.5">
+                  className="cursor-pointer group p-3 rounded-2xl bg-[#1e1a16] border border-white/5 hover:border-[var(--border-gold)] hover:bg-[#25201b] transition-all flex flex-col justify-betwee                  <div className="aspect-[4/3] rounded-xl overflow-hidden bg-[#12100e] border border-white/5 p-2 flex items-center justify-center relative mb-2.5">
                     <img 
                       src={itm.imageUrl} 
                       alt={itm.name} 
+                      width="160"
+                      height="120"
                       className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300" 
                     />
                     <span className="absolute bottom-1.5 left-1.5 text-[9px] bg-black/85 backdrop-blur-md px-2 py-0.5 rounded-md text-white font-medium border border-white/10">
@@ -202,6 +202,8 @@ export default function GarmentLightboxModal({
                 <img 
                   src={currentItem.imageUrl} 
                   alt={currentItem.name}
+                  width="400"
+                  height="300"
                   className="max-h-full max-w-full object-contain rounded-xl drop-shadow-2xl transition-transform duration-300 group-hover:scale-105"
                 />
 
@@ -241,7 +243,8 @@ export default function GarmentLightboxModal({
                             : 'border-white/10 opacity-50 hover:opacity-100'
                         }`}
                       >
-                        <img src={itm.imageUrl} alt={itm.name} className="w-full h-full object-contain bg-[#12100e] rounded-lg" />
+                        <img src={itm.imageUrl} alt={itm.name} width="36" height="36" className="w-full h-full object-contain bg-[#12100e] rounded-lg" />
+                      </button>object-contain bg-[#12100e] rounded-lg" />
                       </button>
                     ))}
                   </div>

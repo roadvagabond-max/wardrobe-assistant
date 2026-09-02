@@ -83,6 +83,9 @@ export default function SettingsModal({ isOpen, onClose }) {
             </div>
             <input
               type="password"
+              id="settings-gemini-key-input"
+              name="geminiApiKey"
+              aria-label="Google Gemini API Kulcs"
               placeholder="AIzaSy..."
               value={geminiKey}
               onChange={(e) => setGeminiKey(e.target.value)}
@@ -106,9 +109,12 @@ export default function SettingsModal({ isOpen, onClose }) {
             </div>
 
             <div>
-              <label className="block text-[11px] text-[var(--text-muted)] mb-1">Firebase API Key</label>
+              <label htmlFor="settings-firebase-api-key" className="block text-[11px] text-[var(--text-muted)] mb-1">Firebase API Key</label>
               <input
                 type="text"
+                id="settings-firebase-api-key"
+                name="firebaseApiKey"
+                aria-label="Firebase API Key"
                 placeholder="AIzaSy..."
                 value={firebaseApiKey}
                 onChange={(e) => setFirebaseApiKey(e.target.value)}
@@ -117,9 +123,12 @@ export default function SettingsModal({ isOpen, onClose }) {
             </div>
 
             <div>
-              <label className="block text-[11px] text-[var(--text-muted)] mb-1">Project ID</label>
+              <label htmlFor="settings-firebase-project-id" className="block text-[11px] text-[var(--text-muted)] mb-1">Project ID</label>
               <input
                 type="text"
+                id="settings-firebase-project-id"
+                name="firebaseProjectId"
+                aria-label="Firebase Project ID"
                 placeholder="wardrobe-assistant-123"
                 value={firebaseProjectId}
                 onChange={(e) => setFirebaseProjectId(e.target.value)}
@@ -128,9 +137,12 @@ export default function SettingsModal({ isOpen, onClose }) {
             </div>
 
             <div>
-              <label className="block text-[11px] text-[var(--text-muted)] mb-1">Auth Domain</label>
+              <label htmlFor="settings-firebase-auth-domain" className="block text-[11px] text-[var(--text-muted)] mb-1">Auth Domain</label>
               <input
                 type="text"
+                id="settings-firebase-auth-domain"
+                name="firebaseAuthDomain"
+                aria-label="Firebase Auth Domain"
                 placeholder="wardrobe-assistant-123.firebaseapp.com"
                 value={firebaseAuthDomain}
                 onChange={(e) => setFirebaseAuthDomain(e.target.value)}

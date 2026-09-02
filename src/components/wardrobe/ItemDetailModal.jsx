@@ -275,6 +275,8 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
                   alt="Preview" 
                   loading="lazy"
                   decoding="async"
+                  width="400"
+                  height="300"
                   className="max-h-full max-w-full object-contain rounded-lg" 
                 />
                 <div className="absolute bottom-3 right-3 flex items-center gap-2">
@@ -299,6 +301,9 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
                 </div>
                 <input 
                   type="file" 
+                  id="item-edit-photo-input"
+                  name="itemEditPhoto"
+                  aria-label="Ruha fotó módosítása"
                   accept="image/*" 
                   ref={photoInputRef} 
                   onChange={handlePhotoUpload} 
@@ -309,9 +314,12 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
 
             {/* Name */}
             <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Megnevezés:</label>
+              <label htmlFor="item-edit-name-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Megnevezés:</label>
               <input
                 type="text"
+                id="item-edit-name-input"
+                name="itemEditName"
+                aria-label="Megnevezés"
                 required
                 value={editData.name}
                 onChange={(e) => setEditData({ ...editData, name: e.target.value })}
@@ -322,8 +330,11 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
             {/* Category & Formality */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Kategória:</label>
+                <label htmlFor="item-edit-category-select" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Kategória:</label>
                 <select
+                  id="item-edit-category-select"
+                  name="itemEditCategory"
+                  aria-label="Kategória"
                   value={editData.category}
                   onChange={(e) => setEditData({ ...editData, category: e.target.value })}
                   className="custom-input text-xs"
@@ -340,8 +351,11 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Formalitás:</label>
+                <label htmlFor="item-edit-formality-select" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Formalitás:</label>
                 <select
+                  id="item-edit-formality-select"
+                  name="itemEditFormality"
+                  aria-label="Formalitás"
                   value={editData.formality}
                   onChange={(e) => setEditData({ ...editData, formality: e.target.value })}
                   className="custom-input text-xs"
@@ -356,9 +370,12 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
             {/* Brand & Size */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Gyártó / Márka:</label>
+                <label htmlFor="item-edit-brand-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Gyártó / Márka:</label>
                 <input
                   type="text"
+                  id="item-edit-brand-input"
+                  name="itemEditBrand"
+                  aria-label="Gyártó vagy Márka"
                   value={editData.brand}
                   onChange={(e) => setEditData({ ...editData, brand: e.target.value })}
                   className="custom-input text-xs"
@@ -367,9 +384,12 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Méret:</label>
+                <label htmlFor="item-edit-size-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Méret:</label>
                 <input
                   type="text"
+                  id="item-edit-size-input"
+                  name="itemEditSize"
+                  aria-label="Méret"
                   value={editData.size}
                   onChange={(e) => setEditData({ ...editData, size: e.target.value })}
                   className="custom-input text-xs font-mono"
@@ -381,9 +401,12 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
             {/* Color & Material */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Anyag:</label>
+                <label htmlFor="item-edit-material-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Anyag:</label>
                 <input
                   type="text"
+                  id="item-edit-material-input"
+                  name="itemEditMaterial"
+                  aria-label="Anyagösszetétel"
                   value={editData.material}
                   onChange={(e) => setEditData({ ...editData, material: e.target.value })}
                   className="custom-input text-xs"
@@ -401,8 +424,11 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
 
             {/* Condition */}
             <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Állapot:</label>
+              <label htmlFor="item-edit-condition-select" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Állapot:</label>
               <select
+                id="item-edit-condition-select"
+                name="itemEditCondition"
+                aria-label="Állapot"
                 value={editData.condition}
                 onChange={(e) => setEditData({ ...editData, condition: e.target.value })}
                 className="custom-input text-xs"
@@ -472,6 +498,8 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
                   alt={item.name || 'Ruhadarab'} 
                   loading="lazy" 
                   decoding="async" 
+                  width="500"
+                  height="375"
                   className="max-h-full max-w-full object-contain rounded-lg shadow-md" 
                 />
               ) : (

@@ -372,6 +372,9 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               <div className="flex items-center gap-2 self-end sm:self-center">
                 <span className="text-xs text-[var(--text-muted)]">Város:</span>
                 <select
+                  id="stylist-city-select"
+                  name="stylistCity"
+                  aria-label="Időjárás város kiválasztása"
                   value={selectedCity}
                   onChange={(e) => setSelectedCity(e.target.value)}
                   className="bg-black/60 border border-white/10 text-white text-xs rounded-lg px-2.5 py-1.5 outline-none focus:border-[var(--accent-gold)]"
@@ -404,7 +407,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 <div className="flex flex-wrap gap-2">
                   {anchorItems.map(item => (
                     <div key={item.id} className="flex items-center gap-2 p-2 rounded-xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-xs">
-                      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="w-7 h-7 rounded-lg object-contain bg-black" />
+                      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="28" height="28" className="w-7 h-7 rounded-lg object-contain bg-black" />
                       <span className="font-semibold text-white truncate max-w-[180px]">{item.name}</span>
                       <button
                         type="button"
@@ -451,6 +454,9 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               <div className="pt-2">
                 <input
                   type="text"
+                  id="stylist-custom-event-input"
+                  name="stylistCustomEvent"
+                  aria-label="Egyedi esemény megadása"
                   placeholder="Írj be bármit: pl. 'Holnap este elegáns vacsora', 'Szombat délután kerti parti 26 fokban'..."
                   value={customEvent}
                   onChange={(e) => setCustomEvent(e.target.value)}
@@ -562,7 +568,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                             className="space-y-1 group relative cursor-pointer"
                           >
                             <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] border border-white/10 group-hover:border-[var(--accent-gold)] p-1 flex items-center justify-center relative transition-all">
-                              <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300" />
+                              <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="160" height="120" className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-300" />
                               <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
                                 {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') ? '🎗️ Öv' : item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Kiegészítő'}
                               </span>
@@ -635,11 +641,14 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
             {/* Event & Weather Header for Manual Audit */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
+                <label htmlFor="manual-audit-event-input" className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                   Alkalom / Esemény:
                 </label>
                 <input
                   type="text"
+                  id="manual-audit-event-input"
+                  name="manualAuditEvent"
+                  aria-label="Alkalom vagy esemény megadása az audithoz"
                   placeholder="pl. Üzleti Tárgyalás, Randi, Színház, Laza Péntek..."
                   value={customEvent || selectedEvent}
                   onChange={(e) => {
@@ -700,7 +709,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                             className="w-14 h-14 rounded-xl overflow-hidden bg-[#06080e] p-1 shrink-0 border border-white/10 flex items-center justify-center cursor-pointer group"
                             title="Nagyítás"
                           >
-                            <img src={selected.imageUrl} alt={selected.name} className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform" />
+                            <img src={selected.imageUrl} alt={selected.name} width="160" height="120" className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <h5 className="text-xs font-bold text-white truncate">{selected.name}</h5>
@@ -837,7 +846,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                       className="cursor-pointer group p-1.5 rounded-xl bg-black/50 border border-white/10 hover:border-[var(--accent-gold)] transition-all text-left"
                     >
                       <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center relative mb-1">
-                        <img src={itm.imageUrl} alt={itm.name} className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform" />
+                        <img src={itm.imageUrl} alt={itm.name} width="160" height="120" className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform" />
                       </div>
                       <span className="text-[10px] text-white/90 line-clamp-1 font-medium group-hover:text-[var(--accent-gold)]">
                         {itm.name}
@@ -1016,7 +1025,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                       className="p-2.5 rounded-xl bg-black/40 border border-white/10 hover:border-[var(--accent-gold)] hover:bg-black/60 transition-all text-left group flex flex-col justify-between"
                     >
                       <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center mb-2">
-                        <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
+                        <img src={item.imageUrl} alt={item.name} width="160" height="120" className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-white line-clamp-1 group-hover:text-[var(--accent-gold)] transition-colors">
@@ -1074,7 +1083,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     }`}
                   >
                     <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center mb-1.5">
-                      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain" />
+                      <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="120" height="90" className="max-h-full max-w-full object-contain" />
                     </div>
                     <p className="text-[11px] font-medium text-white line-clamp-1">{item.name}</p>
                     <span className="text-[9px] text-[var(--text-muted)] block">{item.category}</span>

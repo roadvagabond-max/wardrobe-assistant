@@ -525,6 +525,9 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               >
                 <input 
                   type="file" 
+                  id="add-clothing-camera-input"
+                  name="clothingCamera"
+                  aria-label="Fotó készítése kamerával"
                   accept="image/*" 
                   capture="environment" 
                   ref={cameraInputRef} 
@@ -572,6 +575,9 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               >
                 <input 
                   type="file" 
+                  id="add-clothing-file-input"
+                  name="clothingFile"
+                  aria-label="Fotó feltöltése galériából"
                   accept="image/*" 
                   ref={fileInputRef} 
                   onChange={handleFileChange} 
@@ -591,7 +597,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             {activeMode === 'link' && (
               <form onSubmit={handleLinkImport} className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                  <label htmlFor="add-clothing-webshop-input" className="block text-xs font-medium text-[var(--text-secondary)]">
                     Webshop Terméklink VAGY Cikkszám / Termékkód (Next, Zara, Reserved stb.):
                   </label>
                   <span className="text-[10px] text-[var(--accent-gold)] font-medium">SKU Keresés Aktív</span>
@@ -599,6 +605,9 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 <div className="flex gap-2">
                   <input
                     type="text"
+                    id="add-clothing-webshop-input"
+                    name="clothingWebshopUrl"
+                    aria-label="Webshop terméklink vagy cikkszám"
                     required
                     placeholder="pl. https://www.nextdirect.com/... VAGY csak cikkszám pl. AA6536"
                     value={webshopUrl}
@@ -761,29 +770,23 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
               {/* Multi-Image Packshot Selector */}
               {availableImages.length > 1 && (
-                <div className="space-y-1.5 pt-1">
-                  <label className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                    <span>Válassz fotót a gardróbhoz (Kattints az izolált termékfotóra):</span>
-                  </label>
-                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">
+                    További képek a webshopból (kattints a kiválasztáshoz):
+                  </span>
+                  <div className="flex items-center gap-2 overflow-x-auto py-1">
                     {availableImages.map((imgUrl, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => setImagePreview(imgUrl)}
-                        className={`relative w-14 h-14 rounded-xl overflow-hidden bg-black/50 border shrink-0 transition-all ${
-                          imagePreview === imgUrl
-                            ? 'border-[var(--accent-gold)] ring-2 ring-[var(--accent-gold-glow)] scale-105'
-                            : 'border-white/10 opacity-70 hover:opacity-100'
+                        className={`w-14 h-14 rounded-xl overflow-hidden bg-[#07090e] border p-0.5 shrink-0 transition-all ${
+                          imagePreview === imgUrl 
+                            ? 'border-[var(--accent-gold)] ring-2 ring-[var(--accent-gold)]/40 scale-105' 
+                            : 'border-white/10 opacity-60 hover:opacity-100'
                         }`}
                       >
-                        <img src={imgUrl} alt={`Foto ${idx + 1}`} className="w-full h-full object-contain" />
-                        {imagePreview === imgUrl && (
-                          <div className="absolute inset-0 bg-[var(--accent-gold)]/20 flex items-center justify-center">
-                            <Check className="w-3.5 h-3.5 text-[var(--accent-gold)] drop-shadow" />
-                          </div>
-                        )}
+                        <img src={imgUrl} alt={`Foto ${idx + 1}`} width="100" height="75" className="w-full h-full object-contain" />
                       </button>
                     ))}
                   </div>
@@ -804,11 +807,14 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
             {/* 2. Item Name */}
             <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+              <label htmlFor="add-clothing-name-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                 Megnevezés:
               </label>
               <input
                 type="text"
+                id="add-clothing-name-input"
+                name="clothingName"
+                aria-label="Megnevezés"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -820,10 +826,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             {/* 3. Category & Formality */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                <label htmlFor="add-clothing-category-select" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Kategória:
                 </label>
                 <select
+                  id="add-clothing-category-select"
+                  name="clothingCategory"
+                  aria-label="Kategória"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="custom-input"
@@ -840,10 +849,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                <label htmlFor="add-clothing-formality-select" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Formalitási Szint (Dress Code):
                 </label>
                 <select
+                  id="add-clothing-formality-select"
+                  name="clothingFormality"
+                  aria-label="Formalitási szint"
                   value={formData.formality}
                   onChange={(e) => setFormData({ ...formData, formality: e.target.value })}
                   className="custom-input"
@@ -858,11 +870,14 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             {/* 4. Brand & Size (Gyártmány & Méret) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                <label htmlFor="add-clothing-brand-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Gyártó / Márka:
                 </label>
                 <input
                   type="text"
+                  id="add-clothing-brand-input"
+                  name="clothingBrand"
+                  aria-label="Gyártó vagy Márka"
                   value={formData.brand}
                   onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                   className="custom-input text-xs"
@@ -871,11 +886,14 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                <label htmlFor="add-clothing-size-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Méret (Címke szerint):
                 </label>
                 <input
                   type="text"
+                  id="add-clothing-size-input"
+                  name="clothingSize"
+                  aria-label="Méret címke szerint"
                   value={formData.size}
                   onChange={(e) => setFormData({ ...formData, size: e.target.value })}
                   className="custom-input text-xs font-mono"
@@ -887,11 +905,14 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             {/* 4. Material & Curated Color Palette */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                <label htmlFor="add-clothing-material-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                   Anyagösszetétel & Szövés:
                 </label>
                 <input
                   type="text"
+                  id="add-clothing-material-input"
+                  name="clothingMaterial"
+                  aria-label="Anyagösszetétel és szövés"
                   value={formData.material}
                   onChange={(e) => setFormData({ ...formData, material: e.target.value })}
                   className="custom-input"
@@ -916,10 +937,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-amber-300 mb-1">
+                <label htmlFor="add-clothing-styling-tip" className="block text-xs font-medium text-amber-300 mb-1">
                   💡 Mivel érdemes hordani (AI Ajánlás):
                 </label>
                 <textarea
+                  id="add-clothing-styling-tip"
+                  name="clothingStylingTip"
+                  aria-label="Mivel érdemes hordani"
                   ref={stylingTipRef}
                   value={formData.stylingTip}
                   onChange={(e) => setFormData({ ...formData, stylingTip: e.target.value })}
@@ -930,10 +954,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-emerald-300 mb-1">
+                <label htmlFor="add-clothing-when-to-wear" className="block text-xs font-medium text-emerald-300 mb-1">
                   📅 Mikor és milyen alkalomra ajánlott:
                 </label>
                 <textarea
+                  id="add-clothing-when-to-wear"
+                  name="clothingWhenToWear"
+                  aria-label="Mikor és milyen alkalomra ajánlott"
                   ref={whenToWearRef}
                   value={formData.whenToWear}
                   onChange={(e) => setFormData({ ...formData, whenToWear: e.target.value })}
@@ -1011,10 +1038,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
             {/* 8. Style Archetype (7 directions) */}
             <div>
-              <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+              <label htmlFor="add-clothing-style-archetype-select" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                 Stílusirányzat:
               </label>
               <select
+                id="add-clothing-style-archetype-select"
+                name="clothingStyleArchetype"
+                aria-label="Stílusirányzat"
                 value={formData.styleArchetype}
                 onChange={(e) => setFormData({ ...formData, styleArchetype: e.target.value })}
                 className="custom-input text-xs"
@@ -1055,6 +1085,9 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               <div className="flex gap-2 pt-1">
                 <input
                   type="text"
+                  id="add-clothing-custom-tag-input"
+                  name="clothingCustomTag"
+                  aria-label="Egyedi címke hozzáadása"
                   placeholder="Egyedi címke hozzáadása..."
                   value={customTagInput}
                   onChange={(e) => setCustomTagInput(e.target.value)}

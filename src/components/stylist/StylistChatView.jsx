@@ -306,7 +306,7 @@ export default function StylistChatView({ weather }) {
                           className="cursor-pointer group p-1.5 rounded-lg bg-black/50 border border-white/10 hover:border-[var(--accent-gold)] transition-all flex items-center gap-2"
                         >
                           <div className="w-8 h-8 rounded bg-[#07090e] p-0.5 shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
-                            <img src={itm.imageUrl} alt={itm.name} className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform" />
+                            <img src={itm.imageUrl} alt={itm.name} width="32" height="32" className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform" />
                           </div>
                           <span className="text-[11px] text-white/90 line-clamp-1 font-medium group-hover:text-[var(--accent-gold)]">
                             {itm.name}
@@ -356,6 +356,9 @@ export default function StylistChatView({ weather }) {
       {/* Input Area */}
       <div className="shrink-0 relative bg-black/60 border border-[var(--border-gold)] rounded-2xl p-2 flex items-end gap-2 shadow-2xl backdrop-blur-md">
         <textarea
+          id="stylist-chat-textarea"
+          name="stylistChatMessage"
+          aria-label="Üzenet a Mester Stylistnak"
           ref={textareaRef}
           value={inputMessage}
           onChange={handleTextareaChange}

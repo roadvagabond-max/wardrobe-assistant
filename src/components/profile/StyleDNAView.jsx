@@ -312,6 +312,9 @@ export default function StyleDNAView() {
           <div className="flex items-center gap-2 shrink-0">
             <input 
               type="file" 
+              id="portrait-camera-input"
+              name="portraitCamera"
+              aria-label="Portré fotó készítése kamerával"
               accept="image/*" 
               capture="user" 
               ref={cameraInputRef} 
@@ -320,6 +323,9 @@ export default function StyleDNAView() {
             />
             <input 
               type="file" 
+              id="portrait-file-input"
+              name="portraitFile"
+              aria-label="Portré fotó feltöltése fájlból"
               accept="image/*" 
               ref={fileInputRef} 
               onChange={handlePortraitFile} 
@@ -386,9 +392,12 @@ export default function StyleDNAView() {
           
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-secondary)] mb-1">Név / Megszólítás</label>
+              <label htmlFor="profile-name-input" className="block text-xs text-[var(--text-secondary)] mb-1">Név / Megszólítás</label>
               <input
                 type="text"
+                id="profile-name-input"
+                name="profileName"
+                aria-label="Név vagy Megszólítás"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="custom-input text-sm"
@@ -396,9 +405,12 @@ export default function StyleDNAView() {
             </div>
 
             <div>
-              <label className="block text-xs text-[var(--text-secondary)] mb-1">Magasság</label>
+              <label htmlFor="profile-height-input" className="block text-xs text-[var(--text-secondary)] mb-1">Magasság</label>
               <input
                 type="text"
+                id="profile-height-input"
+                name="profileHeight"
+                aria-label="Magasság"
                 value={formData.height}
                 onChange={(e) => setFormData({ ...formData, height: e.target.value })}
                 className="custom-input text-sm"
@@ -407,9 +419,12 @@ export default function StyleDNAView() {
             </div>
 
             <div>
-              <label className="block text-xs text-[var(--text-secondary)] mb-1">Testsúly (kg):</label>
+              <label htmlFor="profile-weight-input" className="block text-xs text-[var(--text-secondary)] mb-1">Testsúly (kg):</label>
               <input
                 type="text"
+                id="profile-weight-input"
+                name="profileWeight"
+                aria-label="Testsúly"
                 value={formData.weight || ''}
                 onChange={(e) => {
                   const val = e.target.value.replace(/[^0-9]/g, '');
@@ -423,9 +438,12 @@ export default function StyleDNAView() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-[var(--text-secondary)] mb-1">Testalkat</label>
+              <label htmlFor="profile-bodytype-input" className="block text-xs text-[var(--text-secondary)] mb-1">Testalkat</label>
               <input
                 type="text"
+                id="profile-bodytype-input"
+                name="profileBodyType"
+                aria-label="Testalkat"
                 value={formData.bodyType}
                 onChange={(e) => setFormData({ ...formData, bodyType: e.target.value })}
                 className="custom-input text-sm"
@@ -434,9 +452,12 @@ export default function StyleDNAView() {
             </div>
 
             <div>
-              <label className="block text-xs text-[var(--text-secondary)] mb-1">Bőrtónus & Színtípus</label>
+              <label htmlFor="profile-skintone-input" className="block text-xs text-[var(--text-secondary)] mb-1">Bőrtónus & Színtípus</label>
               <input
                 type="text"
+                id="profile-skintone-input"
+                name="profileSkinTone"
+                aria-label="Bőrtónus és Színtípus"
                 value={formData.skinTone}
                 onChange={(e) => setFormData({ ...formData, skinTone: e.target.value })}
                 className="custom-input text-sm"
@@ -470,8 +491,11 @@ export default function StyleDNAView() {
           </div>
 
           <div>
-            <label className="block text-xs text-[var(--text-secondary)] mb-1">Stílusfilozófia & Szabási preferenciák</label>
+            <label htmlFor="profile-philosophy-textarea" className="block text-xs text-[var(--text-secondary)] mb-1">Stílusfilozófia & Szabási preferenciák</label>
             <textarea
+              id="profile-philosophy-textarea"
+              name="profilePhilosophy"
+              aria-label="Stílusfilozófia és szabási preferenciák"
               rows={3}
               value={formData.stylePhilosophy}
               onChange={(e) => setFormData({ ...formData, stylePhilosophy: e.target.value })}
@@ -495,6 +519,9 @@ export default function StyleDNAView() {
               <div className="flex items-center gap-4">
                 <input 
                   type="file" 
+                  id="profile-avatar-file-input"
+                  name="profileAvatarFile"
+                  aria-label="Profilfotó feltöltése"
                   accept="image/*" 
                   ref={avatarInputRef} 
                   onChange={handlePortraitFile} 
@@ -506,7 +533,7 @@ export default function StyleDNAView() {
                   title="Kattints a profilfotó cseréjéhez"
                 >
                   {profile.avatarUrl ? (
-                    <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
+                    <img src={profile.avatarUrl} alt={profile.name} width="64" height="64" className="w-full h-full object-cover" />
                   ) : (
                     <span>{profile.name?.[0] || 'A'}</span>
                   )}
@@ -663,6 +690,9 @@ export default function StyleDNAView() {
         >
           <input
             type="text"
+            id="new-styling-rule-input"
+            name="newStylingRule"
+            aria-label="Új személyes stílusszabály megadása"
             value={newRuleInput}
             onChange={(e) => setNewRuleInput(e.target.value)}
             placeholder="pl. Nem szeretem a pólóingeket VAGY Csak rejtett gombolású ingeket hordok..."
@@ -827,6 +857,9 @@ export default function StyleDNAView() {
             <form onSubmit={handleMineRulesNow} className="flex gap-2">
               <input
                 type="text"
+                id="sartorial-mining-topic-input"
+                name="sartorialMiningTopic"
+                aria-label="Célzott kutatási téma megadása"
                 value={customMiningTopic}
                 onChange={(e) => setCustomMiningTopic(e.target.value)}
                 placeholder="Opcionális fókusz: pl. Női blézer és maxiruha arányok VAGY Ingdzseki rétegezési szabályok..."

@@ -63,7 +63,7 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
               {currentUser.photoURL ? (
-                <img src={currentUser.photoURL} alt="User Avatar" className="w-12 h-12 rounded-full" />
+                <img src={currentUser.photoURL} alt="User Avatar" width="48" height="48" className="w-12 h-12 rounded-full" />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">
                   {currentUser.email?.[0]?.toUpperCase()}
