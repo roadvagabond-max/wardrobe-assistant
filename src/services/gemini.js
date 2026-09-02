@@ -145,7 +145,12 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+      const isBearerAuth = cleanKey.startsWith('AQ.') || cleanKey.startsWith('ya29.');
+
+      const url = isBearerAuth
+        ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+        : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
+
       const requestBody = {
         contents,
         generationConfig: {
@@ -163,12 +168,11 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
 
       const headers = {
         'Content-Type': 'application/json',
-        'x-goog-api-key': cleanKey
+        ...(isBearerAuth
+          ? { 'Authorization': `Bearer ${cleanKey}` }
+          : { 'x-goog-api-key': cleanKey }
+        )
       };
-
-      if (cleanKey.startsWith('AQ.') || cleanKey.startsWith('ya29.')) {
-        headers['Authorization'] = `Bearer ${cleanKey}`;
-      }
 
       const response = await fetch(url, {
         method: 'POST',
