@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Sparkles, Trash2, Bot, User, RefreshCw, MessageSquare, Loader2, ArrowRight, Layers, Compass, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { chatWithMasterStylist, formatStylistJsonToMarkdown } from '../../services/gemini';
+import { chatWithMasterStylist, formatStylistJsonToMarkdown, isGeminiConfigured } from '../../services/gemini';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
 
 const QUICK_PROMPTS = [
@@ -262,6 +262,23 @@ export default function StylistChatView({ weather }) {
         </button>
       </div>
 
+      {/* Banner if Gemini is not yet configured */}
+      {!isGeminiConfigured() && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-200 shrink-0 shadow-lg">
+          <div className="flex items-center gap-2.5">
+            <Sparkles className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
+            <span>A személyes Mester Stylist AI funkciókhoz ingyenes Gemini API kulcs szükséges.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-settings'))}
+            className="btn-gold py-1.5 px-3 text-xs shrink-0 font-bold flex items-center gap-1.5 shadow"
+          >
+            <span>⚙️ Beállítások Megnyitása</span>
+          </button>
+        </div>
+      )}
+
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto space-y-4 pr-1 sm:pr-2">
         {messages.map((msg, index) => {
@@ -291,6 +308,19 @@ export default function StylistChatView({ weather }) {
                   : 'glass-card bg-[#0b0e14]/90 border-white/10 text-white/90 rounded-tl-none'
               }`}>
                 {renderFormattedContent(msg.content)}
+
+                {/* Direct Action Button if Error/Auth Issue */}
+                {msg.isError && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => window.dispatchEvent(new CustomEvent('open-settings'))}
+                      className="btn-gold py-1.5 px-3 text-xs flex items-center gap-1.5 font-bold shadow"
+                    >
+                      <span>⚙️ Beállítások Megnyitása (API Kulcs)</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Wardrobe Items Visual Mention Cards */}
                 {mentionedItems.length > 0 && (

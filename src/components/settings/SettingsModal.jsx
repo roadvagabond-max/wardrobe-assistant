@@ -8,7 +8,10 @@ import { isGeminiConfigured } from '../../services/gemini';
 export default function SettingsModal({ isOpen, onClose }) {
   const { wardrobe, resetToDemoData, currentUser } = useAuth();
 
-  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('GEMINI_API_KEY') || '');
+  const [geminiKey, setGeminiKey] = useState(() => {
+    const raw = localStorage.getItem('GEMINI_API_KEY') || '';
+    return raw.startsWith('AQ.') ? '' : raw;
+  });
   const [firebaseApiKey, setFirebaseApiKey] = useState(() => localStorage.getItem('VITE_FIREBASE_API_KEY') || '');
   const [firebaseProjectId, setFirebaseProjectId] = useState(() => localStorage.getItem('VITE_FIREBASE_PROJECT_ID') || '');
   const [firebaseAuthDomain, setFirebaseAuthDomain] = useState(() => localStorage.getItem('VITE_FIREBASE_AUTH_DOMAIN') || '');
@@ -19,15 +22,19 @@ export default function SettingsModal({ isOpen, onClose }) {
   const handleSaveKeys = async (e) => {
     e.preventDefault();
     const cleanGeminiKey = geminiKey ? geminiKey.trim() : '';
-    if (cleanGeminiKey) localStorage.setItem('GEMINI_API_KEY', cleanGeminiKey);
+    if (cleanGeminiKey) {
+      localStorage.setItem('GEMINI_API_KEY', cleanGeminiKey);
+    } else {
+      localStorage.removeItem('GEMINI_API_KEY');
+    }
     if (firebaseApiKey) localStorage.setItem('VITE_FIREBASE_API_KEY', firebaseApiKey.trim());
     if (firebaseProjectId) localStorage.setItem('VITE_FIREBASE_PROJECT_ID', firebaseProjectId.trim());
     if (firebaseAuthDomain) localStorage.setItem('VITE_FIREBASE_AUTH_DOMAIN', firebaseAuthDomain.trim());
 
-    if (currentUser && db && isFirebaseConfigured && cleanGeminiKey) {
+    if (currentUser && db && isFirebaseConfigured) {
       try {
         await setDoc(doc(db, 'users', currentUser.uid), {
-          geminiApiKey: cleanGeminiKey,
+          geminiApiKey: cleanGeminiKey || '',
           updatedAt: new Date().toISOString()
         }, { merge: true });
       } catch (err) {

@@ -146,8 +146,8 @@ export function AuthProvider({ children }) {
               if (data.savedOutfits) {
                 setSavedOutfits(data.savedOutfits);
               }
-              if (data.geminiApiKey && !localStorage.getItem('GEMINI_API_KEY')) {
-                localStorage.setItem('GEMINI_API_KEY', data.geminiApiKey);
+              if (data.geminiApiKey && typeof data.geminiApiKey === 'string' && data.geminiApiKey.trim()) {
+                localStorage.setItem('GEMINI_API_KEY', data.geminiApiKey.trim());
               }
             } else {
               const localProfile = JSON.parse(localStorage.getItem('user_style_profile') || JSON.stringify(INITIAL_USER_PROFILE));

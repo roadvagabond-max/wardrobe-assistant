@@ -64,6 +64,13 @@ export default function App() {
     } catch (e) {
       console.warn('Share target param feldolgozási figyelmeztetés:', e);
     }
+
+    const handleOpenSettings = () => setIsSettingsModalOpen(true);
+    window.addEventListener('open-settings', handleOpenSettings);
+
+    return () => {
+      window.removeEventListener('open-settings', handleOpenSettings);
+    };
   }, []);
 
   const handleTestInAdvisor = (gapItem) => {

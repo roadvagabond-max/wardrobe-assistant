@@ -3,11 +3,22 @@ import { ensureBase64Image } from './imageOptimizer';
 import { normalizeBrandName } from './webshop';
 import { formatRulesForPrompt } from './sartorialRules';
 
-const getGeminiApiKey = () => {
-  return (import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || '').trim();
+export const getGeminiApiKey = () => {
+  const localKey = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
+  if (localKey && localKey.startsWith('AIzaSy')) return localKey;
+  if (localKey && !localKey.startsWith('AQ.')) return localKey;
+
+  const envKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim();
+  if (envKey && envKey.startsWith('AIzaSy')) return envKey;
+  if (envKey && !envKey.startsWith('AQ.')) return envKey;
+
+  return (localKey && !localKey.startsWith('AQ.')) ? localKey : (envKey && !envKey.startsWith('AQ.')) ? envKey : '';
 };
 
-export const isGeminiConfigured = () => Boolean(getGeminiApiKey());
+export const isGeminiConfigured = () => {
+  const key = getGeminiApiKey();
+  return Boolean(key && (key.startsWith('AIzaSy') || key.length > 25));
+};
 
 // Google Gemini official 2026 models in order of stability & speed
 export const FAST_MODELS = [
@@ -161,8 +172,17 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
         const errBody = await response.text();
         console.warn(`Gemini (${model}) státusz: ${response.status}`, errBody);
         
-        if (response.status === 400 && (errBody.includes('API key not valid') || errBody.includes('INVALID_ARGUMENT'))) {
-          throw new Error('Érvénytelen Google Gemini API kulcs! Kérlek generálj egy saját ingyenes kulcsot az aistudio.google.com/apikey oldalon, és másold be a Beállítások menübe!');
+        if (
+          response.status === 401 ||
+          response.status === 403 ||
+          (response.status === 400 && (
+            errBody.includes('API key not valid') ||
+            errBody.includes('INVALID_ARGUMENT') ||
+            errBody.includes('UNAUTHENTICATED') ||
+            errBody.includes('API_KEY_INVALID')
+          ))
+        ) {
+          throw new Error('Érvénytelen vagy hiányzó Google Gemini API kulcs (401 Auth Error)! Kérlek generálj egy saját ingyenes kulcsot az aistudio.google.com/apikey oldalon, és add meg a jobb felső ⚙️ Beállítások menüben!');
         }
 
         // If 503 or 429, invalidate activeFastModel cache so next call doesn't hit it first
@@ -174,7 +194,11 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
       }
     } catch (e) {
       clearTimeout(timeoutId);
-      if (e.message?.includes('Érvénytelen Google Gemini API kulcs')) {
+      if (
+        e.message?.includes('401 Auth Error') ||
+        e.message?.includes('Érvénytelen vagy hiányzó Google Gemini API kulcs') ||
+        e.message?.includes('aistudio.google.com/apikey')
+      ) {
         throw e;
       }
       console.warn(`Hiba vagy időtúllépés a(z) ${model} modellel:`, e.name === 'AbortError' ? `Időtúllépés (>${(timeoutMs/1000).toFixed(1)}s)` : e.message);
