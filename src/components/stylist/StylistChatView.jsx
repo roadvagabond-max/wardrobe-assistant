@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Sparkles, Trash2, Bot, User, RefreshCw, MessageSquare, Loader2, ArrowRight, Layers, Compass, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { chatWithMasterStylist, formatStylistJsonToMarkdown, isGeminiConfigured } from '../../services/gemini';
-import GarmentLightboxModal from '../common/GarmentLightboxModal';
 
 const QUICK_PROMPTS = [
   'Mit vegyek fel holnap a meglévő ruháimból?',
@@ -33,9 +32,6 @@ export default function StylistChatView({ weather }) {
 
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedLightboxItem, setSelectedLightboxItem] = useState(null);
-  const [lightboxItems, setLightboxItems] = useState([]);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -135,27 +131,6 @@ export default function StylistChatView({ weather }) {
       setMessages(resetMsg);
       localStorage.setItem('stylist_chat_history', JSON.stringify(resetMsg));
     }
-  };
-
-  // Find wardrobe items mentioned in model text to offer rich visual previews
-  const extractMentionedWardrobeItems = (text) => {
-    if (!text || !wardrobe || wardrobe.length === 0) return [];
-    const formatted = formatStylistJsonToMarkdown(text);
-    const lower = formatted.toLowerCase();
-    return wardrobe.filter(w => {
-      if (!w.name) return false;
-      const wName = w.name.toLowerCase();
-      // Match exact name or strong keyword match
-      return lower.includes(wName) || (wName.length > 8 && lower.includes(wName.slice(0, 10)));
-    }).slice(0, 4);
-  };
-
-  const openLightboxForItem = (item, allMentions = []) => {
-    const list = allMentions.length > 0 ? allMentions : [item];
-    const idx = list.findIndex(x => x.id === item.id);
-    setLightboxItems(list);
-    setSelectedLightboxItem(item);
-    setIsLightboxOpen(true);
   };
 
   // Safe HTML sanitizer and bold formatter to prevent XSS
@@ -284,7 +259,6 @@ export default function StylistChatView({ weather }) {
       <div className="flex-1 overflow-y-auto space-y-4 pr-1 sm:pr-2">
         {messages.map((msg, index) => {
           const isUser = msg.role === 'user';
-          const mentionedItems = !isUser ? extractMentionedWardrobeItems(msg.content) : [];
 
           return (
             <div
@@ -294,8 +268,8 @@ export default function StylistChatView({ weather }) {
               {/* Avatar */}
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-md ${
                 isUser 
-                  ? 'bg-[var(--accent-gold)] text-black font-bold' 
-                  : 'bg-[#151a24] text-[var(--accent-gold)] border border-[var(--border-gold)]'
+                ? 'bg-[var(--accent-gold)] text-black font-bold' 
+                : 'bg-[#151a24] text-[var(--accent-gold)] border border-[var(--border-gold)]'
               }`}>
                 {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
               </div>
@@ -320,31 +294,6 @@ export default function StylistChatView({ weather }) {
                     >
                       <span>⚙️ Beállítások Megnyitása (API Kulcs)</span>
                     </button>
-                  </div>
-                )}
-
-                {/* Wardrobe Items Visual Mention Cards */}
-                {mentionedItems.length > 0 && (
-                  <div className="pt-2 border-t border-white/10 space-y-1.5">
-                    <span className="text-[10px] text-[var(--accent-gold)] font-mono uppercase tracking-wider block">
-                      ✦ Említett Darabok a Gardróbodból (Kattints a nagyításhoz):
-                    </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {mentionedItems.map((itm, iIdx) => (
-                        <div
-                          key={iIdx}
-                          onClick={() => openLightboxForItem(itm, mentionedItems)}
-                          className="cursor-pointer group p-1.5 rounded-lg bg-black/50 border border-white/10 hover:border-[var(--accent-gold)] transition-all flex items-center gap-2"
-                        >
-                          <div className="w-8 h-8 rounded bg-[#07090e] p-0.5 shrink-0 flex items-center justify-center overflow-hidden border border-white/5">
-                            <img src={itm.imageUrl} alt={itm.name} width="32" height="32" className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform" />
-                          </div>
-                          <span className="text-[11px] text-white/90 line-clamp-1 font-medium group-hover:text-[var(--accent-gold)]">
-                            {itm.name}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 )}
               </div>
@@ -414,15 +363,6 @@ export default function StylistChatView({ weather }) {
           <Send className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Lightbox Modal for any clicked garment */}
-      <GarmentLightboxModal
-        isOpen={isLightboxOpen}
-        onClose={() => setIsLightboxOpen(false)}
-        items={lightboxItems}
-        initialIndex={lightboxItems.findIndex(x => x.id === selectedLightboxItem?.id)}
-        outfitTitle="Személyes Stylist Csevegés"
-      />
 
     </div>
   );
