@@ -203,14 +203,14 @@ sequenceDiagram
 
 ### 🌐 Workflow 10: Autonóm Sartorial Tudásbázis & 7-Napos Periodikus Webes Szabálykutató
 1. **Google Search Grounding Kutató Motor (`mineSartorialRulesFromWeb`):**
-   - A rendszer nemzetközi divatkódexekből és szabászati stílusirányzatokból (Savile Row, Pitti Uomo, Vogue, Permanent Style, Die Workwear) kinyeri az autentikus rétegezési, gallér-, ujj- és sziluettszabályokat.
+   - A rendszer nemzetközi divatkódexekből és szabászati stílusirányzatokból (Savile Row, Pitti Uomo, Vogue, Permanent Style, Die Workwear, Crockett & Jones, Alan Flusser, Drake's London, Loro Piana) kinyeri az autentikus rétegezési, gallér-, ujj-, sziluett-, nadrágtörési (trouser break), zokni-, bőr-fém és 3-színes harmóniaszabályokat.
 2. **7-Napos Ciklikus Háttér-Szinkronizáció (`checkAndAutoSyncSartorialRules`):**
    - 7 naponta automatikusan lefut a háttérben anélkül, hogy a felhasználói felületet lassítaná.
    - Intelligensen deduplikál és frissíti a felhő/helyi szabálytárat.
 3. **Keresztfunkciós Alkalmazás:**
    - Minden kutatott szabály azonnal beépül az összes döntési modulba (Outfit Generátor, Manuális Audit, Vásárlási Tanácsadó, Master Stylist Chat).
 4. **UI Szabálytár Hub (`StyleDNAView.jsx`):**
-   - Részletes szabálykártyák (❌ Don't / ✅ Do, forrás, dátum), kategóriaszűrés és manuális kutatásindítás fókuszált témákkal.
+   - Részletes szabálykártyák (❌ Don't / ✅ Do, forrás, dátum), kategóriaszűrés (Gallérok, Ujjak, Sziluettek, Anyagok, Színharmónia, Lábbelik & Hossz, Bőrök & Fémek, Gombolás & Kiegészítők, Női szabályok) és manuális kutatásindítás fókuszált témákkal.
 
 ---
 
@@ -237,7 +237,7 @@ sequenceDiagram
 - **Fő fájlok:** `src/services/gemini.js`, `src/components/advisor/PurchaseAdvisorView.jsx`, `src/components/profile/StyleDNAView.jsx`
 
 ### 4. `sartorial-rule-miner`
-- **Cél:** Autonóm internetes szabálykutatás Google Search Groundinggal, 7 napos háttér-szinkronizáció, strukturált gallér-, ujj- és sziluettszabályok kezelése.
+- **Cél:** Autonóm internetes szabálykutatás Google Search Groundinggal, 7 napos háttér-szinkronizáció, strukturált gallér-, ujj-, sziluett-, lábbeli-, nadrághossz-, szín- és fémtónus-szabályok kezelése.
 - **Fő fájlok:** `src/services/sartorialRules.js`, `src/context/AuthContext.jsx`, `src/components/profile/StyleDNAView.jsx`
 
 ### 5. `webshop-sku-engine`

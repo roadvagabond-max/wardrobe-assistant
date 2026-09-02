@@ -9,8 +9,11 @@ export const SARTORIAL_CATEGORIES = [
   { id: 'sleeve_hierarchy', label: 'Ujjak & Rétegek', icon: '👕' },
   { id: 'silhouette_balance', label: 'Sziluettek & Arányok', icon: '⚖️' },
   { id: 'fabric_synergy', label: 'Anyagok & Textúrák', icon: '🧵' },
-  { id: 'womenswear_specific', label: 'Női Stílusszabályok', icon: '👗' },
-  { id: 'footwear_and_proportions', label: 'Lábbelik & Hossz', icon: '👞' }
+  { id: 'color_and_contrast', label: 'Színharmónia & Kontraszt', icon: '🎨' },
+  { id: 'footwear_and_proportions', label: 'Lábbelik & Hossz', icon: '👞' },
+  { id: 'leather_and_metals', label: 'Bőrök & Fémek', icon: '🎗️' },
+  { id: 'finishing_touches', label: 'Gombolás & Kiegészítők', icon: '🎩' },
+  { id: 'womenswear_specific', label: 'Női Stílusszabályok', icon: '👗' }
 ];
 
 export const INITIAL_SARTORIAL_RULES = [
@@ -163,7 +166,7 @@ export const INITIAL_SARTORIAL_RULES = [
     discoveredAt: '2026-09-01T00:00:00.000Z'
   },
 
-  // 4. Fabric Synergy
+  // 4. Fabric Synergy & Weather Dynamics
   {
     id: 'rule-rustic-vs-fine-fabrics',
     category: 'fabric_synergy',
@@ -189,6 +192,118 @@ export const INITIAL_SARTORIAL_RULES = [
     source: 'Riviera Summer Sartorial Code',
     enabled: true,
     discoveredAt: '2026-09-01T00:00:00.000Z'
+  },
+  {
+    id: 'rule-worsted-vs-denim',
+    category: 'fabric_synergy',
+    title: 'Fényes öltönyszövet (Worsted Wool) és farmer összeférhetetlensége',
+    ruleDescription: 'Selyemfényű, sima felületű formális öltönyzakó (Super 120s+ Worsted) nem hordható koptatott farmernadrággal. A farmer textúrájához matt, rusztikusabb vagy szőtt zakó (tweed, flanel, hop-sack, len vagy pamut blézer) dukál.',
+    dont: 'Fényes fésűsgyapjú öltönyzakó + koptatott farmer',
+    do: 'Farmernadrághoz strukturált tweed, gyapjú flanel, pamut vagy lenvászon blézer',
+    gender: 'universal',
+    severity: 'strict',
+    source: 'Loro Piana & Permanent Style Fabric Pairing Manual',
+    enabled: true,
+    discoveredAt: '2026-09-02T00:00:00.000Z'
+  },
+  {
+    id: 'rule-suede-rain-protection',
+    category: 'fabric_synergy',
+    title: 'Velúrbőr (Suede) és csapadékos időjárás dinamikája',
+    ruleDescription: 'Kezeletlen nyers velúrbőr (suede) és nubuk lábbeli vagy dzseki esős, nyirkos időben átázik és foltosodik. Csapadékos időben sima borjúbőr (Calfskin) vagy kezelt vízálló bőr hordandó.',
+    dont: 'Nyers velúrbőr lábbeli esős, sáros időben',
+    do: 'Esőben sima boxbőr/borjúbőr lábbeli vagy impregnált velúr; száraz őszi/tavaszi napokon velúrbőr',
+    gender: 'universal',
+    severity: 'high',
+    source: 'Crockett & Jones Leather Care & Weather Manual',
+    enabled: true,
+    discoveredAt: '2026-09-02T00:00:00.000Z'
+  },
+
+  // 5. Color Harmony & Contrast
+  {
+    id: 'rule-three-color-harmony',
+    category: 'color_and_contrast',
+    title: 'A 3-Színes Sartorial Alapszabály (Three-Color Rule)',
+    ruleDescription: 'Egy elegáns és harmonikus outfitben legfeljebb 3 domináns színcsalád szerepelhet egyszerre (pl. Sötétkék zakó + Dohánybarna nadrág + Törtfehér ing). 4 vagy több különböző élénk szín zűrzavaros, túlzsúfolt hatást kelt.',
+    dont: '4 vagy több eltérő élénk alapszín véletlenszerű keverése egyetlen szettben',
+    do: 'Legfeljebb 3 harmonizáló színcsalád (1 domináns bázis, 1 másodlagos réteg, 1 semleges/akcentus tónus)',
+    gender: 'universal',
+    severity: 'high',
+    source: 'Alan Flusser: Dressing the Man & Italian Color Theory',
+    enabled: true,
+    discoveredAt: '2026-09-02T00:00:00.000Z'
+  },
+
+  // 6. Footwear, Proportions & Socks
+  {
+    id: 'rule-trouser-break-loafer-oxford',
+    category: 'footwear_and_proportions',
+    title: 'Nadrágtörés (Trouser Break) és lábbeli harmóniája',
+    ruleDescription: 'A nadrág szárhossza és a cipő típusa szoros geometriai kapcsolatban áll: loaferhez és mokaszinhoz No Break (bokavillantós/croppelt) vagy finom Quarter Break szárhossz illik; fűzős félcipőhöz és flanelnadrághoz Half Break ajánlott.',
+    dont: 'Földig érő, gyűrődő Full Break nadrágszár nyári könnyű loaferrel',
+    do: 'Bőrcipőhöz méretre szabott nadrághossz (loaferhez No/Quarter Break, oxfordhoz Half Break)',
+    gender: 'universal',
+    severity: 'high',
+    source: 'Crockett & Jones Bespoke Fitting Guide & Parisian Gentleman',
+    enabled: true,
+    discoveredAt: '2026-09-02T00:00:00.000Z'
+  },
+  {
+    id: 'rule-sock-color-etiquette',
+    category: 'footwear_and_proportions',
+    title: 'Zokni színetika és a fehér zokni tiltása',
+    ruleDescription: 'A zokni színe mindig a nadrág színét követi a láb optikai nyújtása érdekében (vagy tudatos sartorial kontrasztot képez, pl. sötétbordó vagy erdőzöld). Sosem lehet világosabb a nadrágnál és a cipőnél (fehér pamutzokni formális nadrággal tiltott).',
+    dont: 'Fehér sport- vagy pamutzokni öltönynadrághoz vagy elegáns félcipőhöz',
+    do: 'A zokni színe megegyezik a nadrág színével, vagy mély bordó/sötétkék merinó zokni; melegben loafernél titokzokni',
+    gender: 'universal',
+    severity: 'strict',
+    source: 'Edward Green & Savile Row Etiquette Code',
+    enabled: true,
+    discoveredAt: '2026-09-02T00:00:00.000Z'
+  },
+
+  // 7. Leather & Metal Coordination
+  {
+    id: 'rule-leather-metal-harmony',
+    category: 'leather_and_metals',
+    title: 'Bőrök és fém kiegészítők szigorú tónusharmóniája',
+    ruleDescription: 'Egy szetten belül a bőrelemek (cipő, öv, óraszíj) és a fémek (övcsat, óratok, mandzsettagomb, gyűrű) tónusának harmonizálnia kell. Fekete és barna bőr keverése formális viseletben tiltott.',
+    dont: 'Fekete cipő + barna öv keverése, vagy arany óratok + ezüst övcsat és ezüst mandzsettagomb vegyítése',
+    do: 'Barna cipőhöz azonos tónusú barna öv és sárgaréz/arany fémek; fekete cipőhöz fekete öv és ezüst/króm fémek',
+    gender: 'universal',
+    severity: 'strict',
+    source: 'Classic Sartorial Leather & Metal Coordination Standard',
+    enabled: true,
+    discoveredAt: '2026-09-02T00:00:00.000Z'
+  },
+
+  // 8. Finishing Touches & Buttoning Etiquette
+  {
+    id: 'rule-pocket-square-independent',
+    category: 'finishing_touches',
+    title: 'Díszzsebkendő aranyszabály: tilos a nyakkendővel egyforma minta',
+    ruleDescription: 'A díszzsebkendő (Pocket square) sosem készülhet a nyakkendővel megegyező anyagból és mintából (olcsó ajándékszett-hatás). A zsebkendő önálló textúrát képvisel, csupán egy másodlagos színárnyalatot tükröz vissza.',
+    dont: 'A nyakkendővel pontosan megegyező mintájú és anyagú poliészter díszzsebkendő viselése',
+    do: 'Fehér lenvászon TV-fold díszzsebkendő, vagy a szett valamelyik árnyalatával harmonizáló önálló mintájú kendő',
+    gender: 'universal',
+    severity: 'strict',
+    source: 'Drake\'s London & Rubinacci Pocket Square Guide',
+    enabled: true,
+    discoveredAt: '2026-09-02T00:00:00.000Z'
+  },
+  {
+    id: 'rule-blazer-buttoning-always-never',
+    category: 'finishing_touches',
+    title: 'Zakó gombolási illemkódex (Always, Never)',
+    ruleDescription: 'Kétgombos zakó esetén álláskor a felső gomb mindig zárva van, az alsó gomb SOHA nincs begombolva (az alsó gomb zárása torzítja a zakó szabásvonalát és csípőesését). Leüléskor a zakó kigombolandó.',
+    dont: 'Kétgombos zakó alsó gombjának begombolása álláskor',
+    do: 'Álláskor felső gomb zárva, alsó nyitva; leüléskor teljes kigombolás',
+    gender: 'universal',
+    severity: 'strict',
+    source: 'Savile Row Etiquette & Tailoring Protocol',
+    enabled: true,
+    discoveredAt: '2026-09-02T00:00:00.000Z'
   }
 ];
 
@@ -282,11 +397,15 @@ export async function mineSartorialRulesFromWeb({ apiKey = null, userUid = null,
   const currentRules = getStoredSartorialRules();
 
   const searchTopics = focusTopic || `
-- Classic and modern bespoke tailoring layering rules (Savile Row, Milanese tailoring, Pitti Uomo)
-- Menswear collar vs lapel vs knitwear pairing mistakes (stand collar, mandarin collar, turtleneck, crewneck)
-- Womenswear neckline, collar, sleeve layering and silhouette volume balance rules
-- Fabric weight, weave texture synergy (linen, flannel, cashmere, silk, tweed)
-- Dress and skirt proportions with outerwear and belts
+- Classic and modern bespoke tailoring layering rules (Savile Row, Milanese tailoring, Pitti Uomo, Die Workwear, Permanent Style)
+- Menswear collar vs lapel vs knitwear pairing mistakes (stand collar, mandarin collar, turtleneck, crewneck, shacket overshirt)
+- Trouser break proportions (No Break vs Quarter Break vs Full Break) with loafers, monkstraps, derbies and oxfords (Crockett & Jones, Edward Green, Parisian Gentleman)
+- Sock etiquette (trouser-matching, white sock prohibition with suits, invisible socks with loafers)
+- Leather & metal coordination (shoe and belt tone matching, watch metal vs belt buckle harmony, black vs brown separation)
+- Three-color rule and contrast ratio in tailoring (Alan Flusser, Johannes Itten color theory)
+- Worsted wool vs denim/tweed texture pairing (Loro Piana fabric synergy, GSM weight balance, suede weather protection)
+- Blazer buttoning etiquette (always-never rule) and independent pocket square styling (Drake's London, Rubinacci)
+- Womenswear neckline, collar, sleeve layering and silhouette volume balance rules (Vogue Styling Masterclass, Harper's Bazaar)
 `;
 
   const prompt = `Te egy világklasszis Sartorial Kutató és Szabályalkotó AI vagy (Master Sartorial Intelligence & Rule Mining Engine).
@@ -296,9 +415,9 @@ KUTATÁSI FÓKUSZ:
 ${searchTopics}
 
 SZABÁLYKÖVETELMÉNYEK:
-1. Konkrét, strukturális és esztétikai DOs and DONTs (ne általános közhelyek legyenek, hanem pontos gallér-, ujj-, sziluett-, arány- vagy anyag-szabályok)!
-2. Keress olyan szabályokat is, amelyek a rétegezés fizikai/geometriai hibáit (pl. gyűrődés, kettős ujjvég, gallér-összeakadás, aránytalan sziluett) küszöbölik ki!
-3. Megbízható forrásokat jelölj meg (pl. Bespoke Tailoring Guides, Savile Row Code, Vogue Styling Masterclass, Pitti Uomo Standards, Die Workwear, Permanent Style).
+1. Konkrét, strukturális és esztétikai DOs and DONTs (ne általános közhelyek legyenek, hanem pontos gallér-, ujj-, sziluett-, arány-, cipő-, zokni-, fém- vagy anyag-szabályok)!
+2. Keress olyan szabályokat is, amelyek a rétegezés fizikai/geometriai hibáit (pl. gyűrődés, kettős ujjvég, gallér-összeakadás, aránytalan sziluett, hibás gombolás) küszöbölik ki!
+3. Megbízható forrásokat jelölj meg (pl. Bespoke Tailoring Guides, Savile Row Code, Vogue Styling Masterclass, Pitti Uomo Standards, Die Workwear, Permanent Style, Crockett & Jones, Parisian Gentleman, Drake's London).
 
 A MEGLÉVŐ SZABÁLYAINK (${currentRules.length} db):
 ${currentRules.slice(0, 10).map(r => `• ${r.title}`).join('\n')}
