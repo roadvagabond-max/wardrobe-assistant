@@ -4,6 +4,18 @@ import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import './styles/index.css';
 
+// Suppress benign browser extension messaging errors (e.g. LastPass, Grammarly, React DevTools)
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason && typeof event.reason.message === 'string') {
+    if (
+      event.reason.message.includes('A listener indicated an asynchronous response') ||
+      event.reason.message.includes('message channel closed before a response was received')
+    ) {
+      event.preventDefault();
+    }
+  }
+});
+
 // Register Service Worker for PWA WebAPK & Web Share Target support
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

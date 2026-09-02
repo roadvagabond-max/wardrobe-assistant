@@ -517,6 +517,30 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   const temperature = typeof weather?.temperature === 'number' ? weather.temperature : 22;
   const isWarmWeather = temperature >= 19;
 
+  // Helper: Smart, unbiased candidate picker for fallback layers to ensure fair wardrobe rotation
+  const getCandidateItems = (matcher) => {
+    return wardrobe.filter(w => matcher(w) && w.condition !== 'Lecserélendő' && w.condition !== 'Javításra vár' && !items.some(i => i.id === w.id));
+  };
+
+  const pickSmartFallbackGarment = (candidates, preferredColorFamily = null) => {
+    if (!candidates || candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+
+    if (preferredColorFamily) {
+      const colorMatches = candidates.filter(c => {
+        const col = (c.color || '').toLowerCase();
+        return col.includes(preferredColorFamily.toLowerCase());
+      });
+      if (colorMatches.length > 0) {
+        const randIdx = Math.floor(Math.random() * colorMatches.length);
+        return colorMatches[randIdx];
+      }
+    }
+
+    const randIdx = Math.floor(Math.random() * candidates.length);
+    return candidates[randIdx];
+  };
+
   // 1. SARTORIAL HARMONY RESOLUTION: Stand collar, Turtleneck & Sleeve rules
   const hasStandCollarShirt = items.some(i => isBaseTop(i) && isStandCollar(i));
   const hasClosedSweater = items.some(i => isClosedSweater(i));
@@ -524,14 +548,14 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   const hasTurtleneckKnit = items.some(i => isTurtleneck(i));
   const hasShortSleeveKnit = items.some(i => (i.category === 'knitwear' || (i.subCategory || '').includes('sweater') || (i.name || '').toLowerCase().includes('pulóver')) && isShortSleeve(i));
 
-  // A. Stand Collar Shirt vs Closed Sweaters & Classic Blazers:
-  // A stand collar shirt (mandarin/band) cannot be worn under a closed crewneck/V-neck sweater or a classic notched/peaked lapel blazer!
+  // A. Stand Collar Shirt vs Closed Sweaters & Classic Blazers
   if (hasStandCollarShirt) {
     if (hasClosedSweater) {
       if (candidateItem && isStandCollar(candidateItem)) {
         items = items.filter(i => !isClosedSweater(i));
       } else {
-        const classicShirt = wardrobe.find(w => isBaseTop(w) && !isStandCollar(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id));
+        const classicShirtCandidates = getCandidateItems(w => isBaseTop(w) && !isStandCollar(w));
+        const classicShirt = pickSmartFallbackGarment(classicShirtCandidates);
         if (classicShirt) {
           items = items.map(i => isStandCollar(i) && isBaseTop(i) ? classicShirt : i);
         } else {
@@ -544,12 +568,14 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
       if (candidateItem && isStandCollar(candidateItem)) {
         items = items.filter(i => !isClassicBlazer(i));
       } else if (candidateItem && isClassicBlazer(candidateItem)) {
-        const classicShirt = wardrobe.find(w => isBaseTop(w) && !isStandCollar(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id));
+        const classicShirtCandidates = getCandidateItems(w => isBaseTop(w) && !isStandCollar(w));
+        const classicShirt = pickSmartFallbackGarment(classicShirtCandidates);
         if (classicShirt) {
           items = items.map(i => isStandCollar(i) && isBaseTop(i) ? classicShirt : i);
         }
       } else {
-        const classicShirt = wardrobe.find(w => isBaseTop(w) && !isStandCollar(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id));
+        const classicShirtCandidates = getCandidateItems(w => isBaseTop(w) && !isStandCollar(w));
+        const classicShirt = pickSmartFallbackGarment(classicShirtCandidates);
         if (classicShirt) {
           items = items.map(i => isStandCollar(i) && isBaseTop(i) ? classicShirt : i);
         } else {
@@ -559,36 +585,22 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   }
 
-  // B. Turtleneck Resolution:
-  // A turtleneck acts as its own top/base layer or mid layer; no collared shirt should be underneath!
+  // B. Turtleneck Resolution
   if (hasTurtleneckKnit) {
     items = items.filter(i => !isBaseTop(i) || isTurtleneck(i));
   }
 
-  // C. Short Sleeve Knitwear Resolution:
-  // Under a short sleeve knitwear, do NOT layer a short sleeve t-shirt!
+  // C. Short Sleeve Knitwear Resolution
   if (hasShortSleeveKnit) {
     items = items.filter(i => !(isBaseTop(i) && isShortSleeve(i) && i.category !== 'knitwear'));
   }
 
-  // D. Shacket / Overshirt Resolution:
-  // Under a shacket or overshirt, do NOT layer a collared dress shirt (Double collar & Double placket clash)!
-  // Replace with a clean t-shirt, fine knit top, or turtleneck.
+  // D. Shacket / Overshirt Resolution
   const hasShacket = items.some(i => isShacket(i));
   const hasCollaredShirt = items.some(i => isCollaredShirt(i));
   if (hasShacket && hasCollaredShirt) {
-    const tShirtOrKnit = wardrobe.find(w =>
-      !isCollaredShirt(w) &&
-      !isShacket(w) &&
-      (isBaseTop(w) || isTurtleneck(w)) &&
-      w.condition !== 'Lecserélendő' &&
-      !items.some(i => i.id === w.id)
-    ) || wardrobe.find(w =>
-      !isCollaredShirt(w) &&
-      !isShacket(w) &&
-      (isBaseTop(w) || isTurtleneck(w)) &&
-      !items.some(i => i.id === w.id)
-    );
+    const tShirtCandidates = getCandidateItems(w => !isCollaredShirt(w) && !isShacket(w) && (isBaseTop(w) || isTurtleneck(w)));
+    const tShirtOrKnit = pickSmartFallbackGarment(tShirtCandidates);
     if (tShirtOrKnit) {
       items = items.map(i => isCollaredShirt(i) ? tShirtOrKnit : i);
     } else {
@@ -599,9 +611,8 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   // 2. Check if the outfit has a valid Base Top (ing vagy póló) unless turtleneck is already present
   const hasBaseTop = items.some(i => isBaseTop(i) || isTurtleneck(i) || hasShortSleeveKnit);
   if (!hasBaseTop) {
-    const baseTop = wardrobe.find(w => isBaseTop(w) && !isStandCollar(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-      wardrobe.find(w => isBaseTop(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-      wardrobe.find(w => isBaseTop(w) && !items.some(i => i.id === w.id));
+    const topCandidates = getCandidateItems(w => isBaseTop(w) && !isStandCollar(w));
+    const baseTop = pickSmartFallbackGarment(topCandidates.length > 0 ? topCandidates : getCandidateItems(isBaseTop));
     if (baseTop) {
       items.push(baseTop);
     }
@@ -610,8 +621,8 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   // 3. Check if the outfit has Bottoms (nadrág)
   const hasBottom = items.some(i => isBottom(i));
   if (!hasBottom) {
-    const bottom = wardrobe.find(w => isBottom(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-      wardrobe.find(w => isBottom(w) && !items.some(i => i.id === w.id));
+    const bottomCandidates = getCandidateItems(isBottom);
+    const bottom = pickSmartFallbackGarment(bottomCandidates);
     if (bottom) {
       items.push(bottom);
     }
@@ -621,24 +632,22 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   const currentShoeIndex = items.findIndex(i => isShoe(i));
   if (currentShoeIndex !== -1) {
     const currentShoe = items[currentShoeIndex];
-    // If it's warm weather (>= 19°C) and the shoe is a heavy boot/autumn-winter ankle boot, replace with summer shoe if available
     if (isWarmWeather && isHeavyBoot(currentShoe)) {
-      const summerAlternative = wardrobe.find(w => isShoe(w) && !isHeavyBoot(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-        wardrobe.find(w => isShoe(w) && !isHeavyBoot(w) && !items.some(i => i.id === w.id));
+      const summerCandidates = getCandidateItems(w => isShoe(w) && !isHeavyBoot(w));
+      const summerAlternative = pickSmartFallbackGarment(summerCandidates);
       if (summerAlternative) {
         items[currentShoeIndex] = summerAlternative;
       }
     }
   } else {
-    // If missing shoe, select temperature-appropriate shoe
-    const shoe = isWarmWeather
-      ? (wardrobe.find(w => isShoe(w) && !isHeavyBoot(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-        wardrobe.find(w => isShoe(w) && !isHeavyBoot(w) && !items.some(i => i.id === w.id)) ||
-        wardrobe.find(w => isShoe(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-        wardrobe.find(w => isShoe(w) && !items.some(i => i.id === w.id)))
-      : (wardrobe.find(w => isShoe(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-        wardrobe.find(w => isShoe(w) && !items.some(i => i.id === w.id)));
+    const shoeCandidates = isWarmWeather
+      ? getCandidateItems(w => isShoe(w) && !isHeavyBoot(w))
+      : getCandidateItems(isShoe);
 
+    const existingBelt = items.find(i => isBelt(i));
+    const beltColorFamily = existingBelt?.color ? (existingBelt.color.toLowerCase().includes('barna') ? 'barna' : (existingBelt.color.toLowerCase().includes('fekete') ? 'fekete' : null)) : null;
+
+    const shoe = pickSmartFallbackGarment(shoeCandidates.length > 0 ? shoeCandidates : getCandidateItems(isShoe), beltColorFamily);
     if (shoe) {
       items.push(shoe);
     }
@@ -647,8 +656,11 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   // 5. Check if the outfit has a Belt (öv - kötelező kiegészítő)
   const hasBelt = items.some(i => isBelt(i));
   if (!hasBelt) {
-    const belt = wardrobe.find(w => isBelt(w) && w.condition !== 'Lecserélendő' && !items.some(i => i.id === w.id)) ||
-      wardrobe.find(w => isBelt(w) && !items.some(i => i.id === w.id));
+    const existingShoe = items.find(i => isShoe(i));
+    const shoeColorFamily = existingShoe?.color ? (existingShoe.color.toLowerCase().includes('barna') ? 'barna' : (existingShoe.color.toLowerCase().includes('fekete') ? 'fekete' : null)) : null;
+
+    const beltCandidates = getCandidateItems(isBelt);
+    const belt = pickSmartFallbackGarment(beltCandidates, shoeColorFamily);
     if (belt) {
       items.push(belt);
     }
@@ -726,24 +738,29 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
       const resolvedBase64 = await ensureBase64Image(imageBase64OrUrl);
 
       // Lean, rich representation of wardrobe for ultra-low token transfer with normalized brands and full sartorial metadata
-      const compactWardrobe = wardrobe
-        .filter(w => w.condition !== 'Javításra vár')
-        .map(w => ({
-          id: w.id,
-          name: w.name,
-          cat: w.category,
-          subCat: w.subCategory || '',
-          mat: w.material || '',
-          season: w.season || [],
-          pat: w.pattern || '',
-          col: w.color,
-          form: w.formality,
-          fit: w.fit || '',
-          brand: normalizeBrandName(w.brand) || w.brand || '',
-          size: w.size || '',
-          cond: w.condition,
-          style: w.styleArchetype
-        }));
+      const eligibleItems = wardrobe.filter(w => w.condition !== 'Javításra vár');
+      const shuffledEligible = [...eligibleItems];
+      for (let i = shuffledEligible.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledEligible[i], shuffledEligible[j]] = [shuffledEligible[j], shuffledEligible[i]];
+      }
+
+      const compactWardrobe = shuffledEligible.map(w => ({
+        id: w.id,
+        name: w.name,
+        cat: w.category,
+        subCat: w.subCategory || '',
+        mat: w.material || '',
+        season: w.season || [],
+        pat: w.pattern || '',
+        col: w.color,
+        form: w.formality,
+        fit: w.fit || '',
+        brand: normalizeBrandName(w.brand) || w.brand || '',
+        size: w.size || '',
+        cond: w.condition,
+        style: w.styleArchetype
+      }));
 
       const webshopBrand = normalizeBrandName(webshopContext.brand) || webshopContext.brand || '';
       const webshopTextInfo = [
@@ -1076,7 +1093,14 @@ export async function generateEventOutfits({ eventName, weather, anchorItemIds =
         : [];
       const dynamicSartorialRules = formatRulesForPrompt();
 
-      const richWardrobe = availableWardrobe.map(w => ({
+      // Fisher-Yates shuffle to eliminate LLM Primacy Bias (giving 100% equal opportunity to older and newer pieces)
+      const shuffledWardrobe = [...availableWardrobe];
+      for (let i = shuffledWardrobe.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledWardrobe[i], shuffledWardrobe[j]] = [shuffledWardrobe[j], shuffledWardrobe[i]];
+      }
+
+      const richWardrobe = shuffledWardrobe.map(w => ({
         id: w.id,
         name: w.name,
         category: w.category,
@@ -1165,8 +1189,11 @@ SARTORIAL BLUEPRINT, ANATÓMIAI RÉTEGEZÉSI & SZILUETTSZABÁLYOK:
    - ❄️ TÉLI / HIDEG IDŐ (< 12°C vagy Téli esemény):
      * KETTŐS KÜLSŐ RÉTEG ENGEDÉLYEZETT: A zakó ('blazer') FÖLÉ mehet a téli szövetkabát / nagykabát ('overcoat' / 'coat')!
 
-7. 3 KÜLÖNBÖZŐ SZEMÉLYES HANGULAT AZ ESEMÉNYRE:
-   - Készíts 3 olyan komplett szettet, amelyek a fenti rétegezési szabályok szerint épülnek fel, de 3 különböző stílusárnyalatot képviselnek.
+7. 🔄 KÖTELEZŐ RUHATÁR-ROTÁCIÓ & MAXIMÁLIS DARAB-VÁLTOZATOSSÁG (STRICT WARDROBE DIVERSITY):
+   - A 3 generált szettben KÖTELEZŐ a ruhatár TELJES SZÉLESSÉGÉT és mélységét kihasználni!
+   - SZIGORÚAN TILOS ugyanazt a nadrágot, cipőt vagy zakót mindhárom szettbe beletenni, ha a ruhatárban elérhető más megfelelő darab!
+   - Mind a korábban meglévő klasszikus alapdarabokat, mind az újabb szerzeményeket EGYENLŐ ESÉLLYEL és KIEGYENSÚLYOZOTTAN vond be a válogatásba!
+   - A 3 szett (Outfit 1, Outfit 2, Outfit 3) 3 teljesen különböző stílusárnyalatot és darab-kombinációt mutasson be!
 
 🚫 CSENDES SZABÁLYBETARTÁS (Silent Rule Enforcement):
 - A felhasználó egyéni szabályait és tiltásait (pl. nem hord pólóinget, nem vesz fel joggert inggel stb.) KÖTELEZŐEN A HÁTTÉRBEN, CSENDBEN TARTSD BE a szettek összeállításakor!
@@ -1225,6 +1252,154 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
   }
 
   throw new Error('Nincs beállítva Gemini API kulcs vagy üres a ruhatár!');
+}
+
+/**
+ * 3b. AI Outfit Garment Swapper (Intelligens Egyedi Ruhacsere a Szettben)
+ * Replaces a single garment in an outfit with the best matching alternative from the wardrobe.
+ */
+export async function swapOutfitItem({
+  outfit,
+  itemToReplace,
+  wardrobe = [],
+  styleProfile = {},
+  weather = null,
+  eventName = ''
+}) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey || !outfit || !itemToReplace) {
+    throw new Error('Hiányzó adatok vagy Gemini API kulcs a ruha cseréjéhez!');
+  }
+
+  // 1. Identify category / role of itemToReplace
+  const itemCategory = itemToReplace.category || '';
+  const isShoes = itemCategory === 'shoes' || (itemToReplace.name || '').toLowerCase().includes('cipő') || (itemToReplace.name || '').toLowerCase().includes('loafer');
+  const isBottoms = itemCategory === 'bottoms' || itemCategory === 'skirts' || (itemToReplace.name || '').toLowerCase().includes('nadrág');
+  const isOuterwear = itemCategory === 'outerwear' || (itemToReplace.name || '').toLowerCase().includes('zakó') || (itemToReplace.name || '').toLowerCase().includes('kabát') || (itemToReplace.name || '').toLowerCase().includes('blézer');
+  const isTops = itemCategory === 'tops' || (itemToReplace.name || '').toLowerCase().includes('ing') || (itemToReplace.name || '').toLowerCase().includes('póló');
+  const isKnitwear = itemCategory === 'knitwear' || (itemToReplace.name || '').toLowerCase().includes('pulóver') || (itemToReplace.name || '').toLowerCase().includes('kardigán');
+  const isAccessory = itemCategory === 'accessories' || (itemToReplace.name || '').toLowerCase().includes('öv');
+
+  // 2. Candidate items from wardrobe in the same / compatible category excluding current item and items already in outfit
+  const remainingOutfitItems = (outfit.items || []).filter(i => i.id !== itemToReplace.id);
+  const remainingIds = new Set(remainingOutfitItems.map(i => i.id));
+
+  const candidateWardrobe = wardrobe.filter(w => {
+    if (w.id === itemToReplace.id) return false;
+    if (remainingIds.has(w.id)) return false;
+    if (w.condition === 'Lecserélendő' || w.condition === 'Javításra vár') return false;
+
+    if (isShoes) {
+      return w.category === 'shoes' || (w.name || '').toLowerCase().includes('cipő') || (w.name || '').toLowerCase().includes('loafer') || (w.name || '').toLowerCase().includes('sneaker') || (w.name || '').toLowerCase().includes('csizma') || (w.name || '').toLowerCase().includes('bakancs');
+    }
+    if (isBottoms) {
+      return w.category === 'bottoms' || w.category === 'skirts' || (w.name || '').toLowerCase().includes('nadrág') || (w.name || '').toLowerCase().includes('chino') || (w.name || '').toLowerCase().includes('farmer');
+    }
+    if (isOuterwear) {
+      return w.category === 'outerwear' || (w.name || '').toLowerCase().includes('zakó') || (w.name || '').toLowerCase().includes('blézer') || (w.name || '').toLowerCase().includes('dzseki') || (w.name || '').toLowerCase().includes('kabát');
+    }
+    if (isTops) {
+      return w.category === 'tops' || (w.name || '').toLowerCase().includes('ing') || (w.name || '').toLowerCase().includes('póló') || (w.name || '').toLowerCase().includes('felső');
+    }
+    if (isKnitwear) {
+      return w.category === 'knitwear' || (w.name || '').toLowerCase().includes('pulóver') || (w.name || '').toLowerCase().includes('kardigán');
+    }
+    if (isAccessory) {
+      return w.category === 'accessories' || (w.name || '').toLowerCase().includes('öv');
+    }
+    return w.category === itemCategory;
+  });
+
+  if (candidateWardrobe.length === 0) {
+    throw new Error(`Nincs másik elérhető darab a ruhatáradban a(z) "${itemToReplace.name}" cseréjéhez ebben a kategóriában.`);
+  }
+
+  // 3. Prompt Gemini to pick the best alternative and explain
+  const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
+    ? styleProfile.customStylingRules
+    : [];
+  const dynamicSartorialRules = formatRulesForPrompt();
+
+  const compactCandidates = candidateWardrobe.map(w => ({
+    id: w.id,
+    name: w.name,
+    category: w.category,
+    subCategory: w.subCategory || '',
+    material: w.material || '',
+    pattern: w.pattern || '',
+    color: w.color,
+    formality: w.formality,
+    fit: w.fit || '',
+    style: w.styleArchetype
+  }));
+
+  const compactRemaining = remainingOutfitItems.map(w => ({
+    id: w.id,
+    name: w.name,
+    category: w.category,
+    material: w.material || '',
+    color: w.color,
+    style: w.styleArchetype
+  }));
+
+  const prompt = `Te egy mester sartorial személyi stylist vagy.
+A felhasználó az alábbi outfitből szeretné LECSERÉLNI a(z) "${itemToReplace.name}" (${itemToReplace.category}, ${itemToReplace.color}) darabot egy másik, tökéletesen passzoló alternatívára.
+
+ESEMÉNY: "${eventName || outfit.occasion || 'Stílusos megjelenés'}"
+SZETT NEVE: "${outfit.title}"
+A SZETT MEGLÉVŐ TOVÁBBI ELEMEI (amik megmaradnak a szettben):
+${JSON.stringify(compactRemaining)}
+
+CSERÉRE ELÉRHETŐ DARABOK A FELHASZNÁLÓ RUHATÁRÁBÓL:
+${JSON.stringify(compactCandidates)}
+
+FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI:
+${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek.'}
+
+SARTORIAL HARMÓNIASZABÁLYOK:
+${dynamicSartorialRules}
+
+FELADAT:
+Válaszd ki a legmegfelelőbb alternatív darab 'id'-ját a fenti elérhető listából!
+A választott darabnak tökéletes színharmóniában, anyagtalálkozásban és formalitásban kell lennie a szett megmaradt elemeivel és az eseménnyel.
+
+VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
+{
+  "selectedItemId": "a_kiválasztott_ruha_id_ja",
+  "reasoning": "Rövid, meggyőző indoklás (1-2 mondat magyarul), hogy miért ez az új darab a tökéletes választás a szetthez",
+  "updatedTitle": "Opcionális frissített szett név ha a stílus finomodott",
+  "matchScore": 95
+}`;
+
+  const parsed = await callGeminiApi({
+    apiKey,
+    contents: [{ parts: [{ text: prompt }] }],
+    temperature: 0.2,
+    preferredModels: FAST_MODELS,
+    timeoutMs: 14000
+  });
+
+  const selectedItem = candidateWardrobe.find(w => w.id === parsed.selectedItemId) || candidateWardrobe[0];
+  if (!selectedItem) {
+    throw new Error('Nem sikerült megfelelő alternatív darabot kiválasztani.');
+  }
+
+  // Replace item in items array
+  const newItemsRaw = outfit.items.map(i => i.id === itemToReplace.id ? selectedItem : i);
+  const updatedItems = enforceAnatomicalOutfitLayers(newItemsRaw, wardrobe, null, weather);
+
+  return {
+    ...outfit,
+    title: parsed.updatedTitle || outfit.title,
+    matchScore: parsed.matchScore || outfit.matchScore || 94,
+    culturalFitReasoning: parsed.reasoning || outfit.culturalFitReasoning,
+    items: updatedItems,
+    replacedItemInfo: {
+      previousItemName: itemToReplace.name,
+      newItemName: selectedItem.name,
+      reasoning: parsed.reasoning
+    }
+  };
 }
 
 /**

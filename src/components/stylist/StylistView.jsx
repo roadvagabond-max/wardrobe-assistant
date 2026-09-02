@@ -5,7 +5,7 @@ import {
   Maximize2, Grid, ChevronRight, Feather, SlidersHorizontal as Sliders
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { generateEventOutfits, auditManualOutfit } from '../../services/gemini';
+import { generateEventOutfits, auditManualOutfit, swapOutfitItem, enforceAnatomicalOutfitLayers } from '../../services/gemini';
 import { fetchCurrentWeather, CITIES } from '../../services/weather';
 import confetti from 'canvas-confetti';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
@@ -33,19 +33,48 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
   const { wardrobe, profile, saveOutfit, savedOutfits } = useAuth();
 
   // Top Mode Selector: 'generator' | 'manual-audit' | 'chat'
-  const [activeSubTab, setActiveSubTab] = useState('generator');
+  const [activeSubTab, setActiveSubTab] = useState(() => {
+    return localStorage.getItem('sartorial_stylist_subtab') || 'generator';
+  });
 
-  // Generator States
-  const [selectedEvent, setSelectedEvent] = useState('Üzleti Tárgyalás & Ebéd');
-  const [customEvent, setCustomEvent] = useState('');
-  const [selectedCity, setSelectedCity] = useState('Budapest');
+  // Generator States (Preserved until next explicit request)
+  const [selectedEvent, setSelectedEvent] = useState(() => {
+    return localStorage.getItem('sartorial_last_selected_event') || 'Üzleti Tárgyalás & Ebéd';
+  });
+  const [customEvent, setCustomEvent] = useState(() => {
+    return localStorage.getItem('sartorial_last_custom_event') || '';
+  });
+  const [selectedCity, setSelectedCity] = useState(() => {
+    return localStorage.getItem('sartorial_last_selected_city') || 'Budapest';
+  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRefreshingIndex, setIsRefreshingIndex] = useState(null);
-  const [generatedOutfits, setGeneratedOutfits] = useState([]);
+  const [generatedOutfits, setGeneratedOutfits] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sartorial_last_generated_outfits');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [savedIds, setSavedIds] = useState(new Set());
 
+  // Individual Garment Swap States
+  const [swappingItemKey, setSwappingItemKey] = useState(null); // "${outfitIndex}-${itemId}"
+  const [itemSwapModal, setItemSwapModal] = useState(null); // { outfitIndex, item, outfit }
+  const [isAiSwapping, setIsAiSwapping] = useState(false);
+  const [swapError, setSwapError] = useState(null);
+
   // Anchor / Key Items
-  const [anchorItems, setAnchorItems] = useState(initialAnchorItem ? [initialAnchorItem] : []);
+  const [anchorItems, setAnchorItems] = useState(() => {
+    if (initialAnchorItem) return [initialAnchorItem];
+    try {
+      const saved = localStorage.getItem('sartorial_last_anchor_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [showAnchorModal, setShowAnchorModal] = useState(false);
 
   // Manual Outfit Builder & Audit States
@@ -86,6 +115,46 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     const saved = localStorage.getItem('user_event_history');
     return saved ? JSON.parse(saved) : DEFAULT_EVENT_PRESETS;
   });
+
+  // Persist outfits to localStorage whenever updated
+  useEffect(() => {
+    try {
+      if (generatedOutfits && generatedOutfits.length > 0) {
+        localStorage.setItem('sartorial_last_generated_outfits', JSON.stringify(generatedOutfits));
+      }
+    } catch (e) {}
+  }, [generatedOutfits]);
+
+  // Persist form inputs & selections
+  useEffect(() => {
+    try {
+      localStorage.setItem('sartorial_stylist_subtab', activeSubTab);
+    } catch (e) {}
+  }, [activeSubTab]);
+
+  useEffect(() => {
+    try {
+      if (selectedEvent) localStorage.setItem('sartorial_last_selected_event', selectedEvent);
+    } catch (e) {}
+  }, [selectedEvent]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sartorial_last_custom_event', customEvent || '');
+    } catch (e) {}
+  }, [customEvent]);
+
+  useEffect(() => {
+    try {
+      if (selectedCity) localStorage.setItem('sartorial_last_selected_city', selectedCity);
+    } catch (e) {}
+  }, [selectedCity]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sartorial_last_anchor_items', JSON.stringify(anchorItems || []));
+    } catch (e) {}
+  }, [anchorItems]);
 
   // Sync anchor item if provided externally
   useEffect(() => {
@@ -174,6 +243,112 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     } finally {
       setIsRefreshingIndex(null);
     }
+  };
+
+  // Helper to find swap candidates from wardrobe
+  const getSwapCandidates = (itemToReplace, outfit) => {
+    if (!itemToReplace || !wardrobe) return [];
+    const currentOutfitItemIds = new Set((outfit?.items || []).map(i => i.id));
+    const cat = itemToReplace.category || '';
+    const isShoes = cat === 'shoes' || (itemToReplace.name || '').toLowerCase().includes('cipő') || (itemToReplace.name || '').toLowerCase().includes('loafer');
+    const isBottoms = cat === 'bottoms' || cat === 'skirts' || (itemToReplace.name || '').toLowerCase().includes('nadrág');
+    const isOuterwear = cat === 'outerwear' || (itemToReplace.name || '').toLowerCase().includes('zakó') || (itemToReplace.name || '').toLowerCase().includes('kabát') || (itemToReplace.name || '').toLowerCase().includes('blézer');
+    const isTops = cat === 'tops' || (itemToReplace.name || '').toLowerCase().includes('ing') || (itemToReplace.name || '').toLowerCase().includes('póló');
+    const isKnitwear = cat === 'knitwear' || (itemToReplace.name || '').toLowerCase().includes('pulóver');
+    const isAccessory = cat === 'accessories' || (itemToReplace.name || '').toLowerCase().includes('öv');
+
+    return wardrobe.filter(w => {
+      if (w.id === itemToReplace.id) return false;
+      if (currentOutfitItemIds.has(w.id)) return false;
+      if (w.condition === 'Lecserélendő' || w.condition === 'Javításra vár') return false;
+
+      if (isShoes) {
+        return w.category === 'shoes' || (w.name || '').toLowerCase().includes('cipő') || (w.name || '').toLowerCase().includes('loafer') || (w.name || '').toLowerCase().includes('sneaker') || (w.name || '').toLowerCase().includes('csizma') || (w.name || '').toLowerCase().includes('bakancs');
+      }
+      if (isBottoms) {
+        return w.category === 'bottoms' || w.category === 'skirts' || (w.name || '').toLowerCase().includes('nadrág') || (w.name || '').toLowerCase().includes('chino') || (w.name || '').toLowerCase().includes('farmer');
+      }
+      if (isOuterwear) {
+        return w.category === 'outerwear' || (w.name || '').toLowerCase().includes('zakó') || (w.name || '').toLowerCase().includes('blézer') || (w.name || '').toLowerCase().includes('dzseki') || (w.name || '').toLowerCase().includes('kabát');
+      }
+      if (isTops) {
+        return w.category === 'tops' || (w.name || '').toLowerCase().includes('ing') || (w.name || '').toLowerCase().includes('póló') || (w.name || '').toLowerCase().includes('felső');
+      }
+      if (isKnitwear) {
+        return w.category === 'knitwear' || (w.name || '').toLowerCase().includes('pulóver') || (w.name || '').toLowerCase().includes('kardigán');
+      }
+      if (isAccessory) {
+        return w.category === 'accessories' || (w.name || '').toLowerCase().includes('öv');
+      }
+      return w.category === cat;
+    });
+  };
+
+  // AI Individual Garment Swap Handler
+  const handleAiSwapGarment = async (outfitIndex, itemToReplace) => {
+    if (!itemToReplace || outfitIndex === null || outfitIndex === undefined) return;
+    const currentOutfit = generatedOutfits[outfitIndex];
+    if (!currentOutfit) return;
+
+    const key = `${outfitIndex}-${itemToReplace.id}`;
+    setSwappingItemKey(key);
+    setIsAiSwapping(true);
+    setSwapError(null);
+
+    try {
+      const updatedOutfit = await swapOutfitItem({
+        outfit: currentOutfit,
+        itemToReplace,
+        wardrobe,
+        styleProfile: profile,
+        weather,
+        eventName: customEvent.trim() || selectedEvent
+      });
+
+      if (updatedOutfit) {
+        setGeneratedOutfits(prev => {
+          const updated = [...prev];
+          updated[outfitIndex] = updatedOutfit;
+          return updated;
+        });
+        setItemSwapModal(null);
+      }
+    } catch (err) {
+      console.error('Hiba a darab AI cseréjekor:', err);
+      setSwapError(err.message || 'Nem sikerült az AI csere.');
+    } finally {
+      setSwappingItemKey(null);
+      setIsAiSwapping(false);
+    }
+  };
+
+  // Manual Garment Swap Handler
+  const handleManualSwapGarment = (outfitIndex, itemToReplace, selectedNewItem) => {
+    if (!selectedNewItem || !itemToReplace || outfitIndex === null || outfitIndex === undefined) return;
+    const currentOutfit = generatedOutfits[outfitIndex];
+    if (!currentOutfit) return;
+
+    const newItemsRaw = (currentOutfit.items || []).map(i => i.id === itemToReplace.id ? selectedNewItem : i);
+    const updatedItems = enforceAnatomicalOutfitLayers(newItemsRaw, wardrobe, null, weather);
+
+    const updatedOutfit = {
+      ...currentOutfit,
+      items: updatedItems,
+      replacedItemInfo: {
+        previousItemName: itemToReplace.name,
+        newItemName: selectedNewItem.name,
+        reasoning: 'Kézi választás a gardróbból'
+      }
+    };
+
+    setGeneratedOutfits(prev => {
+      const updated = [...prev];
+      updated[outfitIndex] = updatedOutfit;
+      return updated;
+    });
+
+    setItemSwapModal(null);
+    setSwapError(null);
   };
 
   const handleSaveOutfit = (outfit) => {
@@ -500,7 +675,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {generatedOutfits.map((outfit, index) => {
-                  const isSaved = savedIds.has(outfit.id);
+                  const isSaved = savedIds.has(outfit.id) || (savedOutfits && savedOutfits.some(s => s.id === outfit.id || (s.title === outfit.title && s.eventName === (customEvent.trim() || selectedEvent))));
                   const isThisRefreshing = isRefreshingIndex === index;
 
                   return (
@@ -559,25 +734,75 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                         </div>
                       </div>
 
-                      {/* Visual Items Showcase Row with Click-to-Enlarge Lightbox */}
+                      {/* Visual Items Showcase Row with Click-to-Enlarge Lightbox & Garment Swap */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-2 p-2 rounded-xl bg-black/40 border border-white/5">
-                        {outfit.items?.map((item, iIdx) => (
-                          <div 
-                            key={iIdx} 
-                            onClick={() => openLightbox(outfit.items, iIdx, outfit.title)}
-                            className="space-y-1 group relative cursor-pointer"
-                          >
-                            <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] border border-white/10 group-hover:border-[var(--accent-gold)] p-1 flex items-center justify-center relative transition-all">
-                              <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="160" height="120" style={{ aspectRatio: '4 / 3' }} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
-                              <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
-                                {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') ? '🎗️ Öv' : item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Kiegészítő'}
-                              </span>
+                        {outfit.items?.map((item, iIdx) => {
+                          const isThisSwapping = swappingItemKey === `${index}-${item.id}`;
+
+                          return (
+                            <div 
+                              key={iIdx} 
+                              className="space-y-1 group relative"
+                            >
+                              <div 
+                                onClick={() => openLightbox(outfit.items, iIdx, outfit.title)}
+                                className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] border border-white/10 group-hover:border-[var(--accent-gold)] p-1 flex items-center justify-center relative transition-all cursor-pointer"
+                              >
+                                <img src={item.imageUrl} alt={item.name} loading="lazy" decoding="async" width="160" height="120" style={{ aspectRatio: '4 / 3' }} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                                
+                                {/* Category Badge */}
+                                <span className="absolute bottom-1 left-1 text-[8px] bg-black/85 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
+                                  {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') ? '🎗️ Öv' : item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Kiegészítő'}
+                                </span>
+
+                                {/* Garment Swap / Replace Button in Top-Right */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setItemSwapModal({ outfitIndex: index, item, outfit });
+                                  }}
+                                  disabled={isThisSwapping}
+                                  className="absolute top-1 right-1 p-1.5 rounded-lg bg-black/80 hover:bg-[var(--accent-gold)] text-[var(--accent-gold)] hover:text-black border border-[var(--border-gold)]/50 opacity-90 group-hover:opacity-100 transition-all shadow-md z-10"
+                                  title={`Darab cseréje a szettben (${item.name})`}
+                                >
+                                  {isThisSwapping ? (
+                                    <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-gold)]" />
+                                  ) : (
+                                    <RefreshCw className="w-3 h-3" />
+                                  )}
+                                </button>
+
+                                {/* Swapping Loading Overlay */}
+                                {isThisSwapping && (
+                                  <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center rounded-lg z-20">
+                                    <Loader2 className="w-5 h-5 animate-spin text-[var(--accent-gold)]" />
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between px-0.5 gap-1">
+                                <p 
+                                  onClick={() => openLightbox(outfit.items, iIdx, outfit.title)}
+                                  className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium group-hover:text-white transition-colors cursor-pointer flex-1"
+                                  title={item.name}
+                                >
+                                  {item.name}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setItemSwapModal({ outfitIndex: index, item, outfit });
+                                  }}
+                                  className="text-[9px] text-[var(--accent-gold)] hover:underline shrink-0 font-semibold cursor-pointer"
+                                >
+                                  Csere
+                                </button>
+                              </div>
                             </div>
-                            <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5 group-hover:text-white transition-colors">
-                              {item.name}
-                            </p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       {/* Styling Notes, Layering & Thermal Advice */}
@@ -1106,6 +1331,167 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 Kész
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: Egyedi Ruha Csere & AI Alternatíva Ajánló Modal */}
+      {/* ========================================================================= */}
+      {itemSwapModal && (
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isAiSwapping) {
+              setItemSwapModal(null);
+              setSwapError(null);
+            }
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md"
+        >
+          <div className="glass-card max-w-xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 border-[var(--border-gold)] space-y-5 animate-scale-up">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-white/10">
+              <div>
+                <h3 className="font-serif font-bold text-white text-lg sm:text-xl flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5 text-[var(--accent-gold)]" />
+                  <span>Ruha Cseréje a Szetthez</span>
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  Szett: <span className="text-[var(--accent-gold)] font-medium">{itemSwapModal.outfit?.title}</span>
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  if (!isAiSwapping) {
+                    setItemSwapModal(null);
+                    setSwapError(null);
+                  }
+                }}
+                disabled={isAiSwapping}
+                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Currently Selected Garment to Replace */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                Lecserélendő Darab:
+              </label>
+              <div className="flex items-center gap-3.5 p-3 rounded-xl bg-black/50 border border-white/10">
+                <div className="w-14 h-14 rounded-lg bg-[#07090e] p-1 border border-white/10 shrink-0 flex items-center justify-center">
+                  <img src={itemSwapModal.item.imageUrl} alt={itemSwapModal.item.name} className="w-full h-full object-contain" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-white text-sm truncate">{itemSwapModal.item.name}</h4>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap text-xs text-[var(--text-muted)]">
+                    <span className="badge badge-gold text-[10px]">{itemSwapModal.item.category}</span>
+                    {itemSwapModal.item.color && <span>Szín: {itemSwapModal.item.color}</span>}
+                    {itemSwapModal.item.material && <span>• {itemSwapModal.item.material}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Error Message if any */}
+            {swapError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{swapError}</span>
+              </div>
+            )}
+
+            {/* Primary Action: AI Smart Swap */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-[var(--accent-gold)]/20 via-[var(--accent-gold)]/5 to-black/40 border border-[var(--border-gold)] space-y-3 shadow-lg">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[var(--accent-gold)] animate-pulse" />
+                <h4 className="text-sm font-bold text-white font-serif">Google Gemini AI Intelligens Csere</h4>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                A mesterséges intelligencia átvizsgálja a ruhatáradat, és a szett többi elemével (anyag, szín, formalitás) és az eseménnyel leginkább harmonizáló alternatívát választja ki.
+              </p>
+              <button
+                type="button"
+                onClick={() => handleAiSwapGarment(itemSwapModal.outfitIndex, itemSwapModal.item)}
+                disabled={isAiSwapping}
+                className="btn-gold w-full py-2.5 text-xs font-bold shadow-md flex items-center justify-center gap-2"
+              >
+                {isAiSwapping ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Gemini 3.7 Flash keresi a legjobb alternatívát...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Másik passzoló darab kérése az AI-tól</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Secondary Action: Manual Wardrobe Selector */}
+            {(() => {
+              const candidates = getSwapCandidates(itemSwapModal.item, itemSwapModal.outfit);
+
+              return (
+                <div className="space-y-2.5 pt-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                      Vagy válassz kézzel a ruhatáradból ({candidates.length} db elérhető darab):
+                    </label>
+                  </div>
+
+                  {candidates.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 text-center text-xs text-[var(--text-muted)]">
+                      Nincs másik szabad darab a ruhatáradban ebben a kategóriában.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                      {candidates.map(candidate => (
+                        <button
+                          key={candidate.id}
+                          type="button"
+                          disabled={isAiSwapping}
+                          onClick={() => handleManualSwapGarment(itemSwapModal.outfitIndex, itemSwapModal.item, candidate)}
+                          className="p-2.5 rounded-xl bg-black/40 border border-white/10 hover:border-[var(--accent-gold)] hover:bg-[var(--accent-gold-glow)] transition-all text-left group flex flex-col justify-between"
+                        >
+                          <div className="aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center mb-1.5">
+                            <img src={candidate.imageUrl} alt={candidate.name} width="120" height="90" className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-medium text-white line-clamp-1 group-hover:text-[var(--accent-gold)] transition-colors">
+                              {candidate.name}
+                            </p>
+                            <span className="text-[9px] text-[var(--text-muted)] block truncate mt-0.5">
+                              {candidate.color || candidate.brand || candidate.material}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Modal Footer */}
+            <div className="pt-3 border-t border-white/10 flex justify-end">
+              <button
+                type="button"
+                disabled={isAiSwapping}
+                onClick={() => {
+                  setItemSwapModal(null);
+                  setSwapError(null);
+                }}
+                className="btn-secondary py-2 px-4 text-xs font-semibold"
+              >
+                Mégse
+              </button>
+            </div>
+
           </div>
         </div>
       )}
