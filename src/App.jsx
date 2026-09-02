@@ -11,6 +11,7 @@ import MissingPiecesView from './components/missing/MissingPiecesView';
 import StyleDNAView from './components/profile/StyleDNAView';
 import AuthModal from './components/auth/AuthModal';
 import SettingsModal from './components/settings/SettingsModal';
+import HelpGuideModal from './components/common/HelpGuideModal';
 import { fetchCurrentWeather } from './services/weather';
 import { useAuth } from './context/AuthContext';
 
@@ -47,6 +48,7 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [initialAnchorItem, setInitialAnchorItem] = useState(null);
   const [advisorPrefill, setAdvisorPrefill] = useState(null);
 
@@ -104,10 +106,13 @@ export default function App() {
     }
 
     const handleOpenSettings = () => setIsSettingsModalOpen(true);
+    const handleOpenHelp = () => setIsHelpModalOpen(true);
     window.addEventListener('open-settings', handleOpenSettings);
+    window.addEventListener('open-help', handleOpenHelp);
 
     return () => {
       window.removeEventListener('open-settings', handleOpenSettings);
+      window.removeEventListener('open-help', handleOpenHelp);
     };
   }, []);
 
@@ -128,6 +133,7 @@ export default function App() {
       <Header
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenHelp={() => setIsHelpModalOpen(true)}
         weather={weather}
       />
 
@@ -140,6 +146,7 @@ export default function App() {
           <WardrobeView
             onAddNewItem={() => setIsAddModalOpen(true)}
             onSelectItem={(item) => setSelectedItem(item)}
+            onNavigateTab={setActiveTab}
           />
         )}
 
@@ -194,6 +201,11 @@ export default function App() {
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+      />
+
+      <HelpGuideModal
+        isOpen={isHelpModalOpen}
+        onClose={() => setIsHelpModalOpen(false)}
       />
 
     </div>

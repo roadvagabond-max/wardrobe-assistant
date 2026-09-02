@@ -1,8 +1,8 @@
 import React from 'react';
-import { Sparkles, User, Settings, LogIn, ShieldAlert } from 'lucide-react';
+import { Sparkles, User, Settings, LogIn, ShieldAlert, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
-export default function Header({ onOpenSettings, onOpenAuth, weather }) {
+export default function Header({ onOpenSettings, onOpenAuth, onOpenHelp, weather }) {
   const { currentUser, isDemoMode, wardrobe, isAdmin, isSimulatingUser, toggleUserSimulation } = useAuth();
 
   return (
@@ -59,6 +59,17 @@ export default function Header({ onOpenSettings, onOpenAuth, weather }) {
             <span className="w-2 h-2 rounded-full bg-[var(--accent-gold)] animate-pulse"></span>
             <span>{wardrobe.length} db ruha</span>
           </div>
+
+          {/* Sartorial Help Guide Button */}
+          <button 
+            onClick={onOpenHelp}
+            className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 transition-all flex items-center gap-1.5 shadow-sm"
+            title="Sartorial Útmutató & Súgó"
+            aria-label="Súgó és Útmutató megnyitása"
+          >
+            <HelpCircle className="w-4 h-4 sm:w-4 sm:h-4 text-[var(--accent-gold)]" />
+            <span className="hidden md:inline text-xs font-semibold text-amber-200">Súgó</span>
+          </button>
 
           {/* Settings Modal Button */}
           <button 

@@ -310,18 +310,22 @@ export default function StyleDNAView() {
       </div>
 
       {/* 📷 AI Photo Color Season Analysis Card */}
-      <div className="glass-card p-5 sm:p-6 border-[var(--border-gold)]/60 bg-gradient-to-r from-black/60 to-[var(--accent-gold-glow)]/10 space-y-4">
+      <div className="glass-card p-5 sm:p-6 border-[var(--border-gold)]/60 bg-gradient-to-r from-black/60 via-[#161b26]/70 to-[var(--accent-gold-glow)]/10 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
+          <div className="space-y-1.5 max-w-xl">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[var(--accent-gold)]" />
               <h3 className="font-serif font-bold text-white text-base sm:text-lg">
                 Portré / Szelfi alapú AI Színtípus & Bőrtónus Elemző
               </h3>
             </div>
-            <p className="text-xs text-[var(--text-secondary)]">
-              Készíts egy természetes fényű fotót, és a Gemini 3.7 Flash automatikusan meghatározza a 12 évszakos színtípusodat és a hozzád legjobban illő színpalettát!
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+              Készíts egy szelfit természetes fényben! A <strong>Gemini 3.7 Flash</strong> AI meghatározza az arcbőröd tónusát (hideg/meleg), a 12 évszakos színtípusodat és a hozzád legjobban passzoló színpalettát, amit az AI Stylist azonnal beépít a szettjeidbe.
             </p>
+            <div className="flex items-center gap-2 text-[11px] text-amber-300/90 pt-0.5">
+              <span>💡</span>
+              <span><strong>Tipp a legpontosabb eredményhez:</strong> Természetes nappali fényben (ablak felé fordulva), smink és napszemüveg nélkül fotózz!</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -351,19 +355,19 @@ export default function StyleDNAView() {
               type="button"
               onClick={() => cameraInputRef.current?.click()}
               disabled={isAnalyzingPhoto}
-              className="btn-gold text-xs py-2 px-3 flex items-center gap-1.5 shadow"
+              className="btn-gold text-xs py-2.5 px-3.5 flex items-center gap-1.5 shadow"
             >
-              <Camera className="w-3.5 h-3.5" />
-              <span>Kamera</span>
+              <Camera className="w-4 h-4" />
+              <span>Szelfi Készítése</span>
             </button>
 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isAnalyzingPhoto}
-              className="btn-secondary text-xs py-2 px-3 flex items-center gap-1.5"
+              className="btn-secondary text-xs py-2.5 px-3.5 flex items-center gap-1.5"
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Upload className="w-4 h-4" />
               <span>Kép Feltöltése</span>
             </button>
           </div>

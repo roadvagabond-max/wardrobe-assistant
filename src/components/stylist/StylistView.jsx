@@ -528,6 +528,20 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       {/* ========================================================================= */}
       {activeSubTab === 'generator' && (
         <div className="space-y-6">
+
+          {/* Contextual Guidance Banner */}
+          <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-black/40 to-transparent border border-amber-500/30 text-xs space-y-1.5">
+            <div className="flex items-center gap-2 text-amber-200 font-serif font-bold text-xs">
+              <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+              <span>Hogyan generál szetteket a Gemini 3.7 Flash AI Stylist?</span>
+            </div>
+            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+              Válassz eseményt és várost! Az AI az <strong>aktuális helyi időjáráshoz</strong>, a <strong>Stílus DNS-edhez</strong> és az <strong>egyéni szabályaidhoz</strong> szabva állít össze 3 anatómiailag rétegzett (ing ➔ pulóver ➔ zakó ➔ kabát) szettet a gardróbodból.
+            </p>
+            <p className="text-[11px] text-amber-300/90 pt-0.5">
+              🍂 <em>Tipp: A legjobb eredményhez töltsd fel a mostani szezonális ruháidat (ingek, nadrágok, cipők)!</em>
+            </p>
+          </div>
           
           {/* Control Panel Card */}
           <div className="glass-card p-5 sm:p-6 space-y-5">

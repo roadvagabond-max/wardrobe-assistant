@@ -114,6 +114,17 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
         </button>
       </div>
 
+      {/* Helpful Capsule Guidance Banner */}
+      <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-black/40 to-transparent border border-amber-500/30 text-xs space-y-1.5">
+        <div className="flex items-center gap-2 text-amber-200 font-serif font-bold text-xs">
+          <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+          <span>Hogyan választja ki az AI a hiányzó kulcsdarabokat?</span>
+        </div>
+        <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+          Az AI megvizsgálja a ruhatárad kategória-lefedettségét és a darabok állapotát. Azokat az elemeket (pl. <em>szezonális lábbelik</em>, <em>természetes anyagú rétegek</em>) sorolja előre, amelyek a <strong>legtöbb új szettkombinációt</strong> nyitják meg a meglévő ruháiddal.
+        </p>
+      </div>
+
       {/* Seasonal & Category Filter Tabs */}
       <div className="flex flex-wrap gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
         {[

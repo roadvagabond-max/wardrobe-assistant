@@ -306,6 +306,32 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
         )}
       </div>
 
+      {/* Helpful 4-Pillar Guidance Banner */}
+      <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-black/40 to-transparent border border-amber-500/30 text-xs space-y-2">
+        <div className="flex items-center gap-2 text-amber-200 font-serif font-bold text-xs">
+          <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+          <span>Hogyan segít az AI megelőzni a rossz vásárlási döntéseket?</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-[11px] text-[var(--text-secondary)]">
+          <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+            <strong className="text-white block">1. 3 komplett szett:</strong>
+            <span>Megmutatja, hogyan tudod viselni a már meglévő darabjaiddal.</span>
+          </div>
+          <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+            <strong className="text-white block">2. Duplikáció szűrés:</strong>
+            <span>Figyelmeztet, ha már van hasonló darabod a ruhatáradban.</span>
+          </div>
+          <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+            <strong className="text-white block">3. Szabás & Méret:</strong>
+            <span>Ellenőrzi a méretet és szabást (pl. Slim vs Regular).</span>
+          </div>
+          <div className="p-2 rounded-lg bg-black/40 border border-white/5">
+            <strong className="text-white block">4. Anyagminőség:</strong>
+            <span>Kiszűri a rossz műszálakat (100% poliészter, PU műbőr).</span>
+          </div>
+        </div>
+      </div>
+
       {/* Input Stage */}
       {!evaluationResult && (
         <div className="glass-card p-5 sm:p-6 space-y-5">

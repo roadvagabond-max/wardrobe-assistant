@@ -460,7 +460,29 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
         {/* Input Method Selector / Form */}
         {!isFormReady ? (
-          <div className="space-y-6">
+          <div className="space-y-5">
+            
+            {/* Helpful Onboarding & Best Practices Tip Card */}
+            <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 text-xs space-y-2">
+              <div className="flex items-center gap-2 text-amber-300 font-bold font-serif text-xs">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                <span>Aranyszabályok a hatékony ruhatárépítéshez:</span>
+              </div>
+              <ul className="space-y-1.5 pl-1 text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-amber-400 font-bold shrink-0">🍂 1.</span>
+                  <span><strong>Szezonális prioritás:</strong> Először az <em>aktuális évszakban hordott ruháidat</em> töltsd fel, hogy az AI Stylist azonnal a mai napra és időjárásra készítsen szetteket!</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-emerald-400 font-bold shrink-0">📏 2.</span>
+                  <span><strong>Csak a tökéletesen passzoló darabok:</strong> Csak olyan ruhát rögzíts, ami ma is kényelmes és jó méretű. A kinőtt vagy túl szűk darabokat hagyd ki!</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-amber-300 font-bold shrink-0">✨ 3.</span>
+                  <span><strong>Valós állapot:</strong> Ha a darab kopott, állítsd <em>Játszós</em> vagy <em>Lecserélendő</em> státuszra, hogy az AI ne tegye elegáns szettekbe.</span>
+                </li>
+              </ul>
+            </div>
             
             {/* Mode Tabs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
@@ -899,6 +921,9 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                   className="custom-input text-xs font-mono"
                   placeholder="pl. 50, M, L, 40 / 15.75, 32/32, 42.5"
                 />
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                  📏 <em>Csak olyan ruhát tölts fel, ami most is tökéletesen passzol rád!</em>
+                </p>
               </div>
             </div>
 
@@ -1012,9 +1037,14 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
             {/* 7. Garment Condition (5 levels) */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-[var(--text-secondary)]">
-                Ruha Állapota:
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                  Ruha Állapota:
+                </label>
+                <span className="text-[10px] text-amber-300">
+                  ✨ Ha kopott, állítsd 'Játszós' vagy 'Lecserélendő'-re!
+                </span>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {CONDITION_LEVELS.map(c => {
                   const isSelected = formData.condition === c.val;

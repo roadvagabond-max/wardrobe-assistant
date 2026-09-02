@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Shirt } from 'lucide-react';
+import { Plus, Search, Shirt, Sparkles, Compass, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeBrandName } from '../../services/webshop';
+import OnboardingGuide from '../common/OnboardingGuide';
 
-export default function WardrobeView({ onAddNewItem, onSelectItem }) {
+export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab }) {
   const { wardrobe } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -72,6 +73,12 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
   return (
     <div className="space-y-6 animate-slide-up">
       
+      {/* Interactive Onboarding Quick-Start Guide */}
+      <OnboardingGuide 
+        onNavigateTab={onNavigateTab || (() => {})} 
+        onOpenAddModal={onAddNewItem} 
+      />
+
       {/* Top Banner / Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -90,6 +97,16 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
           <Plus className="w-5 h-5" />
           <span>Új Ruha Feltöltése</span>
         </button>
+      </div>
+
+      {/* Seasonal & Fit Strategy Hint Banner */}
+      <div className="p-3 sm:p-3.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between gap-3 text-xs text-[var(--text-secondary)]">
+        <div className="flex items-center gap-2.5">
+          <span className="text-base">🍂</span>
+          <span>
+            <strong>Szezonális tipp:</strong> Mindig az <em>aktuális évszakban hordott ruháiddal kezdd</em> a feltöltést, és csak olyan darabokat tarts meg, amelyek <em>ma is passzolnak rád</em>!
+          </span>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
@@ -263,6 +280,29 @@ export default function WardrobeView({ onAddNewItem, onSelectItem }) {
               </div>
             </div>
           ))}
+        </div>
+      ) : wardrobe.length === 0 ? (
+        <div className="glass-card p-8 sm:p-12 text-center space-y-5 border-[var(--border-gold)]/50 bg-gradient-to-b from-black/60 to-[var(--accent-gold-glow)]/10 max-w-xl mx-auto">
+          <div className="w-16 h-16 rounded-full bg-[var(--accent-gold)]/20 border border-[var(--border-gold)] flex items-center justify-center mx-auto text-[var(--accent-gold)] shadow-lg">
+            <Shirt className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-serif font-bold text-white">
+              A digitális gardróbod még üres
+            </h3>
+            <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+              Töltsd fel az első 3-5 ruhádat az <strong>aktuális szezonból</strong> (pl. kedvenc inged, zakód, nadrágod, cipőd), hogy az AI Stylist azonnal dolgozni tudjon velük!
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={onAddNewItem}
+              className="btn-gold w-full sm:w-auto text-xs py-2.5 px-5 flex items-center justify-center gap-2 shadow"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Első Szezonális Ruha Feltöltése</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="glass-card p-12 text-center space-y-4">
