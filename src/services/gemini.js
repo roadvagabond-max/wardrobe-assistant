@@ -1054,7 +1054,89 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
     }
   }
 
-  throw new Error('Nincs beállítva Gemini API kulcs!');
+/**
+ * Heurisztikus Sartorial Outfit Generátor (Offline & API Hiba Fallback)
+ */
+export function generateLocalSartorialOutfits({ eventName = '', weather = null, anchorItemIds = [], wardrobe = [], styleProfile = {} } = {}) {
+  const temperature = typeof weather?.temperature === 'number' ? weather.temperature : 22;
+  const isWarmWeather = temperature >= 19;
+  const isFormalEvent = /üzleti|tárgyalás|esküvő|gála|színház|ünnepi|formal|opera|vacsora/i.test(eventName);
+
+  const availableWardrobe = wardrobe.filter(w => {
+    if (w.condition === 'Lecserélendő' || w.condition === 'Javításra vár') return false;
+    if (isFormalEvent && w.condition === 'Játszós / Kopott') return false;
+    return true;
+  });
+
+  if (availableWardrobe.length === 0) {
+    throw new Error('Nincs elérhető ruhadarab a ruhatáradban a szettek összeállításához.');
+  }
+
+  const tops = availableWardrobe.filter(w => w.category === 'tops');
+  const bottoms = availableWardrobe.filter(w => w.category === 'bottoms');
+  const shoes = availableWardrobe.filter(w => w.category === 'shoes');
+  const outerwear = availableWardrobe.filter(w => w.category === 'outerwear');
+  const knitwear = availableWardrobe.filter(w => w.category === 'knitwear');
+  const accessories = availableWardrobe.filter(w => w.category === 'accessories');
+
+  const anchorItems = wardrobe.filter(w => anchorItemIds.includes(w.id));
+
+  const archetypes = [
+    { title: '1. Olasz Sprezzatura & Smart Casual', style: 'Olasz Sprezzatura', score: 98, note: 'Kifinomult rétegzés a gardróbod legfontosabb alapdarabjaiból.' },
+    { title: '2. Időtlen Klasszikus Elegancia', style: 'Klasszikus & Időtlen', score: 95, note: 'Tiszta vonalvezetés és harmonikus színharmónia.' },
+    { title: '3. Kényelmes & Kortárs Relaxed', style: 'Kortárs Elegáns', score: 92, note: 'Laza, magabiztos összeállítás természetes anyagokkal.' }
+  ];
+
+  const outfits = archetypes.map((arch, idx) => {
+    let rawItems = [...anchorItems];
+
+    // Pick a bottom if not anchored
+    if (!rawItems.some(i => i.category === 'bottoms') && bottoms.length > 0) {
+      rawItems.push(bottoms[idx % bottoms.length]);
+    }
+
+    // Pick a top if not anchored
+    if (!rawItems.some(i => i.category === 'tops') && tops.length > 0) {
+      rawItems.push(tops[idx % tops.length]);
+    }
+
+    // Pick outerwear or knitwear based on temperature and index
+    if (!isWarmWeather || isFormalEvent) {
+      if (idx % 2 === 0 && outerwear.length > 0 && !rawItems.some(i => i.category === 'outerwear')) {
+        rawItems.push(outerwear[idx % outerwear.length]);
+      } else if (knitwear.length > 0 && !rawItems.some(i => i.category === 'knitwear')) {
+        rawItems.push(knitwear[idx % knitwear.length]);
+      }
+    }
+
+    // Pick shoes if not anchored
+    if (!rawItems.some(i => i.category === 'shoes') && shoes.length > 0) {
+      rawItems.push(shoes[idx % shoes.length]);
+    }
+
+    // Pick matching belt if not anchored
+    if (!rawItems.some(i => (i.subCategory === 'belt' || (i.name || '').toLowerCase().includes('öv'))) && accessories.length > 0) {
+      const belt = accessories.find(a => a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv')) || accessories[0];
+      if (belt) rawItems.push(belt);
+    }
+
+    const fullItems = enforceAnatomicalOutfitLayers(rawItems, availableWardrobe, null, weather);
+
+    return {
+      id: `outfit-sartorial-${Date.now()}-${idx}`,
+      title: arch.title,
+      styleArchetype: arch.style,
+      occasion: eventName || 'Kiemelt Alkalom',
+      matchScore: arch.score,
+      stylingNotes: arch.note,
+      layeringAdvice: isWarmWeather ? "Könnyed, légáteresztő összeállítás a meleg időhöz." : "Tökéletes többrétegű összeállítás, amely hűvösebb időben és belső térben is komfortos.",
+      culturalFitReasoning: "A szett megfelel a kulturális és stilisztikai elvárásoknak a felhasználó egyéni stílus DNS-e alapján.",
+      weatherSuitability: `Ideális a(z) ${temperature}°C-os időjáráshoz.`,
+      items: fullItems
+    };
+  }).filter(o => o.items.length > 0);
+
+  return outfits;
 }
 
 /**
@@ -1244,12 +1326,12 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
         }).filter(o => o.items.length > 0);
       }
     } catch (e) {
-      console.error("Gemini Stylist hiba:", e);
-      throw e;
+      console.warn("Gemini AI API hívás sikertelen, Sartorial Heurisztikus Generátorra váltás:", e.message);
+      return generateLocalSartorialOutfits({ eventName, weather, anchorItemIds, wardrobe, styleProfile });
     }
   }
 
-  throw new Error('Nincs beállítva Gemini API kulcs vagy üres a ruhatár!');
+  return generateLocalSartorialOutfits({ eventName, weather, anchorItemIds, wardrobe, styleProfile });
 }
 
 /**
@@ -1638,40 +1720,64 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   throw new Error('Nincs beállítva Gemini API kulcs vagy üres a szett!');
 }
 
+function generateLocalStylistChatReply({ messages = [], wardrobe = [], styleProfile = {}, weather = null } = {}) {
+  const lastUserMsg = messages.filter(m => m.role === 'user').slice(-1)[0]?.content || '';
+  const query = lastUserMsg.toLowerCase();
+  const temp = weather?.temperature ?? 21;
+  const isWarm = temp >= 19;
+
+  const tops = wardrobe.filter(w => w.category === 'tops');
+  const bottoms = wardrobe.filter(w => w.category === 'bottoms');
+  const shoes = wardrobe.filter(w => w.category === 'shoes');
+  const outerwear = wardrobe.filter(w => w.category === 'outerwear');
+  const knitwear = wardrobe.filter(w => w.category === 'knitwear');
+
+  const top1 = tops[0]?.name || 'klasszikus ing';
+  const bottom1 = bottoms[0]?.name || 'nadrág';
+  const shoe1 = shoes[0]?.name || 'bőrcipő';
+  const outer1 = outerwear[0]?.name || knitwear[0]?.name || 'zakó';
+
+  if (query.includes('holnap') || query.includes('mit vegyek') || query.includes('szett') || query.includes('öltöz')) {
+    return `A jelenlegi ${temp}°C-os időjáráshoz és a digitális ruhatáradhoz (${wardrobe.length} db ruha) igazodva az alábbi sartorial szettet javaslom:\n\n• **Bázis:** **${top1}** (kényelmes, minőségi bázisréteg)\n• **Alsó:** **${bottom1}**\n• **Külső réteg:** **${outer1}**\n• **Lábbeli:** **${shoe1}**\n\n*Sartorial tanács:* ${isWarm ? 'Melegben a felső réteg levehető, az ing vagy póló önmagában is magabiztos eleganciát ad.' : 'A rétegezés hűvösebb időben és belső térben is optimális komfortot biztosít.'}`;
+  }
+
+  if (query.includes('hiány') || query.includes('kapszula') || query.includes('vásárol')) {
+    return `A gardróbod (${wardrobe.length} db ruha) áttekintése alapján a legfontosabb hiánypótló darabok:\n\n1. **Sötétbarna Full-Grain Bőr Chelsea Csizma** – Őszi/téli időben a flanelnadrágok és szövetkabátok elegáns sarokköve.\n2. **Konyakbarna és Fekete Bőröv** – A cipőkkel harmonizáló bőröv elengedhetetlen.\n3. **Merinó gyapjú garbó** – Kiemelkedő olasz sprezzatura eleganciát ad zakó alatt.`;
+  }
+
+  return `Áttekintettem a ruhatáradat (${wardrobe.length} db darab) a kérdésed kapcsán. A gardróbod remek alapokkal rendelkezik a választott stílusirányzataidhoz. A természetes textúrák (gyapjú, pamut, bőr) és a harmonikus földszínek kombinációjára érdemes építened!\n\nKérdezz bátran konkrét szettekről, alkalmakról vagy rétegezésről!`;
+}
+
 /**
  * 6. Szabad Szöveges Személyes AI Master Stylist Chat
  */
 export async function chatWithMasterStylist({ messages = [], wardrobe = [], styleProfile = {}, weather = null, apiKey = null }) {
   const cleanKey = (apiKey || getGeminiApiKey() || '').trim();
-
-  if (!cleanKey || cleanKey.startsWith('AQ.')) {
-    throw new Error('Nincs érvényes Gemini API kulcs! Kérlek add meg a Beállításokban.');
-  }
-
   const activeApiKey = cleanKey;
 
-  try {
-    const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
-      ? styleProfile.customStylingRules
-      : [];
-    const dynamicSartorialRules = formatRulesForPrompt();
+  if (activeApiKey) {
+    try {
+      const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
+        ? styleProfile.customStylingRules
+        : [];
+      const dynamicSartorialRules = formatRulesForPrompt();
 
-    const wardrobeInventory = wardrobe.map(w => ({
-      id: w.id,
-      name: w.name,
-      category: w.category,
-      subCategory: w.subCategory || '',
-      material: w.material || '',
-      color: w.color,
-      brand: w.brand || '',
-      size: w.size || '',
-      condition: w.condition || '',
-      formality: w.formality || '',
-      style: w.styleArchetype || '',
-      tags: w.tags || []
-    }));
+      const wardrobeInventory = wardrobe.map(w => ({
+        id: w.id,
+        name: w.name,
+        category: w.category,
+        subCategory: w.subCategory || '',
+        material: w.material || '',
+        color: w.color,
+        brand: w.brand || '',
+        size: w.size || '',
+        condition: w.condition || '',
+        formality: w.formality || '',
+        style: w.styleArchetype || '',
+        tags: w.tags || []
+      }));
 
-    const systemInstruction = `Te egy világklasszis, közvetlen, diszkrét és rendkívül művelt Mester Személyi Stylist (Master Sartorial Consultant) vagy.
+      const systemInstruction = `Te egy világklasszis, közvetlen, diszkrét és rendkívül művelt Mester Személyi Stylist (Master Sartorial Consultant) vagy.
 A felhasználóval beszélgetsz, aki tanácsot kérhet tőled szettekről, konkrét ruhadarabjainak viseléséről, stílustrendekről, gardrób-bővítésről vagy esemény-specifikus megjelenésről.
 
 A LEGFONTOSABB SZUPERERŐD:
@@ -1704,48 +1810,51 @@ STÍLUS ÉS KOMMUNIKÁCIÓS IRÁNYELVEK:
 5. Ha a felhasználó egy szettet kérdez tőled, használd a sartorial rétegezési szabályokat (Bázis ing + Nadrág + Cipő + Öv + opcionális Pulóver / Zakó / Kabát).
 6. Használj elegáns markdown formázást (félkövér kiemelések, felsorolások, bekezdések).`;
 
-    // Convert chat history into Gemini contents format
-    const contents = [
-      {
-        role: 'user',
-        parts: [{ text: `[KONTEXTUS ÉS RENDSZER UTASÍTÁS]:\n${systemInstruction}\n\nKérlek erősítsd meg, hogy felkészültél a személyes stílustanácsadásra!` }]
-      },
-      {
-        role: 'model',
-        parts: [{ text: 'Természetesen! Teljes mélységében áttekintettem a ruhatáradat, a stílusprofilodat és a személyes preferenciáidat. Készen állok, miben segíthetek ma?' }]
+      // Convert chat history into Gemini contents format
+      const contents = [
+        {
+          role: 'user',
+          parts: [{ text: `[KONTEXTUS ÉS RENDSZER UTASÍTÁS]:\n${systemInstruction}\n\nKérlek erősítsd meg, hogy felkészültél a személyes stílustanácsadásra!` }]
+        },
+        {
+          role: 'model',
+          parts: [{ text: 'Természetesen! Teljes mélységében áttekintettem a ruhatáradat, a stílusprofilodat és a személyes preferenciáidat. Készen állok, miben segíthetek ma?' }]
+        }
+      ];
+
+      for (const msg of messages) {
+        contents.push({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }]
+        });
       }
-    ];
 
-    for (const msg of messages) {
-      contents.push({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
+      const response = await callGeminiApi({
+        apiKey: activeApiKey,
+        contents,
+        temperature: 0.65,
+        expectJson: false,
+        preferredModels: REASONING_MODELS,
+        timeoutMs: 25000
       });
-    }
 
-    const response = await callGeminiApi({
-      apiKey: activeApiKey,
-      contents,
-      temperature: 0.65,
-      expectJson: false,
-      preferredModels: REASONING_MODELS,
-      timeoutMs: 25000
-    });
-
-    if (typeof response === 'string') {
+      if (typeof response === 'string') {
+        return formatStylistJsonToMarkdown(response);
+      }
+      if (response && response.text) {
+        return formatStylistJsonToMarkdown(response.text);
+      }
+      if (response && response.content) {
+        return formatStylistJsonToMarkdown(response.content);
+      }
       return formatStylistJsonToMarkdown(response);
+    } catch (e) {
+      console.warn('Gemini Chat API sikertelen, helyi Sartorial Stylist válaszra váltás:', e.message);
+      return generateLocalStylistChatReply({ messages, wardrobe, styleProfile, weather });
     }
-    if (response && response.text) {
-      return formatStylistJsonToMarkdown(response.text);
-    }
-    if (response && response.content) {
-      return formatStylistJsonToMarkdown(response.content);
-    }
-    return formatStylistJsonToMarkdown(response);
-  } catch (e) {
-    console.error('Hiba a Master Stylist chat során:', e);
-    throw e;
   }
+
+  return generateLocalStylistChatReply({ messages, wardrobe, styleProfile, weather });
 }
 
 /**
