@@ -36,10 +36,10 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const DEFAULT_ADMIN_EMAILS = [
-    'roadvagabond@gmail.com',
-    'attila.varadi@gmail.com'
-  ];
+  const [sartorialRules, setSartorialRules] = useState(() => getStoredSartorialRules());
+  const [isMiningRules, setIsMiningRules] = useState(false);
+
+  const DEFAULT_ADMIN_EMAILS = [];
 
   const [adminEmails, setAdminEmails] = useState(() => {
     try {
