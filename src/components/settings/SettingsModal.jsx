@@ -8,8 +8,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const { wardrobe, resetToDemoData, geminiApiKey: contextGeminiKey, saveGeminiApiKey } = useAuth();
 
   const [geminiKey, setGeminiKey] = useState(() => {
-    const raw = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
-    return raw.startsWith('AQ.') ? '' : raw;
+    return (localStorage.getItem('GEMINI_API_KEY') || contextGeminiKey || '').trim();
   });
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [testStatus, setTestStatus] = useState({ testing: false, message: '', success: null });
@@ -21,8 +20,8 @@ export default function SettingsModal({ isOpen, onClose }) {
   // Sync state whenever modal is opened
   useEffect(() => {
     if (isOpen) {
-      const raw = (contextGeminiKey || localStorage.getItem('GEMINI_API_KEY') || '').trim();
-      setGeminiKey(raw.startsWith('AQ.') ? '' : raw);
+      const current = (contextGeminiKey || localStorage.getItem('GEMINI_API_KEY') || '').trim();
+      setGeminiKey(current);
       setFirebaseApiKey(localStorage.getItem('VITE_FIREBASE_API_KEY') || '');
       setFirebaseProjectId(localStorage.getItem('VITE_FIREBASE_PROJECT_ID') || '');
       setFirebaseAuthDomain(localStorage.getItem('VITE_FIREBASE_AUTH_DOMAIN') || '');
@@ -109,7 +108,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 id="settings-gemini-key-input"
                 name="geminiApiKey"
                 aria-label="Google Gemini API Kulcs"
-                placeholder="AIzaSy..."
+                placeholder="AQ.Ab... vagy AIzaSy..."
                 value={geminiKey}
                 onChange={(e) => {
                   setGeminiKey(e.target.value);
@@ -130,21 +129,10 @@ export default function SettingsModal({ isOpen, onClose }) {
             {/* Live Format & Test Button Row */}
             <div className="flex items-center justify-between gap-2 pt-0.5">
               <div className="text-[10px]">
-                {geminiKey.startsWith('AIzaSy') ? (
-                  <span className="text-emerald-400 font-medium flex items-center gap-1">✓ AI Studio formátum</span>
-                ) : geminiKey.startsWith('AQ.') ? (
-                  <span className="text-rose-400 font-medium">❌ Érvénytelen (AIzaSy... szükséges)</span>
-                ) : geminiKey ? (
-                  <span className="text-amber-400 font-medium">⚠️ Ellenőrizd a kulcsot</span>
+                {geminiKey ? (
+                  <span className="text-emerald-400 font-medium flex items-center gap-1">✓ API Kulcs Megadva ({geminiKey.slice(0, 6)}...)</span>
                 ) : (
-                  <a 
-                    href="https://aistudio.google.com/apikey" 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="text-[var(--accent-gold-light)] hover:underline"
-                  >
-                    Ingyenes kulcs igénylése ↗
-                  </a>
+                  <span className="text-[var(--text-muted)]">Nincs kulcs megadva</span>
                 )}
               </div>
 

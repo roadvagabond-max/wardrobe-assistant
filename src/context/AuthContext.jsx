@@ -39,8 +39,7 @@ export function AuthProvider({ children }) {
   const [sartorialRules, setSartorialRules] = useState(() => getStoredSartorialRules());
   const [isMiningRules, setIsMiningRules] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState(() => {
-    const raw = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
-    return raw.startsWith('AQ.') ? '' : raw;
+    return (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
   });
 
   // Debounced non-blocking sync to local storage
@@ -150,13 +149,13 @@ export function AuthProvider({ children }) {
               if (data.savedOutfits) {
                 setSavedOutfits(data.savedOutfits);
               }
-              if (data.geminiApiKey && typeof data.geminiApiKey === 'string' && data.geminiApiKey.trim() && !data.geminiApiKey.startsWith('AQ.')) {
+              if (data.geminiApiKey && typeof data.geminiApiKey === 'string' && data.geminiApiKey.trim()) {
                 const cloudKey = data.geminiApiKey.trim();
                 localStorage.setItem('GEMINI_API_KEY', cloudKey);
                 setGeminiApiKey(cloudKey);
               } else {
-                const localKey = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
-                if (localKey && !localKey.startsWith('AQ.')) {
+                const localKey = (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
+                if (localKey) {
                   await setDoc(userDocRef, {
                     geminiApiKey: localKey,
                     updatedAt: new Date().toISOString()
@@ -165,13 +164,12 @@ export function AuthProvider({ children }) {
               }
             } else {
               const localProfile = JSON.parse(localStorage.getItem('user_style_profile') || JSON.stringify(INITIAL_USER_PROFILE));
-              const localGeminiKey = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
-              const cleanLocalKey = localGeminiKey.startsWith('AQ.') ? '' : localGeminiKey;
+              const localGeminiKey = (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
               await setDoc(userDocRef, {
                 email: user.email,
                 displayName: user.displayName,
                 profile: localProfile,
-                ...(cleanLocalKey ? { geminiApiKey: cleanLocalKey } : {}),
+                ...(localGeminiKey ? { geminiApiKey: localGeminiKey } : {}),
                 updatedAt: new Date().toISOString()
               }, { merge: true });
             }
@@ -344,7 +342,7 @@ export function AuthProvider({ children }) {
 
   const saveGeminiApiKey = async (newKey) => {
     const clean = (newKey || '').trim();
-    if (clean && !clean.startsWith('AQ.')) {
+    if (clean) {
       localStorage.setItem('GEMINI_API_KEY', clean);
       setGeminiApiKey(clean);
     } else {
@@ -355,7 +353,7 @@ export function AuthProvider({ children }) {
     if (currentUser && db && isFirebaseConfigured) {
       try {
         await setDoc(doc(db, 'users', currentUser.uid), {
-          geminiApiKey: (clean && !clean.startsWith('AQ.')) ? clean : '',
+          geminiApiKey: clean || '',
           updatedAt: new Date().toISOString()
         }, { merge: true });
       } catch (err) {

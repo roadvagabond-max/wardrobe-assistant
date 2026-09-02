@@ -5,19 +5,17 @@ import { formatRulesForPrompt } from './sartorialRules';
 
 export const getGeminiApiKey = () => {
   const localKey = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
-  if (localKey && localKey.startsWith('AIzaSy')) return localKey;
-  if (localKey && !localKey.startsWith('AQ.')) return localKey;
+  if (localKey) return localKey;
 
   const envKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim();
-  if (envKey && envKey.startsWith('AIzaSy')) return envKey;
-  if (envKey && !envKey.startsWith('AQ.')) return envKey;
+  if (envKey) return envKey;
 
-  return (localKey && !localKey.startsWith('AQ.')) ? localKey : (envKey && !envKey.startsWith('AQ.')) ? envKey : '';
+  return '';
 };
 
 export const isGeminiConfigured = (providedKey = null) => {
   const key = (providedKey || getGeminiApiKey() || '').trim();
-  return Boolean(key && !key.startsWith('AQ.') && (key.startsWith('AIzaSy') || key.length > 25));
+  return Boolean(key && key.length >= 10);
 };
 
 /**
@@ -28,15 +26,12 @@ export async function testGeminiApiKey(testKey) {
   if (!cleanKey) {
     return { success: false, message: 'Nincs megadva API kulcs!' };
   }
-  if (cleanKey.startsWith('AQ.')) {
-    return { success: false, message: 'Érvénytelen OAuth token formátum! Google AI Studio kulcs szükséges (AIzaSy... kezdetű).' };
-  }
   try {
     const res = await callGeminiApi({
       apiKey: cleanKey,
       contents: [{ role: 'user', parts: [{ text: 'Ping! Respond in JSON: {"status": "ok"}' }] }],
       preferredModels: FAST_MODELS,
-      timeoutMs: 6000,
+      timeoutMs: 8000,
       expectJson: true
     });
     return { success: true, message: '✓ Sikeres kapcsolat a Google Gemini AI-val!' };
@@ -166,12 +161,18 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
         requestBody.tools = tools;
       }
 
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': cleanKey
+      };
+
+      if (cleanKey.startsWith('AQ.') || cleanKey.startsWith('ya29.')) {
+        headers['Authorization'] = `Bearer ${cleanKey}`;
+      }
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': cleanKey
-        },
+        headers,
         body: JSON.stringify(requestBody),
         signal: controller.signal
       });
@@ -207,7 +208,7 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
             errBody.includes('API_KEY_INVALID')
           ))
         ) {
-          throw new Error('Érvénytelen vagy hiányzó Google Gemini API kulcs (401 Auth Error)! Kérlek generálj egy saját ingyenes kulcsot az aistudio.google.com/apikey oldalon, és add meg a jobb felső ⚙️ Beállítások menüben!');
+          throw new Error('Érvénytelen vagy lejárt Google Gemini API kulcs (401 Auth Error)! Kérlek ellenőrizd az API kulcsodat a jobb felső ⚙️ Beállítások menüben.');
         }
 
         // If 503 or 429, invalidate activeFastModel cache so next call doesn't hit it first
