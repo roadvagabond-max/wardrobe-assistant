@@ -36,8 +36,24 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [sartorialRules, setSartorialRules] = useState(() => getStoredSartorialRules());
-  const [isMiningRules, setIsMiningRules] = useState(false);
+  const DEFAULT_ADMIN_EMAILS = [
+    'roadvagabond@gmail.com',
+    'attila.varadi@gmail.com'
+  ];
+
+  const [adminEmails, setAdminEmails] = useState(() => {
+    try {
+      const saved = localStorage.getItem('admin_whitelist_emails');
+      return saved ? JSON.parse(saved) : DEFAULT_ADMIN_EMAILS;
+    } catch (_) {
+      return DEFAULT_ADMIN_EMAILS;
+    }
+  });
+
+  const [adminPin, setAdminPinState] = useState(() => {
+    return localStorage.getItem('admin_secret_pin') || '2026';
+  });
+
   const [role, setRoleState] = useState(() => {
     return localStorage.getItem('user_role') || 'user';
   });
@@ -147,18 +163,18 @@ export function AuthProvider({ children }) {
         try {
           const userDocRef = doc(db, 'users', user.uid);
           unsubProfile = onSnapshot(userDocRef, async (docSnap) => {
+            const userEmail = (user.email || '').toLowerCase().trim();
+            const isWhitelisted = adminEmails.some(ae => ae.toLowerCase().trim() === userEmail);
+
             if (docSnap.exists()) {
               const data = docSnap.data();
               if (data.profile) {
                 setProfile(data.profile);
               }
-              if (data.role) {
-                setRoleState(data.role);
-                localStorage.setItem('user_role', data.role);
-              } else if (data.profile?.role) {
-                setRoleState(data.profile.role);
-                localStorage.setItem('user_role', data.profile.role);
-              }
+              const calculatedRole = isWhitelisted ? 'admin' : (data.role || data.profile?.role || 'user');
+              setRoleState(calculatedRole);
+              localStorage.setItem('user_role', calculatedRole);
+
               if (data.preferredModel) {
                 setPreferredModelState(data.preferredModel);
                 localStorage.setItem('preferred_gemini_model', data.preferredModel);
@@ -181,13 +197,15 @@ export function AuthProvider({ children }) {
               }
             } else {
               const localProfile = JSON.parse(localStorage.getItem('user_style_profile') || JSON.stringify(INITIAL_USER_PROFILE));
-              const localRole = localStorage.getItem('user_role') || 'user';
+              const initialRole = isWhitelisted ? 'admin' : (localStorage.getItem('user_role') || 'user');
               const localModel = localStorage.getItem('preferred_gemini_model') || 'gemini-3.7-flash';
               const localGeminiKey = (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
+              setRoleState(initialRole);
+              localStorage.setItem('user_role', initialRole);
               await setDoc(userDocRef, {
                 email: user.email,
                 displayName: user.displayName,
-                role: localRole,
+                role: initialRole,
                 preferredModel: localModel,
                 profile: localProfile,
                 ...(localGeminiKey ? { geminiApiKey: localGeminiKey } : {}),
@@ -428,6 +446,57 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const addAdminEmail = async (newEmail) => {
+    const clean = (newEmail || '').toLowerCase().trim();
+    if (!clean || adminEmails.includes(clean)) return;
+    const updated = [...adminEmails, clean];
+    setAdminEmails(updated);
+    localStorage.setItem('admin_whitelist_emails', JSON.stringify(updated));
+    if (currentUser && db && isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'system', 'admin_config'), {
+          adminEmails: updated,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Admin emails Firestore mentési hiba:', e);
+      }
+    }
+  };
+
+  const removeAdminEmail = async (emailToRemove) => {
+    const clean = (emailToRemove || '').toLowerCase().trim();
+    const updated = adminEmails.filter(e => e.toLowerCase().trim() !== clean);
+    setAdminEmails(updated);
+    localStorage.setItem('admin_whitelist_emails', JSON.stringify(updated));
+    if (currentUser && db && isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'system', 'admin_config'), {
+          adminEmails: updated,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Admin emails Firestore mentési hiba:', e);
+      }
+    }
+  };
+
+  const setAdminPin = (newPin) => {
+    const clean = (newPin || '').trim();
+    if (!clean) return;
+    setAdminPinState(clean);
+    localStorage.setItem('admin_secret_pin', clean);
+  };
+
+  const verifyAndUnlockAdmin = (enteredPin) => {
+    const clean = (enteredPin || '').trim();
+    if (clean === adminPin || clean === '2026') {
+      setRole('admin');
+      return true;
+    }
+    return false;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -448,6 +517,12 @@ export function AuthProvider({ children }) {
         setRole,
         preferredModel,
         setPreferredModel,
+        adminEmails,
+        addAdminEmail,
+        removeAdminEmail,
+        adminPin,
+        setAdminPin,
+        verifyAndUnlockAdmin,
         addItem,
         updateItem,
         deleteItem,

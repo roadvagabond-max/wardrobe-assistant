@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Key, Database, Sparkles, RotateCcw, Download, Check, Eye, EyeOff, Play, 
-  Loader2, AlertCircle, ShieldCheck, Cpu, HardDrive, UserCheck, Sliders, Activity
+  Loader2, AlertCircle, ShieldCheck, Cpu, HardDrive, UserCheck, Sliders, Activity,
+  Lock, Unlock, UserPlus, Trash2, Mail, Shield, ChevronRight, HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { isFirebaseConfigured } from '../../services/firebase';
@@ -18,7 +19,13 @@ export default function SettingsModal({ isOpen, onClose }) {
     setRole,
     preferredModel,
     setPreferredModel,
-    sartorialRules
+    sartorialRules,
+    adminEmails = [],
+    addAdminEmail,
+    removeAdminEmail,
+    adminPin,
+    setAdminPin,
+    verifyAndUnlockAdmin
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState('general'); // 'general' | 'admin'
@@ -32,6 +39,14 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [firebaseAuthDomain, setFirebaseAuthDomain] = useState(() => localStorage.getItem('VITE_FIREBASE_AUTH_DOMAIN') || '');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // Admin Management States
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newPinCode, setNewPinCode] = useState('');
+  const [pinChangeSuccess, setPinChangeSuccess] = useState(false);
+  const [showUnlockForm, setShowUnlockForm] = useState(false);
+  const [unlockPinInput, setUnlockPinInput] = useState('');
+  const [unlockError, setUnlockError] = useState(null);
+
   // Sync state whenever modal is opened
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +57,9 @@ export default function SettingsModal({ isOpen, onClose }) {
       setFirebaseAuthDomain(localStorage.getItem('VITE_FIREBASE_AUTH_DOMAIN') || '');
       setTestStatus({ testing: false, message: '', success: null });
       setSavedSuccess(false);
+      setShowUnlockForm(false);
+      setUnlockPinInput('');
+      setUnlockError(null);
     }
   }, [isOpen, contextGeminiKey]);
 
@@ -71,6 +89,39 @@ export default function SettingsModal({ isOpen, onClose }) {
       setSavedSuccess(false);
       onClose();
     }, 1000);
+  };
+
+  const handleUnlockAdminWithPin = (e) => {
+    e.preventDefault();
+    setUnlockError(null);
+    const success = verifyAndUnlockAdmin(unlockPinInput);
+    if (success) {
+      setShowUnlockForm(false);
+      setUnlockPinInput('');
+      setActiveTab('admin');
+    } else {
+      setUnlockError('Hibás Admin Mesterkód! Próbáld újra.');
+    }
+  };
+
+  const handleAddNewAdmin = async (e) => {
+    e.preventDefault();
+    const clean = newAdminEmail.trim();
+    if (!clean) return;
+    await addAdminEmail(clean);
+    setNewAdminEmail('');
+  };
+
+  const handleUpdatePin = (e) => {
+    e.preventDefault();
+    if (newPinCode.trim().length < 4) {
+      alert('A PIN kódnak legalább 4 karakterből kell állnia!');
+      return;
+    }
+    setAdminPin(newPinCode.trim());
+    setNewPinCode('');
+    setPinChangeSuccess(true);
+    setTimeout(() => setPinChangeSuccess(false), 2000);
   };
 
   const handleExportData = () => {
@@ -127,7 +178,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>👑 Admin Panel</span>
+              <span>👑 Admin Vezérlőpult</span>
             </button>
           </div>
         )}
@@ -214,32 +265,76 @@ export default function SettingsModal({ isOpen, onClose }) {
                 )}
               </div>
 
-              {/* User Role Card & Simulator Switch for testing */}
-              <div className="bg-[#07090e]/40 p-3 rounded-xl border border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs ${
-                    isAdmin ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                  }`}>
-                    {isAdmin ? '👑' : '👤'}
+              {/* Secure Role Card */}
+              <div className="bg-[#07090e]/40 p-3.5 rounded-xl border border-white/5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm ${
+                      isAdmin ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                    }`}>
+                      {isAdmin ? '👑' : '👤'}
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-white block">
+                        {isAdmin ? 'Adminisztrátori Szerepkör' : 'Normál Felhasználó'}
+                      </span>
+                      <span className="text-[10px] text-[var(--text-muted)]">
+                        {isAdmin ? 'Teljes hozzáférés a rendszerbeállításokhoz' : 'Személyes gardrób élmény'}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs font-semibold text-white block">
-                      {isAdmin ? 'Adminisztrátori Szerepkör' : 'Normál Felhasználó'}
-                    </span>
-                    <span className="text-[10px] text-[var(--text-muted)]">
-                      {isAdmin ? 'Teljes hozzáférés a rendszerbeállításokhoz' : 'Letisztult személyes gardrób élmény'}
-                    </span>
-                  </div>
+
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      onClick={() => setRole('user')}
+                      className="text-[10px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[var(--text-muted)] hover:text-white transition-all"
+                      title="Felhasználói nézet megtekintése"
+                    >
+                      User Nézet
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowUnlockForm(!showUnlockForm)}
+                      className="text-[10px] px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 flex items-center gap-1 transition-all"
+                      title="Adminisztrátori Mód Feloldása"
+                    >
+                      <Lock className="w-3 h-3" />
+                      <span>Admin Feloldása</span>
+                    </button>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setRole(isAdmin ? 'user' : 'admin')}
-                  className="text-[10px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white transition-all"
-                  title="Szerepkör gyorsváltó a teszteléshez"
-                >
-                  {isAdmin ? 'Váltás Userre' : 'Váltás Adminra'}
-                </button>
+                {/* PIN Code Unlock Form (Only for non-admins trying to access) */}
+                {!isAdmin && showUnlockForm && (
+                  <div className="pt-2 border-t border-white/5 space-y-2 animate-slide-up">
+                    <span className="text-[11px] text-[var(--text-secondary)] block">
+                      Add meg az Admin Mesterkódot / PIN-t a rendszergazdai jogok aktiválásához:
+                    </span>
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        placeholder="Admin Mesterkód..."
+                        value={unlockPinInput}
+                        onChange={(e) => setUnlockPinInput(e.target.value)}
+                        className="custom-input text-xs flex-1 py-1.5 font-mono"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleUnlockAdminWithPin}
+                        className="btn-gold text-xs py-1.5 px-3 shrink-0 flex items-center gap-1"
+                      >
+                        <Unlock className="w-3.5 h-3.5" />
+                        <span>Feloldás</span>
+                      </button>
+                    </div>
+                    {unlockError && (
+                      <span className="text-[10px] text-rose-400 block">{unlockError}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
             </div>
@@ -249,6 +344,93 @@ export default function SettingsModal({ isOpen, onClose }) {
           {isAdmin && activeTab === 'admin' && (
             <div className="space-y-4 animate-fade-in">
               
+              {/* 👥 User & Admin Access Management */}
+              <div className="space-y-3 bg-[#07090e]/60 p-3.5 rounded-xl border border-white/5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-amber-400" />
+                    <span>👑 Adminisztrátorok & Hozzáférések</span>
+                  </label>
+                  <span className="text-[10px] text-amber-300 font-medium">
+                    {adminEmails.length} feljogosított admin
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  Az alábbi e-mail címekkel bejelentkező felhasználók automatikusan teljes körű <strong>Adminisztrátori jogosultságot</strong> kapnak.
+                </p>
+
+                {/* List of Admin Emails */}
+                <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                  {adminEmails.map((email) => (
+                    <div key={email} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                        <span className="font-mono text-white/90">{email}</span>
+                      </div>
+                      {adminEmails.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeAdminEmail(email)}
+                          className="p-1 text-rose-400/70 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
+                          title="Admin jog visszavonása"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add New Admin Form */}
+                <div className="pt-2 flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="uj.admin@gmail.com"
+                    value={newAdminEmail}
+                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                    className="custom-input text-xs flex-1 py-1.5 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNewAdmin}
+                    disabled={!newAdminEmail.trim()}
+                    className="btn-gold text-xs py-1.5 px-3 shrink-0 flex items-center gap-1 disabled:opacity-40"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Hozzáadás</span>
+                  </button>
+                </div>
+
+                {/* Change PIN section */}
+                <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-2">
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    <span>Vészhelyzeti PIN kód: </span>
+                    <strong className="font-mono text-white">{adminPin}</strong>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      placeholder="Új PIN..."
+                      value={newPinCode}
+                      onChange={(e) => setNewPinCode(e.target.value)}
+                      className="custom-input text-xs w-24 py-1 font-mono text-center"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleUpdatePin}
+                      disabled={!newPinCode.trim()}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium disabled:opacity-30"
+                    >
+                      Módosítás
+                    </button>
+                  </div>
+                </div>
+                {pinChangeSuccess && (
+                  <span className="text-[10px] text-emerald-400 block text-right">✓ PIN kód sikeresen frissítve!</span>
+                )}
+              </div>
+
               {/* AI Model Strategy */}
               <div className="space-y-2 bg-[#07090e]/60 p-3.5 rounded-xl border border-white/5">
                 <label className="text-xs font-semibold text-white flex items-center gap-1.5">
