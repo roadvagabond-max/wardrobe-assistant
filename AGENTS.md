@@ -250,6 +250,11 @@ sequenceDiagram
 - **Fő fájlok:** `src/context/AuthContext.jsx`, `src/services/firebase.js`
 - **Szabályok:** `onSnapshot` real-time listeners, `setDoc(..., { merge: true })`, idle-time képtömörítés a meglévő darabokra.
 
+### 7. `mobile-ui-designer`
+- **Cél:** Mobil-első (Mobile-First) felhasználói élmény, érintésbarát ergonómia (touch targets >= 40px), Gold Glassmorphism design system, flexbox `min-w-0` túlcsordulás-védelem és lebegő navigációs margók.
+- **Fő fájlok:** `.agents/skills/mobile-ui-designer/SKILL.md`, `src/App.jsx`, `src/components/layout/BottomNav.jsx`, `src/components/stylist/StylistView.jsx`
+- **Szabályok:** `stopPropagation` kártyagomboknál, `pb-28` lebegő alsó margó, `min-w-0` a flexbox szövegeknél, uncropped `aspect-[4/3]` képarányok.
+
 ---
 
 ## ⚡ Minőségi & Sebesség-szabályok
