@@ -16,6 +16,9 @@ export default function SettingsModal({ isOpen, onClose }) {
     saveGeminiApiKey,
     role,
     isAdmin,
+    isActualAdmin,
+    isSimulatingUser,
+    toggleUserSimulation,
     setRole,
     preferredModel,
     setPreferredModel,
@@ -270,28 +273,40 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm ${
-                      isAdmin ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                      isAdmin ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : isSimulatingUser ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                     }`}>
-                      {isAdmin ? '👑' : '👤'}
+                      {isAdmin ? '👑' : isSimulatingUser ? '👁️' : '👤'}
                     </div>
                     <div>
                       <span className="text-xs font-semibold text-white block">
-                        {isAdmin ? 'Adminisztrátori Szerepkör' : 'Normál Felhasználó'}
+                        {isAdmin ? 'Adminisztrátori Szerepkör' : isSimulatingUser ? 'Felhasználói Nézet (Szimuláció)' : 'Normál Felhasználó'}
                       </span>
                       <span className="text-[10px] text-[var(--text-muted)]">
-                        {isAdmin ? 'Teljes hozzáférés a rendszerbeállításokhoz' : 'Személyes gardrób élmény'}
+                        {isAdmin ? 'Teljes hozzáférés a rendszerbeállításokhoz' : isSimulatingUser ? 'Tesztelés alatt: úgy látod az appot, mint egy normál user' : 'Személyes gardrób élmény'}
                       </span>
                     </div>
                   </div>
 
-                  {isAdmin ? (
+                  {isActualAdmin ? (
                     <button
                       type="button"
-                      onClick={() => setRole('user')}
-                      className="text-[10px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[var(--text-muted)] hover:text-white transition-all"
-                      title="Felhasználói nézet megtekintése"
+                      onClick={() => {
+                        toggleUserSimulation();
+                        if (isSimulatingUser) {
+                          setActiveTab('admin');
+                        } else {
+                          setActiveTab('general');
+                        }
+                      }}
+                      className={`text-[10px] px-2.5 py-1.5 rounded-lg border font-semibold transition-all flex items-center gap-1 ${
+                        isSimulatingUser 
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 animate-pulse'
+                          : 'bg-white/5 hover:bg-white/10 border-white/10 text-white/90 hover:text-white'
+                      }`}
+                      title={isSimulatingUser ? "Visszatérés az Adminisztrátori módba" : "Felhasználói nézet kipróbálása"}
                     >
-                      User Nézet
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{isSimulatingUser ? 'Vissza Adminra' : 'User Nézet Teszt'}</span>
                     </button>
                   ) : (
                     <button

@@ -422,7 +422,18 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const isAdmin = role === 'admin';
+  const [isSimulatingUser, setIsSimulatingUser] = useState(false);
+
+  const isUserEmailWhitelisted = currentUser && adminEmails.some(
+    ae => ae.toLowerCase().trim() === (currentUser.email || '').toLowerCase().trim()
+  );
+
+  const isActualAdmin = (role === 'admin') || Boolean(isUserEmailWhitelisted);
+  const isAdmin = isActualAdmin && !isSimulatingUser;
+
+  const toggleUserSimulation = () => {
+    setIsSimulatingUser(prev => !prev);
+  };
 
   const saveGeminiApiKey = async (newKey) => {
     const clean = (newKey || '').trim();
@@ -540,6 +551,9 @@ export function AuthProvider({ children }) {
         loading,
         role,
         isAdmin,
+        isActualAdmin,
+        isSimulatingUser,
+        toggleUserSimulation,
         setRole,
         preferredModel,
         setPreferredModel,

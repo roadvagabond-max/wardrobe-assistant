@@ -3,7 +3,7 @@ import { Sparkles, User, Settings, LogIn, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Header({ onOpenSettings, onOpenAuth, weather }) {
-  const { currentUser, isDemoMode, wardrobe, isAdmin, role } = useAuth();
+  const { currentUser, isDemoMode, wardrobe, isAdmin, isSimulatingUser, toggleUserSimulation } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-[var(--border-subtle)] px-4 py-3 sm:px-8">
@@ -24,6 +24,15 @@ export default function Header({ onOpenSettings, onOpenAuth, weather }) {
                   <span>👑</span>
                   <span>Admin</span>
                 </span>
+              ) : isSimulatingUser ? (
+                <button
+                  onClick={toggleUserSimulation}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer animate-pulse"
+                  title="Kattints ide a visszalépéshez az Adminisztrátori Módba"
+                >
+                  <span>👁️</span>
+                  <span>User Teszt (Vissza Adminra)</span>
+                </button>
               ) : (
                 <span className="hidden sm:inline-block px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-gold-light)] border border-[var(--border-gold)]">
                   AI Assistant
