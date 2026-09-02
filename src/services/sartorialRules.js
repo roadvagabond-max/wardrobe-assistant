@@ -1,5 +1,5 @@
 // Autonomous Sartorial Intelligence & Rule Mining Service
-import { callGeminiApi, FAST_MODELS } from './gemini';
+import { callGeminiApi, FAST_MODELS, getGeminiApiKey } from './gemini';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -274,7 +274,7 @@ export function formatRulesForPrompt(category = null) {
  * Uses Google Gemini 3.x with Google Search Grounding to discover real-world sartorial rules
  */
 export async function mineSartorialRulesFromWeb({ apiKey = null, userUid = null, focusTopic = '' } = {}) {
-  const key = apiKey || (import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('GEMINI_API_KEY') || '').trim();
+  const key = apiKey || getGeminiApiKey();
   if (!key) {
     throw new Error('Nincs érvényes Gemini API kulcs a webes szabálykutatáshoz!');
   }

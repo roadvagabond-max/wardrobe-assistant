@@ -38,6 +38,10 @@ export function AuthProvider({ children }) {
 
   const [sartorialRules, setSartorialRules] = useState(() => getStoredSartorialRules());
   const [isMiningRules, setIsMiningRules] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState(() => {
+    const raw = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
+    return raw.startsWith('AQ.') ? '' : raw;
+  });
 
   // Debounced non-blocking sync to local storage
   useEffect(() => {
@@ -146,17 +150,28 @@ export function AuthProvider({ children }) {
               if (data.savedOutfits) {
                 setSavedOutfits(data.savedOutfits);
               }
-              if (data.geminiApiKey && typeof data.geminiApiKey === 'string' && data.geminiApiKey.trim()) {
-                localStorage.setItem('GEMINI_API_KEY', data.geminiApiKey.trim());
+              if (data.geminiApiKey && typeof data.geminiApiKey === 'string' && data.geminiApiKey.trim() && !data.geminiApiKey.startsWith('AQ.')) {
+                const cloudKey = data.geminiApiKey.trim();
+                localStorage.setItem('GEMINI_API_KEY', cloudKey);
+                setGeminiApiKey(cloudKey);
+              } else {
+                const localKey = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
+                if (localKey && !localKey.startsWith('AQ.')) {
+                  await setDoc(userDocRef, {
+                    geminiApiKey: localKey,
+                    updatedAt: new Date().toISOString()
+                  }, { merge: true });
+                }
               }
             } else {
               const localProfile = JSON.parse(localStorage.getItem('user_style_profile') || JSON.stringify(INITIAL_USER_PROFILE));
-              const localGeminiKey = localStorage.getItem('GEMINI_API_KEY') || '';
+              const localGeminiKey = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
+              const cleanLocalKey = localGeminiKey.startsWith('AQ.') ? '' : localGeminiKey;
               await setDoc(userDocRef, {
                 email: user.email,
                 displayName: user.displayName,
                 profile: localProfile,
-                ...(localGeminiKey ? { geminiApiKey: localGeminiKey } : {}),
+                ...(cleanLocalKey ? { geminiApiKey: cleanLocalKey } : {}),
                 updatedAt: new Date().toISOString()
               }, { merge: true });
             }
@@ -327,6 +342,28 @@ export function AuthProvider({ children }) {
     setIsDemoMode(true);
   };
 
+  const saveGeminiApiKey = async (newKey) => {
+    const clean = (newKey || '').trim();
+    if (clean && !clean.startsWith('AQ.')) {
+      localStorage.setItem('GEMINI_API_KEY', clean);
+      setGeminiApiKey(clean);
+    } else {
+      localStorage.removeItem('GEMINI_API_KEY');
+      setGeminiApiKey('');
+    }
+
+    if (currentUser && db && isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+          geminiApiKey: (clean && !clean.startsWith('AQ.')) ? clean : '',
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (err) {
+        console.warn('Firestore geminiApiKey mentési hiba:', err);
+      }
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -348,6 +385,8 @@ export function AuthProvider({ children }) {
         updateProfile,
         saveOutfit,
         resetToDemoData,
+        geminiApiKey,
+        saveGeminiApiKey,
         loginWithGoogle: handleGoogleLogin,
         logout: handleLogout
       }}
