@@ -1,9 +1,9 @@
 import React from 'react';
-import { Sparkles, User, Settings, LogIn } from 'lucide-react';
+import { Sparkles, User, Settings, LogIn, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Header({ onOpenSettings, onOpenAuth, weather }) {
-  const { currentUser, isDemoMode, wardrobe } = useAuth();
+  const { currentUser, isDemoMode, wardrobe, isAdmin, role } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 w-full glass-panel border-b border-[var(--border-subtle)] px-4 py-3 sm:px-8">
@@ -19,9 +19,16 @@ export default function Header({ onOpenSettings, onOpenAuth, weather }) {
               <h1 className="text-lg sm:text-xl font-bold tracking-tight font-serif gold-gradient-text">
                 SARTORIAL WARDROBE
               </h1>
-              <span className="hidden sm:inline-block px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-gold-light)] border border-[var(--border-gold)]">
-                AI Assistant
-              </span>
+              {isAdmin ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/10 animate-pulse">
+                  <span>👑</span>
+                  <span>Admin</span>
+                </span>
+              ) : (
+                <span className="hidden sm:inline-block px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-gold-light)] border border-[var(--border-gold)]">
+                  AI Assistant
+                </span>
+              )}
             </div>
           </div>
         </div>

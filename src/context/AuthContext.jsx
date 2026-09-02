@@ -38,6 +38,12 @@ export function AuthProvider({ children }) {
 
   const [sartorialRules, setSartorialRules] = useState(() => getStoredSartorialRules());
   const [isMiningRules, setIsMiningRules] = useState(false);
+  const [role, setRoleState] = useState(() => {
+    return localStorage.getItem('user_role') || 'user';
+  });
+  const [preferredModel, setPreferredModelState] = useState(() => {
+    return localStorage.getItem('preferred_gemini_model') || 'gemini-3.7-flash';
+  });
   const [geminiApiKey, setGeminiApiKey] = useState(() => {
     return (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
   });
@@ -146,6 +152,17 @@ export function AuthProvider({ children }) {
               if (data.profile) {
                 setProfile(data.profile);
               }
+              if (data.role) {
+                setRoleState(data.role);
+                localStorage.setItem('user_role', data.role);
+              } else if (data.profile?.role) {
+                setRoleState(data.profile.role);
+                localStorage.setItem('user_role', data.profile.role);
+              }
+              if (data.preferredModel) {
+                setPreferredModelState(data.preferredModel);
+                localStorage.setItem('preferred_gemini_model', data.preferredModel);
+              }
               if (data.savedOutfits) {
                 setSavedOutfits(data.savedOutfits);
               }
@@ -164,10 +181,14 @@ export function AuthProvider({ children }) {
               }
             } else {
               const localProfile = JSON.parse(localStorage.getItem('user_style_profile') || JSON.stringify(INITIAL_USER_PROFILE));
+              const localRole = localStorage.getItem('user_role') || 'user';
+              const localModel = localStorage.getItem('preferred_gemini_model') || 'gemini-3.7-flash';
               const localGeminiKey = (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
               await setDoc(userDocRef, {
                 email: user.email,
                 displayName: user.displayName,
+                role: localRole,
+                preferredModel: localModel,
                 profile: localProfile,
                 ...(localGeminiKey ? { geminiApiKey: localGeminiKey } : {}),
                 updatedAt: new Date().toISOString()
@@ -335,10 +356,55 @@ export function AuthProvider({ children }) {
   };
 
   const handleLogout = async () => {
-    await logoutUser();
+    try {
+      await logoutUser();
+    } catch (e) {
+      console.warn('Logout figyelmeztetés:', e);
+    }
     setCurrentUser(null);
     setIsDemoMode(true);
+    setRoleState('user');
+    localStorage.setItem('user_role', 'user');
+    setWardrobe(INITIAL_WARDROBE);
+    setProfile(INITIAL_USER_PROFILE);
+    setSavedOutfits([]);
+    try {
+      localStorage.removeItem('capsule_gaps_cache');
+    } catch (_) {}
   };
+
+  const setRole = async (newRole) => {
+    const cleanRole = newRole === 'admin' ? 'admin' : 'user';
+    setRoleState(cleanRole);
+    localStorage.setItem('user_role', cleanRole);
+    if (currentUser && db && isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+          role: cleanRole,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Role mentési hiba Firestore-ba:', e);
+      }
+    }
+  };
+
+  const setPreferredModel = async (modelName) => {
+    setPreferredModelState(modelName);
+    localStorage.setItem('preferred_gemini_model', modelName);
+    if (currentUser && db && isFirebaseConfigured) {
+      try {
+        await setDoc(doc(db, 'users', currentUser.uid), {
+          preferredModel: modelName,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.warn('Preferred model mentési hiba Firestore-ba:', e);
+      }
+    }
+  };
+
+  const isAdmin = role === 'admin';
 
   const saveGeminiApiKey = async (newKey) => {
     const clean = (newKey || '').trim();
@@ -377,6 +443,11 @@ export function AuthProvider({ children }) {
         toggleRule,
         deleteSartorialRule,
         loading,
+        role,
+        isAdmin,
+        setRole,
+        preferredModel,
+        setPreferredModel,
         addItem,
         updateItem,
         deleteItem,

@@ -30,6 +30,8 @@ export default function StyleDNAView() {
     wardrobe, 
     currentUser, 
     isDemoMode,
+    role,
+    isAdmin,
     sartorialRules = [],
     isMiningRules,
     mineNewRules,
@@ -269,7 +271,20 @@ export default function StyleDNAView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <span className="badge badge-gold">Stílusprofil</span>
+          <div className="flex items-center gap-2">
+            <span className="badge badge-gold">Stílusprofil</span>
+            {isAdmin ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                <span>👑</span>
+                <span>Adminisztrátor</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-medium tracking-wider rounded-full bg-white/5 text-[var(--text-muted)] border border-white/10">
+                <span>👤</span>
+                <span>Tag</span>
+              </span>
+            )}
+          </div>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
             Stílus DNA
           </h2>
