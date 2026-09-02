@@ -4,18 +4,12 @@ import { normalizeBrandName } from './webshop';
 import { formatRulesForPrompt } from './sartorialRules';
 
 export const getGeminiApiKey = () => {
-  const localKey = (localStorage.getItem('GEMINI_API_KEY') || '').trim();
-  if (localKey) return localKey;
-
-  const envKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim();
-  if (envKey) return envKey;
-
-  return '';
+  return (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
 };
 
 export const isGeminiConfigured = (providedKey = null) => {
   const key = (providedKey || getGeminiApiKey() || '').trim();
-  return Boolean(key && key.length >= 10);
+  return Boolean(key && key.length > 5);
 };
 
 /**
@@ -145,12 +139,7 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const isBearerAuth = cleanKey.startsWith('AQ.') || cleanKey.startsWith('ya29.');
-
-      const url = isBearerAuth
-        ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-        : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
       const requestBody = {
         contents,
         generationConfig: {
@@ -166,17 +155,12 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
         requestBody.tools = tools;
       }
 
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(isBearerAuth
-          ? { 'Authorization': `Bearer ${cleanKey}` }
-          : { 'x-goog-api-key': cleanKey }
-        )
-      };
-
       const response = await fetch(url, {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': cleanKey
+        },
         body: JSON.stringify(requestBody),
         signal: controller.signal
       });
@@ -202,17 +186,8 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
         const errBody = await response.text();
         console.warn(`Gemini (${model}) státusz: ${response.status}`, errBody);
 
-        if (
-          response.status === 401 ||
-          response.status === 403 ||
-          (response.status === 400 && (
-            errBody.includes('API key not valid') ||
-            errBody.includes('INVALID_ARGUMENT') ||
-            errBody.includes('UNAUTHENTICATED') ||
-            errBody.includes('API_KEY_INVALID')
-          ))
-        ) {
-          throw new Error('Érvénytelen vagy lejárt Google Gemini API kulcs (401 Auth Error)! Kérlek ellenőrizd az API kulcsodat a jobb felső ⚙️ Beállítások menüben.');
+        if (response.status === 400 && (errBody.includes('API key not valid') || errBody.includes('INVALID_ARGUMENT'))) {
+          throw new Error('Érvénytelen Google Gemini API kulcs! Kérlek ellenőrizd az API kulcsodat a Beállítások menüben.');
         }
 
         // If 503 or 429, invalidate activeFastModel cache so next call doesn't hit it first
@@ -224,11 +199,7 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
       }
     } catch (e) {
       clearTimeout(timeoutId);
-      if (
-        e.message?.includes('401 Auth Error') ||
-        e.message?.includes('Érvénytelen vagy hiányzó Google Gemini API kulcs') ||
-        e.message?.includes('aistudio.google.com/apikey')
-      ) {
+      if (e.message?.includes('Érvénytelen Google Gemini API kulcs')) {
         throw e;
       }
       console.warn(`Hiba vagy időtúllépés a(z) ${model} modellel:`, e.name === 'AbortError' ? `Időtúllépés (>${(timeoutMs / 1000).toFixed(1)}s)` : e.message);
@@ -237,7 +208,7 @@ export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_M
     }
   }
 
-  throw lastError || new Error('Nem sikerült választ kapni a Gemini AI modelltől.');
+  throw lastError || new Error('Nem sikerült választ kapni a Gemini AI-tól. Kérlek próbáld újra!');
 }
 
 /**
