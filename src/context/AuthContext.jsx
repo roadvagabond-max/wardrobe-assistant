@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { auth, db, loginWithGoogle, logoutUser, isFirebaseConfigured } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { INITIAL_WARDROBE, INITIAL_USER_PROFILE } from '../data/mockWardrobe';
+import { INITIAL_WARDROBE, INITIAL_USER_PROFILE, DEFAULT_NEW_USER_PROFILE } from '../data/mockWardrobe';
 import { ensureBase64Image } from '../services/imageOptimizer';
 import { 
   getStoredSartorialRules, 
@@ -196,10 +196,12 @@ export function AuthProvider({ children }) {
                 }
               }
             } else {
-              const localProfile = JSON.parse(localStorage.getItem('user_style_profile') || JSON.stringify(INITIAL_USER_PROFILE));
-              const initialRole = isWhitelisted ? 'admin' : (localStorage.getItem('user_role') || 'user');
-              const localModel = localStorage.getItem('preferred_gemini_model') || 'gemini-3.7-flash';
-              const localGeminiKey = (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
+              const newProfile = {
+                ...DEFAULT_NEW_USER_PROFILE,
+                name: user.displayName || user.email?.split('@')[0] || 'Felhasználó'
+              };
+              const initialRole = isWhitelisted ? 'admin' : 'user';
+              const localModel = 'gemini-3.7-flash';
               setRoleState(initialRole);
               localStorage.setItem('user_role', initialRole);
               await setDoc(userDocRef, {
@@ -207,8 +209,7 @@ export function AuthProvider({ children }) {
                 displayName: user.displayName,
                 role: initialRole,
                 preferredModel: localModel,
-                profile: localProfile,
-                ...(localGeminiKey ? { geminiApiKey: localGeminiKey } : {}),
+                profile: newProfile,
                 updatedAt: new Date().toISOString()
               }, { merge: true });
             }
@@ -228,12 +229,7 @@ export function AuthProvider({ children }) {
               items.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
               setWardrobe(items);
             } else {
-              const localItems = JSON.parse(localStorage.getItem('wardrobe_items') || '[]');
-              if (localItems.length > 0) {
-                for (const itm of localItems) {
-                  await setDoc(doc(db, 'users', user.uid, 'wardrobe', itm.id), itm);
-                }
-              }
+              setWardrobe([]);
             }
           }, (err) => {
             console.warn('Firestore wardrobe snapshot hiba:', err);
@@ -528,10 +524,37 @@ export function AuthProvider({ children }) {
   const verifyAndUnlockAdmin = (enteredPin) => {
     const clean = (enteredPin || '').trim();
     if (clean === adminPin || clean === '2026') {
+      setIsSimulatingUser(false);
       setRole('admin');
       return true;
     }
     return false;
+  };
+
+  const resetUserByUid = async (uidToReset) => {
+    const cleanUid = (uidToReset || '').trim();
+    if (!cleanUid) return { success: false, error: 'Kérlek adj meg egy érvényes UID-t!' };
+    if (!db || !isFirebaseConfigured) return { success: false, error: 'Nincs aktív Firestore kapcsolat.' };
+
+    try {
+      // 1. Töröljük a wardrobe alkollekciót
+      const wardrobeCol = collection(db, 'users', cleanUid, 'wardrobe');
+      const snap = await getDocs(wardrobeCol);
+      const deletePromises = snap.docs.map(docItem => deleteDoc(doc(db, 'users', cleanUid, 'wardrobe', docItem.id)));
+      await Promise.all(deletePromises);
+
+      // 2. Töröljük a settings/sartorialRules alkollekciót
+      try {
+        await deleteDoc(doc(db, 'users', cleanUid, 'settings', 'sartorialRules'));
+      } catch (_) {}
+
+      // 3. Töröljük a felhasználói fődokumentumot
+      await deleteDoc(doc(db, 'users', cleanUid));
+      return { success: true };
+    } catch (err) {
+      console.error('Felhasználó törlési hiba:', err);
+      return { success: false, error: err.message };
+    }
   };
 
   return (
@@ -563,6 +586,7 @@ export function AuthProvider({ children }) {
         adminPin,
         setAdminPin,
         verifyAndUnlockAdmin,
+        resetUserByUid,
         addItem,
         updateItem,
         deleteItem,

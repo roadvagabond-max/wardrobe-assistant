@@ -28,7 +28,8 @@ export default function SettingsModal({ isOpen, onClose }) {
     removeAdminEmail,
     adminPin,
     setAdminPin,
-    verifyAndUnlockAdmin
+    verifyAndUnlockAdmin,
+    resetUserByUid
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState('general'); // 'general' | 'admin'
@@ -49,6 +50,9 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [showUnlockForm, setShowUnlockForm] = useState(false);
   const [unlockPinInput, setUnlockPinInput] = useState('');
   const [unlockError, setUnlockError] = useState(null);
+  const [targetUidToReset, setTargetUidToReset] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetResult, setResetResult] = useState(null);
 
   // Sync state whenever modal is opened
   useEffect(() => {
@@ -125,6 +129,23 @@ export default function SettingsModal({ isOpen, onClose }) {
     setNewPinCode('');
     setPinChangeSuccess(true);
     setTimeout(() => setPinChangeSuccess(false), 2000);
+  };
+
+  const handleResetUser = async () => {
+    const cleanUid = targetUidToReset.trim();
+    if (!cleanUid) return;
+    if (!window.confirm(`Biztosan nullázni és törölni akarod a(z) ${cleanUid} azonosítójú felhasználó adatait a Firestore-ból?`)) return;
+
+    setIsResetting(true);
+    setResetResult(null);
+    const res = await resetUserByUid(cleanUid);
+    setIsResetting(false);
+    if (res.success) {
+      setResetResult({ success: true, message: `✓ A(z) ${cleanUid} felhasználó adatai sikeresen törölve lettek a Firebase-ből!` });
+      setTargetUidToReset('');
+    } else {
+      setResetResult({ success: false, message: `Hiba a törléskor: ${res.error}` });
+    }
   };
 
   const handleExportData = () => {
@@ -562,6 +583,42 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <span className="font-bold text-white text-xs">{preferredModel}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* 🗑️ User Data Reset Tool */}
+              <div className="space-y-3 bg-[#07090e]/60 p-3.5 rounded-xl border border-white/5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Felhasználói Adatok Törlése & Nullázása (UID alapján)</span>
+                  </label>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  Ha egy korábban belépett tesztfelhasználó adatait (pl. profil, magasság, gardrób) szeretnéd teljesen kitörölni a Firebase-ből, add meg az ő Firebase UID-ját:
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="pl. HdP0TKSjw1dRwAFzUV4stpyR8Ww1"
+                    value={targetUidToReset}
+                    onChange={(e) => setTargetUidToReset(e.target.value)}
+                    className="custom-input text-xs flex-1 py-1.5 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleResetUser}
+                    disabled={!targetUidToReset.trim() || isResetting}
+                    className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs font-semibold disabled:opacity-40 flex items-center gap-1 transition-all shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{isResetting ? 'Törlés...' : 'Nullázás'}</span>
+                  </button>
+                </div>
+                {resetResult && (
+                  <div className={`p-2 rounded-lg text-[11px] border ${resetResult.success ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-200' : 'bg-rose-950/50 border-rose-500/40 text-rose-200'}`}>
+                    {resetResult.message}
+                  </div>
+                )}
               </div>
 
             </div>

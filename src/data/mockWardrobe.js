@@ -289,6 +289,20 @@ export const INITIAL_WARDROBE = [
   }
 ];
 
+export const DEFAULT_NEW_USER_PROFILE = {
+  name: '',
+  title: 'Klasszikus & Időtlen Stílusprofil',
+  height: '—',
+  weight: '—',
+  bodyType: 'Normál / Átlagos',
+  skinTone: 'Közép tónus',
+  preferredStyles: ['Klasszikus & Időtlen', 'Smart Urban'],
+  dislikedStyles: [],
+  favoriteColors: ['Sötétkék (Navy)', 'Törtfehér / Krém', 'Dohánybarna / Espresso'],
+  stylePhilosophy: 'Időtlen, letisztult ruhatár építése minőségi alapdarabokkal.',
+  customStylingRules: []
+};
+
 export const INITIAL_USER_PROFILE = {
   name: 'Attila',
   title: 'Klasszikus & Sprezzatura Stílusprofil',
