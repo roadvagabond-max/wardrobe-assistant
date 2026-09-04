@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Sartorial Wardrobe Assistant — Master Blueprint (v1.0 Build)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b0e14;
+      --bg-card: #121620;
+      --bg-code: #080a0f;
+      --text-main: #1a1a1a;
+      --text-muted: #555555;
+      --gold-primary: #b48a28;
+      --gold-dark: #8c6814;
+      --gold-light: #d4af37;
+      --gold-glow: rgba(212, 175, 55, 0.15);
+      --border-color: #e2d7be;
+      --border-dark: #333d4e;
+    }
+
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 8pt;
+        color: #888;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #1a1f2c;
+      background-color: #ffffff;
+      line-height: 1.55;
+      font-size: 9.5pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Cover / Header Section */
+    .header-container {
+      background: linear-gradient(135deg, #0b0e14 0%, #151b26 100%);
+      color: #ffffff;
+      padding: 24px 28px;
+      border-radius: 12px;
+      border: 1px solid #b48a28;
+      margin-bottom: 22px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+    .header-badge {
+      display: inline-block;
+      background: rgba(212, 175, 55, 0.2);
+      border: 1px solid #d4af37;
+      color: #f5d77f;
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 18pt;
+      font-weight: 800;
+      color: #f8fafc;
+      margin: 0 0 6px 0;
+      letter-spacing: 0.5px;
+    }
+
+    .header-subtitle {
+      font-size: 9.5pt;
+      color: #cbd5e1;
+      margin: 0 0 12px 0;
+      font-style: italic;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      border-top: 1px solid rgba(212, 175, 55, 0.3);
+      padding-top: 10px;
+      font-size: 8.5pt;
+      color: #e2e8f0;
+    }
+
+    .meta-item strong {
+      color: #f5d77f;
+      display: block;
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Headings */
+    h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 13.5pt;
+      font-weight: 700;
+      color: #0b0e14;
+      border-bottom: 2px solid #b48a28;
+      padding-bottom: 4px;
+      margin-top: 22px;
+      margin-bottom: 12px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      page-break-after: avoid;
+    }
+
+    h4 {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #334155;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+
+    p {
+      margin: 0 0 8px 0;
+      color: #27272a;
+    }
+
+    ul, ol {
+      margin: 0 0 10px 0;
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    strong {
+      color: #0f172a;
+    }
+
+    /* Cards & Boxes */
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #b48a28;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      page-break-inside: avoid;
+    }
+
+    .card-gold {
+      background: #fdfbf7;
+      border: 1px solid #e8dec8;
+      border-left: 4px solid #b48a28;
+    }
+
+    .card-dark {
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid #334155;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 10pt;
+      color: #b48a28;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px 0;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+
+    th {
+      background: #0f172a;
+      color: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 7px 10px;
+      border: 1px solid #1e293b;
+    }
+
+    td {
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #1e293b;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* Code Blocks */
+    pre {
+      background: #0b0e14;
+      color: #f1f5f9;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 7.5pt;
+      line-height: 1.45;
+      overflow-x: hidden;
+      border: 1px solid #334155;
+      margin: 8px 0 12px 0;
+      page-break-inside: avoid;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      background: #f1f5f9;
+      color: #b45309;
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-size: 8pt;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre code {
+      background: transparent;
+      color: #f1f5f9;
+      padding: 0;
+      border: none;
+    }
+
+    /* Flow / Workflow Step Boxes */
+    .workflow-box {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      background: #ffffff;
+      page-break-inside: avoid;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+
+    .workflow-header {
+      font-weight: 700;
+      font-size: 10pt;
+      color: #0f172a;
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-gold {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    .badge-blue {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+
+    .badge-purple {
+      background: #f3e8ff;
+      color: #6b21a8;
+      border: 1px solid #e9d5ff;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .footer-note {
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid #cbd5e1;
+      font-size: 7.5pt;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header Banner -->
+  <div class="header-container">
+    <span class="header-badge">Hivatalos Rendszerdokumentáció • v1.0 Build</span>
+    <h1>SARTORIAL WARDROBE ASSISTANT</h1>
+    <div class="header-subtitle">Mesterséges Intelligenciával Támogatott Személyes Stílustanácsadó & Digitális Gardrób Mesterterv</div>
+    <div class="meta-grid">
+      <div class="meta-item">
+        <strong>Kiadási Verzió</strong>
+        v1.0 Build (Production Ready)
+      </div>
+      <div class="meta-item">
+        <strong>Neurális Motor</strong>
+        Google Gemini 3.x Flash-Lite & Flash
+      </div>
+      <div class="meta-item">
+        <strong>Architektúra</strong>
+        Mobile-First SPA / PWA + Realtime Cloud
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. Fejezet -->
+  <h2>1. 🧭 Filozófia és Gondolkodásmód (Core Mindset & Principles)</h2>
+  
+  <p>A <strong>Sartorial Wardrobe Assistant</strong> nem egyszerű leltár-katalógus, hanem egy autonóm szabászati és stílustanácsadó rendszer. Célja a kapszula ruhatár tudatos építése, a meglévő ruhák variálhatóságának kimaxolása és a rossz döntések megelőzése.</p>
+
+  <div class="grid-2">
+    <div class="card card-gold">
+      <div class="card-title">✨ Olasz Sprezzatura & Kapszula Ruhatár</div>
+      <p>Kevesebb, de minőségi természetes kelme (100% gyapjú, kasmír, selyem, len, pamut, bőr). A mesterkéletlen elegancia, ahol a színek és textúrák találkozása természetes összhangot sugároz.</p>
+    </div>
+    <div class="card card-gold">
+      <div class="card-title">🛑 Zero-Mock & Anti-Hallucináció</div>
+      <p>Szigorú 100%-os valódi Gemini AI motor. Tilos a szimulált/kamu válaszok generálása. Ha egy webshop link nem azonosítható biztonsággal, a rendszer sosem talál ki fantomruhát (<code>isUnknown: true</code>).</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🛍️ A Vásárlás Előtti 4 Döntési Pillér („Megvegyem?” Kontroll)</div>
+    <ol>
+      <li><strong>1. Pillér (Kombinálhatóság):</strong> Legalább 3 komplett szett generálása a <em>meglévő</em> ruhatár darabjaival párosítva.</li>
+      <li><strong>2. Pillér (Stilisztikai Lefedettség & Duplikáció):</strong> Meglévő hasonló darab észlelése esetén figyelmeztetés a redundanciára és alternatív ajánlás.</li>
+      <li><strong>3. Pillér (Személyes Illeszkedés & Szabás):</strong> Szabási eltérés (pl. Regular vs Slim dominancia) és egyéni szabályütközések azonnali jelzése.</li>
+      <li><strong>4. Pillér (Anyagminőség & Műszál Auditor):</strong> 100% műszálas poliészter/akril/PU esetén lepontozás és 'Gondold Át / Kerülendő' minősítés.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div class="card-title">👔 Sartorial Gallér- és Ujj-Harmónia Rendszer (Layering Matrix)</div>
+    <ul>
+      <li><strong>Ingdzseki (Shacket / Overshirt):</strong> Tilos alá hagyományos galléros inget venni (kettős gallér és kettős gombsor stílushiba). Kizárólag pólóval, finomkötött kereknyakúval vagy merinó garbóval hordandó.</li>
+      <li><strong>Állógalléros ing (Mandarin / Mao / Grandad):</strong> Tilos zárt kötött pulóverrel vagy hajtókás öltönyzakóval párosítani. Önállóan vagy nyitott kardigánnal viselendő.</li>
+      <li><strong>Garbó (Turtleneck):** Önálló bázisréteg; alá nem veszünk inget.</li>
+      <li><strong>Kötelező Anatómiai Bázisréteg:</strong> Egy szett sem maradhat belső réteg nélkül (ing/póló); zakó vagy pulóver önmagában nem szerepelhet.</li>
+      <li><strong>Szezonális Hőmérsékleti Védelem:</strong> Meleg időben (≥19°C) kizárt a csizma, bakancs és télikabát; hidegben (&lt;14°C) támogatott a télikabát + zakó kettős réteg.</li>
+    </ul>
+  </div>
+
+  <!-- 2. Fejezet -->
+  <h2>2. 🏗️ Technológiai Stack és Rendszerarchitektúra</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 22%;">Réteg</th>
+        <th style="width: 28%;">Technológia</th>
+        <th style="width: 50%;">Műszaki Szerepkör & Felelősség</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Frontend Kliens</strong></td>
+        <td>React 18 + Vite</td>
+        <td>Reaktív SPA architektúra, komponensmodularitás, villámgyors HMR és bundle build.</td>
+      </tr>
+      <tr>
+        <td><strong>Design System</strong></td>
+        <td>TailwindCSS + CSS Tokens</td>
+        <td>Luxury Gold Glassmorphism design tokenek (Obszidián-arany paletta, érintésbarát touch targetek ≥ 40px).</td>
+      </tr>
+      <tr>
+        <td><strong>AI LLM & Vision</strong></td>
+        <td>Google Gemini 3.x API</td>
+        <td><code>gemini-3.5-flash-lite</code> (gyors felismerés), <code>gemini-3.7-flash</code> (mély reasoning szettek), in-memory gyorstárazás.</td>
+      </tr>
+      <tr>
+        <td><strong>Autonóm Szabálykutató</strong></td>
+        <td>Gemini Search Grounding</td>
+        <td>Valós idejű Google webes keresés nemzetközi szabászati kódexekből (Savile Row, Pitti Uomo, Permanent Style).</td>
+      </tr>
+      <tr>
+        <td><strong>Adatbázis & Auth</strong></td>
+        <td>Firebase 11 Auth + Firestore</td>
+        <td>Realtime <code>onSnapshot</code> kétirányú szinkronizáció mobil és asztali böngésző között, offline LocalStorage fallback.</td>
+      </tr>
+      <tr>
+        <td><strong>Képfeldolgozás</strong></td>
+        <td>HTML5 Canvas Client Engine</td>
+        <td>Kliens oldali 640×640 @ 0.75 JPEG tömörítés (~35-50 KB per kép), vágólap és galéria Base64 átalakító.</td>
+      </tr>
+      <tr>
+        <td><strong>Webshop & SKU Motor</strong></td>
+        <td>Multi-CDN Heurisztika & Parser</td>
+        <td>Next Direct, Zara, Reserved, Massimo Dutti, H&M termékkód és mikroadat dekódolás.</td>
+      </tr>
+      <tr>
+        <td><strong>Mobil PWA</strong></td>
+        <td>Web Share Target + SW</td>
+        <td>Mobiltelepíthetőség, offline működés, közvetlen linkmegosztás Chrome, Safari és Facebook In-App böngészőből.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Page Break for Clean Layout -->
+  <div class="page-break"></div>
+
+  <!-- 3. Fejezet -->
+  <h2>3. 🔄 A 10 Alapvető Munkafolyamat (Workflows Step-by-Step)</h2>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>📸 Workflow 1: Ruhafelvitel & Multimodális AI Vision Elemzés</span>
+      <span class="badge badge-gold">Vision AI</span>
+    </div>
+    <p><strong>Bemeneti csatornák:</strong> Közvetlen kamerafotó, galéria feltöltés, vágólap (Ctrl+V) vagy webshop URL / SKU termékkód.</p>
+    <p><strong>Feldolgozás:</strong> A Canvas motor 640×640-re méretezi a képet. A Gemini 3.x felismeri a kategóriát, színt, anyagösszetételt, formalitást (1-5), stílus archetipust, szezonalitást, márkát és méretet, majd előtölti a szerkeszthető űrlapot és menti a Firestore-ba.</p>
+  </div>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>🛍️ Workflow 2: Vásárlás Előtti 4-Pilléres Döntéstámogatás</span>
+      <span class="badge badge-gold">Decision Control</span>
+    </div>
+    <p><strong>Cél:</strong> Megelőzni a megbánt impulzusvásárlásokat még a próbafülkében vagy böngészéskor.</p>
+    <p><strong>Lépések:</strong> 1) 3 komplett szett összeállítása meglévő gardróbbal; 2) Duplikáció és stilisztikai redundancia audit; 3) Szabási és testalkati illeszkedés ellenőrzése; 4) Műszál és anyagminőség pontozás. Egykattintásos átemelés a gardróbba.</p>
+  </div>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>👔 Workflow 3: Esemény- és Kulturális Dress Code AI Stylist</span>
+      <span class="badge badge-blue">Stylist Engine</span>
+    </div>
+    <p><strong>Funkció:</strong> Esemény jellegének értelmezése (pl. techno klub, esküvő, tárgyalás), kulturális tiltólisták érvényesítése, gallérmátrix és kötelező bázisréteg kikényszerítése, helyi időjáráshoz és hőmérséklethez igazított rétegezési tanácsadás.</p>
+  </div>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>🧩 Workflow 4: Kapszula Ruhatár Gap Elemzés & Szezonális Audit</span>
+      <span class="badge badge-blue">Gap Analyzer</span>
+    </div>
+    <p><strong>Audit logika:</strong> 1. prioritású téli lábbeli ellenőrzés (Chelsea/Chukka hiány azonnali jelzése), kategória telítettségi korlát (2+ felső esetén alapkategóriákra fókuszálás), Kapszula Ruhatár Index és szabásérzékeny keresőkifejezések generálása.</p>
+  </div>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>📏 Workflow 5: Gyártói Méretprofil & Kanonikus Márkanévtér</span>
+      <span class="badge badge-purple">Sizing Matrix</span>
+    </div>
+    <p><strong>Intelligencia:</strong> A <code>normalizeBrandName</code> motor egyetlen kanonikus név alá fűzi a domaineket és variánsokat (pl. <code>next.co.uk</code> ➔ <code>Next Direct</code>). Kategóriánkénti bázisméreteket aggregál és márkánkénti illeszkedési mátrixot épít.</p>
+  </div>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>🧠 Workflow 6: Szabad Szöveges AI Stylist Tanítás & Egyéni Szabályrendszer</span>
+      <span class="badge badge-purple">Personal DNA</span>
+    </div>
+    <p><strong>Működés:</strong> A felhasználó szabad szöveges tiltásai (pl. <em>"Nem hordok pólóinget"</em>, <em>"Csak 100% pamut"</em>) azonnal beépülnek a Stylist generátorba, a Gap elemzőbe és a Vásárlási Tanácsadóba (ütközéskor azonnali figyelmeztetés).</p>
+  </div>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>👔 Workflow 7: Saját Szett Összeállítása & 4-Dimenziós Sartorial Audit</span>
+      <span class="badge badge-blue">Manual Outfit Builder</span>
+    </div>
+    <p><strong>Mérés:</strong> Interaktív ruha-összeválogatás után az AI 0-100% közötti pontszámmal értékeli a dress code összhangot, színharmóniát, anyagok találkozását és rétegezési komfortot, konkrét tuning javaslatokkal.</p>
+  </div>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>💬 Workflow 8: Szabad Szöveges Személyes AI Stylist Csevegés</span>
+      <span class="badge badge-gold">Master Chat</span>
+    </div>
+    <p><strong>Kontextus:</strong> Teljes gardrób- és Stílus DNS ismeret. Bármely említett ruha interaktív kártyaként jelenik meg és kattintásra megnyílik a nagyfelbontású Lightboxban.</p>
+  </div>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>📱 Workflow 9: Mobil Web Share Target & Facebook Browser Integráció</span>
+      <span class="badge badge-gold">Mobile PWA</span>
+    </div>
+    <p><strong>Élmény:</strong> Külső böngészőből vagy Facebook appból a termékoldal megosztásakor a Wardrobe Assistant közvetlen célalkalmazásként nyílik meg, és azonnal elindítja a 4-pilléres vásárlási tesztet.</p>
+  </div>
+
+  <div class="workflow-box">
+    <div class="workflow-header">
+      <span>🌐 Workflow 10: Autonóm Stílus-DNS Vezérelt Szabálykutató (Rule Mining)</span>
+      <span class="badge badge-purple">Search Grounding</span>
+    </div>
+    <p><strong>Automatizmus:</strong> A felhasználó profiljához és gardróbjához igazított Google Search kereséssel friss nemzetközi szabászati szabályokat kutat fel, 7 naponta automatikusan frissítve a Firestore adatbázist.</p>
+  </div>
+
+  <!-- Page Break for Clean Layout -->
+  <div class="page-break"></div>
+
+  <!-- 4. Fejezet -->
+  <h2>4. 🗄️ Adatmodellek és Sémák (Data Models & TypeScript Interfaces)</h2>
+
+  <h4>4.1. ClothingItem (Ruhatári Elem Interfész)</h4>
+  <pre><code>interface ClothingItem {
+  id: string;                      // Egyedi azonosító (pl. "item-1725450000000")
+  name: string;                    // Megnevezés (pl. "Sötétkék Olasz Gyapjú Zakó")
+  category: 'tops' | 'bottoms' | 'outerwear' | 'knitwear' | 'shoes' | 'accessories';
+  subCategory?: string;            // pl. "blazer", "shirt", "loafer", "chelsea_boots"
+  color: string;                   // Domináns szín (pl. "Sötétkék")
+  colorHex?: string;               // Színkód hexában (pl. "#1e293b")
+  material: string;                // Anyagösszetétel (pl. "100% Olasz Gyapjú (Nova Fides)")
+  materialCategory?: 'natural' | 'blend' | 'synthetic';
+  pattern?: string;                // pl. "Sima", "Halszálkás", "Kockás", "Csíkos"
+  formalityLevel: 1 | 2 | 3 | 4 | 5; // 1: Casual, 5: Black Tie / Ultra Formális
+  styleArchetype?: 'classic_sartorial' | 'smart_casual' | 'urban_minimalist' | 'casual_weekend' | 'streetwear';
+  season: 'all' | 'summer' | 'winter' | 'transition';
+  fit?: 'slim_tailored' | 'regular_fit' | 'relaxed_oversized';
+  condition?: 'new_or_pristine' | 'good_daily' | 'worn_needs_care' | 'needs_replacement';
+  brand?: string;                  // pl. "Boglioli", "Massimo Dutti", "Next Direct"
+  size?: string;                   // pl. "50", "40 / M", "32/32", "42.5"
+  productUrl?: string;             // Webshop termék link
+  productCode?: string;            // SKU / Termékkód (pl. "SU415329")
+  imageUrl: string;                // Base64 tömörített kép vagy CDN URL
+  styleTips?: string[];            // AI viselési tanácsok
+  createdAt: string;               // ISO Timestamp
+}</code></pre>
+
+  <h4>4.2. UserProfile / StyleDNA (Felhasználói Stílus DNS)</h4>
+  <pre><code>interface UserProfile {
+  uid?: string;
+  name: string;
+  height: string;                  // pl. "182 cm"
+  weight: string;                  // pl. "79 kg"
+  bodyType: 'trapezoid_athletic' | 'v_shape' | 'rectangle' | 'oval' | 'inverted_triangle';
+  skinTone: 'warm_autumn' | 'warm_spring' | 'cool_summer' | 'cool_winter';
+  gender: 'universal' | 'menswear' | 'womenswear';
+  preferredStyles: string[];       // pl. ["classic_sartorial", "smart_casual"]
+  favoriteColors: string[];        // pl. ["Sötétkék", "Tevebarna", "Krémfehér", "Bordó"]
+  customStylingRules?: string;     // Szabad szöveges egyéni szabályok és tiltások
+  brandSizes?: Record&lt;string, string&gt;; // pl. { "Boglioli": "50", "Eton": "40" }
+  updatedAt: string;
+}</code></pre>
+
+  <!-- 5. Fejezet -->
+  <h2>5. 🚀 Lépésről Lépésre Újraépítési Útmutató (Re-Implementation Roadmap)</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 15%;">Fázis</th>
+        <th style="width: 30%;">Mérföldkő</th>
+        <th style="width: 55%;">Főbb Feladatok & Célok</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Fázis</strong></td>
+        <td>Környezet & Design System</td>
+        <td>Vite + React + Tailwind projekt inicializálás, Luxury Gold Glassmorphism CSS tokenek és navigációs váz.</td>
+      </tr>
+      <tr>
+        <td><strong>2. Fázis</strong></td>
+        <td>Képoptimalizáló & Firestore</td>
+        <td>HTML5 Canvas tömörítő motor (640×640 @ 0.75 JPEG), Firebase Auth és Firestore kétirányú realtime listener.</td>
+      </tr>
+      <tr>
+        <td><strong>3. Fázis</strong></td>
+        <td>Gemini AI API Réteg</td>
+        <td>Fast timeout (8s), automatikus modell fallback, activeFastModel in-memory cache, öngyógyító JSON parser.</td>
+      </tr>
+      <tr>
+        <td><strong>4. Fázis</strong></td>
+        <td>Gardróbkezelő & Vision</td>
+        <td>Kamera, galéria, Ctrl+V és webshop SKU parser integráció, ruhafeltöltési űrlap AI kitöltéssel.</td>
+      </tr>
+      <tr>
+        <td><strong>5. Fázis</strong></td>
+        <td>AI Stylist & Rétegezés</td>
+        <td>Eseményfüggő outfit generálás, gallérmátrix és kötelező bázisréteg ellenőrzés, Open-Meteo időjárás.</td>
+      </tr>
+      <tr>
+        <td><strong>6. Fázis</strong></td>
+        <td>Vásárlási Tanácsadó & Gap</td>
+        <td>4-pilléres vásárlás előtti teszt, Kapszula Gap Elemző (1. prioritású téli lábbeli audit, telítettségi stop).</td>
+      </tr>
+      <tr>
+        <td><strong>7. Fázis</strong></td>
+        <td>Stílus DNS & Rule Miner</td>
+        <td>Testalkat, méretmátrix és egyéni szabályok felülete, Google Search Grounding háttér-szinkronizáció.</td>
+      </tr>
+      <tr>
+        <td><strong>8. Fázis</strong></td>
+        <td>PWA, Megosztás & Kiadás</td>
+        <td>Web Share Target API konfiguráció, Service Worker gyorsítótárazás, <code>v1.0 Build</code> produkciós kiadás.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer-note">
+    Sartorial Wardrobe Assistant • Hivatalos Rendszertervezési Mesterterv (v1.0 Build) • Generálva: 2026. szeptember
+  </div>
+
+</body>
+</html>
