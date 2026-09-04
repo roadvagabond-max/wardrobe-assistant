@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, User, Settings, LogIn, ShieldAlert, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { APP_BUILD_NAME } from '../../version';
 
 export default function Header({ onOpenSettings, onOpenAuth, onOpenHelp, weather }) {
   const { currentUser, isDemoMode, wardrobe, isAdmin, isSimulatingUser, toggleUserSimulation } = useAuth();
@@ -22,7 +23,7 @@ export default function Header({ onOpenSettings, onOpenAuth, onOpenHelp, weather
               {isAdmin ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/10 animate-pulse">
                   <span>👑</span>
-                  <span>Admin</span>
+                  <span>Admin ({APP_BUILD_NAME})</span>
                 </span>
               ) : isSimulatingUser ? (
                 <button
@@ -35,7 +36,7 @@ export default function Header({ onOpenSettings, onOpenAuth, onOpenHelp, weather
                 </button>
               ) : (
                 <span className="hidden sm:inline-block px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded-full bg-[var(--accent-gold-glow)] text-[var(--accent-gold-light)] border border-[var(--border-gold)]">
-                  AI Assistant
+                  {APP_BUILD_NAME}
                 </span>
               )}
             </div>

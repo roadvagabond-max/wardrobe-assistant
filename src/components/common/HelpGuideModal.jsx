@@ -37,7 +37,7 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
             <div>
               <div className="flex items-center gap-2">
                 <span className="badge badge-gold text-[10px] uppercase font-bold tracking-wider">
-                  Sartorial Tudásbázis
+                  Sartorial Tudásbázis • v1.0 Build
                 </span>
                 <span className="text-[10px] text-[var(--text-muted)]">Gemini 3.7 Flash AI</span>
               </div>

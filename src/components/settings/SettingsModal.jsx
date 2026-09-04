@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { isFirebaseConfigured } from '../../services/firebase';
 import { isGeminiConfigured, testGeminiApiKey } from '../../services/gemini';
+import { APP_VERSION, APP_BUILD_NAME } from '../../version';
 
 export default function SettingsModal({ isOpen, onClose }) {
   const { 
@@ -559,9 +560,14 @@ export default function SettingsModal({ isOpen, onClose }) {
 
               {/* System Diagnostics */}
               <div className="bg-[#07090e]/60 p-3.5 rounded-xl border border-white/5 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
-                  <Activity className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Rendszerdiagnosztika & Statisztika</span>
+                <div className="flex items-center justify-between text-xs font-semibold text-white">
+                  <div className="flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Rendszerdiagnosztika & Statisztika</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                    {APP_BUILD_NAME}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 text-[var(--text-muted)]">
                   <div className="p-2 rounded-lg bg-white/5">
@@ -579,8 +585,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                     </span>
                   </div>
                   <div className="p-2 rounded-lg bg-white/5">
-                    <span className="block text-[9px] uppercase tracking-wider">Aktív AI Modell</span>
-                    <span className="font-bold text-white text-xs">{preferredModel}</span>
+                    <span className="block text-[9px] uppercase tracking-wider">Verzió / Kiadás</span>
+                    <span className="font-bold text-amber-300 text-xs">{APP_BUILD_NAME} (v{APP_VERSION})</span>
                   </div>
                 </div>
               </div>
@@ -662,6 +668,11 @@ export default function SettingsModal({ isOpen, onClose }) {
               <span>Alapadatok Betöltése</span>
             </button>
           </div>
+        </div>
+
+        {/* Modal App Version Footer */}
+        <div className="pt-2 text-center text-[10px] text-[var(--text-muted)] font-mono tracking-wider">
+          Sartorial Wardrobe Assistant • {APP_BUILD_NAME} (v{APP_VERSION})
         </div>
 
       </div>
