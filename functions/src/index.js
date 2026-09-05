@@ -30,10 +30,10 @@ const REASONING_MODELS = [
   "gemini-3.1-flash-lite"
 ];
 
-// In-memory sliding window rate limiter (Max 25 requests per minute per UID)
+// In-memory sliding window rate limiter (Max 10 requests per minute per UID)
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 25;
+const MAX_REQUESTS_PER_WINDOW = 10;
 
 function checkRateLimit(uid) {
   const now = Date.now();
@@ -122,7 +122,7 @@ export const sartorialAiProxy = onCall(
     memory: "512MiB"
   },
   async (request) => {
-    // 1. Authentication Check (BOLA & Unauthenticated Bot Protection)
+    // 1. Strict Authentication Check (Real Logged-in User Required, Anonymous Disallowed)
     if (!request.auth || !request.auth.uid) {
       throw new HttpsError(
         "unauthenticated",
@@ -130,13 +130,21 @@ export const sartorialAiProxy = onCall(
       );
     }
 
+    const signInProvider = request.auth.token?.firebase?.sign_in_provider;
+    if (signInProvider === "anonymous") {
+      throw new HttpsError(
+        "unauthenticated",
+        "A Sartorial AI szolgáltatás használatához kérlek jelentkezz be a fiókodba (pl. Google fiókkal)."
+      );
+    }
+
     const uid = request.auth.uid;
 
-    // 2. Per-UID Rate Limiting (Wallet Drain / DoS Protection)
+    // 2. Per-UID Rate Limiting (Wallet Drain / DoS Protection - Max 10 requests / min)
     if (!checkRateLimit(uid)) {
       throw new HttpsError(
         "resource-exhausted",
-        "Túl sok kérés érkezett rövid időn belül. Kérlek várj egy percet az újabb AI hívás előtt."
+        "Túl sok kérés érkezett rövid időn belül (limit: 10 kérés/perc). Kérlek várj egy percet az újabb AI hívás előtt."
       );
     }
 

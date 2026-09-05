@@ -48,13 +48,9 @@ export async function callCloudFunction(functionName, payload = {}) {
     throw new Error('A Firebase Cloud Functions szolgáltatás nem érhető el.');
   }
 
-  // If user is not authenticated, sign in anonymously to obtain a valid JWT token
-  if (!auth.currentUser) {
-    try {
-      await signInAnonymously(auth);
-    } catch (authErr) {
-      console.warn('Anonim hitelesítés sikertelen:', authErr);
-    }
+  // Require real authenticated user (no anonymous guests)
+  if (!auth.currentUser || auth.currentUser.isAnonymous) {
+    throw new Error('A mesterséges intelligencia funkciók használatához kérlek jelentkezz be a fiókodba (pl. Google fiókkal)!');
   }
 
   const callable = httpsCallable(functions, functionName);
