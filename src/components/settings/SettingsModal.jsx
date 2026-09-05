@@ -34,10 +34,6 @@ export default function SettingsModal({ isOpen, onClose }) {
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState('general'); // 'general' | 'admin'
-  const [geminiKey, setGeminiKey] = useState(() => {
-    return (localStorage.getItem('GEMINI_API_KEY') || contextGeminiKey || '').trim();
-  });
-  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [testStatus, setTestStatus] = useState({ testing: false, message: '', success: null });
   const [firebaseApiKey, setFirebaseApiKey] = useState(() => localStorage.getItem('VITE_FIREBASE_API_KEY') || '');
   const [firebaseProjectId, setFirebaseProjectId] = useState(() => localStorage.getItem('VITE_FIREBASE_PROJECT_ID') || '');
@@ -58,8 +54,6 @@ export default function SettingsModal({ isOpen, onClose }) {
   // Sync state whenever modal is opened
   useEffect(() => {
     if (isOpen) {
-      const current = (contextGeminiKey || localStorage.getItem('GEMINI_API_KEY') || '').trim();
-      setGeminiKey(current);
       setFirebaseApiKey(localStorage.getItem('VITE_FIREBASE_API_KEY') || '');
       setFirebaseProjectId(localStorage.getItem('VITE_FIREBASE_PROJECT_ID') || '');
       setFirebaseAuthDomain(localStorage.getItem('VITE_FIREBASE_AUTH_DOMAIN') || '');
@@ -74,17 +68,13 @@ export default function SettingsModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   const handleTestKey = async () => {
-    const clean = geminiKey.trim();
-    if (!clean) return;
     setTestStatus({ testing: true, message: '', success: null });
-    const result = await testGeminiApiKey(clean);
+    const result = await testGeminiApiKey();
     setTestStatus({ testing: false, message: result.message, success: result.success });
   };
 
   const handleSaveKeys = async (e) => {
     e.preventDefault();
-    const cleanGeminiKey = geminiKey ? geminiKey.trim() : '';
-    await saveGeminiApiKey(cleanGeminiKey);
 
     if (isAdmin) {
       if (firebaseApiKey) localStorage.setItem('VITE_FIREBASE_API_KEY', firebaseApiKey.trim());
@@ -215,72 +205,53 @@ export default function SettingsModal({ isOpen, onClose }) {
           {(!isAdmin || activeTab === 'general') && (
             <div className="space-y-4">
               
-              {/* Gemini API Key */}
-              <div className="space-y-2 bg-[#07090e]/60 p-3.5 rounded-xl border border-white/5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-white flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                    <span>Google Gemini API Kulcs</span>
-                  </label>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                    isKeyActive 
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  }`}>
-                    {isKeyActive ? '✓ Aktív Kulcs' : '⚠️ Nincs Beállítva'}
+              {/* Server-Side AI Proxy Connection Card */}
+              <div className="space-y-3 bg-[#07090e]/60 p-4 rounded-xl border border-[var(--border-gold)]/40 shadow-lg">
+                <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#f59e0b] to-[#b45309] flex items-center justify-center text-black font-bold shadow-md shadow-[#f59e0b]/20 shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span>Google Gemini AI Szerveroldali Proxy</span>
+                      </h4>
+                      <p className="text-[10px] text-[var(--text-muted)]">
+                        Google Cloud Secret Manager & Service Account védelem
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>✓ Szerver Védelem Aktív</span>
                   </span>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type={showGeminiKey ? "text" : "password"}
-                    id="settings-gemini-key-input"
-                    name="geminiApiKey"
-                    aria-label="Google Gemini API Kulcs"
-                    placeholder="AQ.Ab... vagy AIzaSy..."
-                    value={geminiKey}
-                    onChange={(e) => {
-                      setGeminiKey(e.target.value);
-                      setTestStatus({ testing: false, message: '', success: null });
-                    }}
-                    className="custom-input text-xs font-mono pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowGeminiKey(prev => !prev)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[var(--text-muted)] hover:text-white transition-colors"
-                    title={showGeminiKey ? "Kulcs elrejtése" : "Kulcs megjelenítése"}
-                  >
-                    {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  A rendszer 100%-ban szerveroldali Firebase Cloud Functions v2 végpontokon keresztül éri el a legújabb Gemini 3.7 és 3.5 Flash neurális modelleket. A mesterkulcs biztonságosan a felhőben tárolódik, nem igényel kliensoldali beállítást.
+                </p>
 
-                {/* Live Format & Test Button Row */}
-                <div className="flex items-center justify-between gap-2 pt-0.5">
-                  <div className="text-[10px]">
-                    {geminiKey ? (
-                      <span className="text-emerald-400 font-medium flex items-center gap-1">
-                        ✓ API Kulcs Beállítva ({geminiKey.slice(0, 6)}...)
-                      </span>
-                    ) : (
-                      <span className="text-[var(--text-muted)]">Nincs egyéni kulcs megadva</span>
-                    )}
-                  </div>
+                {/* Connection Test Button */}
+                <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    Modell: <strong className="text-amber-200">Gemini 3.7 Flash & 3.5 Flash-Lite</strong>
+                  </span>
 
                   <button
                     type="button"
                     onClick={handleTestKey}
-                    disabled={!geminiKey || testStatus.testing}
-                    className="text-[10px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/90 hover:text-white border border-white/10 disabled:opacity-30 flex items-center gap-1 transition-all"
+                    disabled={testStatus.testing}
+                    className="btn-gold text-[10px] py-1.5 px-3 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
                   >
-                    {testStatus.testing ? <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-gold)]" /> : <Play className="w-3 h-3 text-[var(--accent-gold)]" />}
-                    <span>{testStatus.testing ? 'Tesztelés...' : 'Kapcsolat Tesztelése'}</span>
+                    {testStatus.testing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                    <span>{testStatus.testing ? 'Tesztelés...' : 'Szerverkapcsolat Tesztelése'}</span>
                   </button>
                 </div>
 
                 {/* Test Status Feedback */}
                 {testStatus.message && (
-                  <div className={`p-2 rounded-lg text-[11px] border leading-relaxed ${
+                  <div className={`p-2.5 rounded-lg text-[11px] border leading-relaxed ${
                     testStatus.success 
                       ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-200' 
                       : 'bg-rose-950/50 border-rose-500/40 text-rose-200'

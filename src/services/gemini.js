@@ -1,36 +1,30 @@
-// Advanced Google Gemini Vision & Fashion Stylist Intelligence Engine
+// Advanced Google Gemini Vision & Fashion Stylist Intelligence Engine (Server Proxy Architecture)
 import { ensureBase64Image } from './imageOptimizer';
 import { normalizeBrandName } from './webshop';
 import { formatRulesForPrompt } from './sartorialRules';
+import { callCloudFunction, isFirebaseConfigured } from './firebase';
 
 export const getGeminiApiKey = () => {
-  return (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
+  return 'SERVER_MANAGED_SECRET';
 };
 
-export const isGeminiConfigured = (providedKey = null) => {
-  const key = (providedKey || getGeminiApiKey() || '').trim();
-  return Boolean(key && key.length > 5);
+export const isGeminiConfigured = () => {
+  return isFirebaseConfigured;
 };
 
 /**
- * Test a Gemini API key with a fast ping to verify credentials
+ * Test the Server-Side Gemini API connection
  */
-export async function testGeminiApiKey(testKey) {
-  const cleanKey = (testKey || getGeminiApiKey() || '').trim();
-  if (!cleanKey) {
-    return { success: false, message: 'Nincs megadva API kulcs!' };
-  }
+export async function testGeminiApiKey() {
   try {
     const res = await callGeminiApi({
-      apiKey: cleanKey,
       contents: [{ role: 'user', parts: [{ text: 'Ping! Respond in JSON: {"status": "ok"}' }] }],
       preferredModels: FAST_MODELS,
-      timeoutMs: 8000,
       expectJson: true
     });
-    return { success: true, message: '✓ Sikeres kapcsolat a Google Gemini AI-val!' };
+    return { success: true, message: '✓ Biztonságos szerveroldali kapcsolat a Google Gemini AI-val aktív!' };
   } catch (err) {
-    return { success: false, message: err.message || 'Nem sikerült csatlakozni a Geminihez.' };
+    return { success: false, message: err.message || 'Nem sikerült elérni a szerveroldali Gemini AI szolgáltatást.' };
   }
 }
 
@@ -102,160 +96,31 @@ export function formatWardrobeToCompactCatalog(wardrobe = []) {
 }
 
 /**
- * Robust, self-healing JSON parser for AI outputs
- * Handles markdown backticks, trailing commas, unclosed brackets, and truncated JSON arrays.
+ * Universal Gemini API caller routed securely through Firebase Cloud Functions v2 Backend Proxy
  */
-function safeParseJson(rawText) {
-  if (!rawText || typeof rawText !== 'string') return null;
-
-  // 1. Remove markdown fences
-  let clean = rawText
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
-
-  // Try direct parse first
+export async function callGeminiApi({ contents, preferredModels = FAST_MODELS, timeoutMs = 25000, maxOutputTokens = 8192, temperature = 0.2, tools = null, expectJson = true }) {
   try {
-    return JSON.parse(clean);
-  } catch (_) { }
+    const response = await callCloudFunction('sartorialAiProxy', {
+      contents,
+      preferredModels,
+      expectJson,
+      temperature,
+      maxOutputTokens,
+      tools
+    });
 
-  // 2. Extract JSON structure via regex
-  const jsonMatch = clean.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-  if (jsonMatch) {
-    try {
-      return JSON.parse(jsonMatch[0]);
-    } catch (_) {
-      clean = jsonMatch[0];
-    }
-  }
-
-  // 3. Attempt Self-Healing for Truncated JSON (e.g. cut off near end of token limit)
-  try {
-    // If it started as an array
-    if (clean.trim().startsWith('[')) {
-      // Find last completely closed object '}'
-      const lastClosedObjIndex = clean.lastIndexOf('}');
-      if (lastClosedObjIndex !== -1) {
-        const repairedArray = clean.slice(0, lastClosedObjIndex + 1) + ']';
-        return JSON.parse(repairedArray);
+    if (response && response.success) {
+      if (response.model) {
+        activeFastModel = response.model;
       }
+      return response.result;
     }
 
-    // If it started as an object
-    if (clean.trim().startsWith('{')) {
-      let openBrackets = (clean.match(/\{/g) || []).length;
-      let closeBrackets = (clean.match(/\}/g) || []).length;
-      let repairedObj = clean;
-
-      // Close open string quotes if odd count
-      const quoteCount = (repairedObj.match(/"/g) || []).length;
-      if (quoteCount % 2 !== 0) repairedObj += '"';
-
-      while (openBrackets > closeBrackets) {
-        repairedObj += '}';
-        closeBrackets++;
-      }
-      return JSON.parse(repairedObj);
-    }
-  } catch (healErr) {
-    console.warn('JSON self-healing nem sikerült:', healErr);
+    throw new Error(response?.message || 'Nem érkezett érvényes válasz a szervertől.');
+  } catch (err) {
+    console.warn('Szerveroldali Gemini hívási hiba:', err);
+    throw err;
   }
-
-  throw new Error(`Nem sikerült érvényes JSON-t olvasni az AI válaszból.`);
-}
-
-/**
- * Universal Gemini API caller with fast-timeout fallback and robust JSON parsing
- */
-export async function callGeminiApi({ apiKey, contents, preferredModels = FAST_MODELS, timeoutMs = 8000, maxOutputTokens = 8192, temperature = 0.2, tools = null, expectJson = true }) {
-  const cleanKey = (apiKey || '').trim();
-  if (!cleanKey) {
-    throw new Error('Nincs érvényes Google Gemini API kulcs! Kérlek add meg a Beállítások menüben.');
-  }
-
-  let lastError = null;
-
-  // Prioritize previously successful model if it exists in preferred list for zero-latency calls
-  const modelsToTry = activeFastModel && preferredModels.includes(activeFastModel)
-    ? [activeFastModel, ...preferredModels.filter(m => m !== activeFastModel)]
-    : preferredModels;
-
-  for (const model of modelsToTry) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-      const requestBody = {
-        contents,
-        generationConfig: {
-          maxOutputTokens,
-          temperature
-        }
-      };
-
-      // Google API rule: If tools are used or expectJson is false, do not force application/json
-      if (expectJson && (!tools || tools.length === 0)) {
-        requestBody.generationConfig.responseMimeType = "application/json";
-      } else if (tools && tools.length > 0) {
-        requestBody.tools = tools;
-      }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': cleanKey
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const data = await response.json();
-        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (rawText) {
-          if (expectJson) {
-            const parsed = safeParseJson(rawText);
-            if (parsed) {
-              activeFastModel = model; // Cache this working model
-              return parsed;
-            }
-          } else {
-            activeFastModel = model;
-            return rawText.trim();
-          }
-        }
-      } else {
-        const errBody = await response.text();
-        console.warn(`Gemini (${model}) státusz: ${response.status}`, errBody);
-
-        if (response.status === 400 && (errBody.includes('API key not valid') || errBody.includes('INVALID_ARGUMENT'))) {
-          throw new Error('Érvénytelen Google Gemini API kulcs! Kérlek ellenőrizd az API kulcsodat a Beállítások menüben.');
-        }
-
-        // If 503 or 429, invalidate activeFastModel cache so next call doesn't hit it first
-        if (response.status === 503 || response.status === 429) {
-          activeFastModel = null;
-        }
-
-        lastError = new Error(`Gemini API hiba (${response.status}): ${errBody.slice(0, 180)}`);
-      }
-    } catch (e) {
-      clearTimeout(timeoutId);
-      if (e.message?.includes('Érvénytelen Google Gemini API kulcs')) {
-        throw e;
-      }
-      console.warn(`Hiba vagy időtúllépés a(z) ${model} modellel:`, e.name === 'AbortError' ? `Időtúllépés (>${(timeoutMs / 1000).toFixed(1)}s)` : e.message);
-      activeFastModel = null;
-      lastError = e;
-    }
-  }
-
-  throw lastError || new Error('Nem sikerült választ kapni a Gemini AI-tól. Kérlek próbáld újra!');
 }
 
 /**

@@ -1,8 +1,9 @@
 // Firebase Initialization & Multi-tenant Database Layer
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut as fbSignOut } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { ensureBase64Image } from './imageOptimizer';
 
 const getEnvOrLocal = (key, fallback = '') => {
@@ -25,17 +26,41 @@ let app = null;
 let auth = null;
 let db = null;
 let storage = null;
+let functions = null;
 
 try {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+  functions = getFunctions(app, 'us-central1');
 } catch (err) {
   console.warn('Firebase inicializálási figyelmeztetés:', err);
 }
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, functions };
+
+/**
+ * Universal Server-Side Cloud Function Caller with Auth Guarantee
+ */
+export async function callCloudFunction(functionName, payload = {}) {
+  if (!functions || !auth) {
+    throw new Error('A Firebase Cloud Functions szolgáltatás nem érhető el.');
+  }
+
+  // If user is not authenticated, sign in anonymously to obtain a valid JWT token
+  if (!auth.currentUser) {
+    try {
+      await signInAnonymously(auth);
+    } catch (authErr) {
+      console.warn('Anonim hitelesítés sikertelen:', authErr);
+    }
+  }
+
+  const callable = httpsCallable(functions, functionName);
+  const result = await callable(payload);
+  return result.data;
+}
 
 // Google Sign In
 export async function loginWithGoogle() {

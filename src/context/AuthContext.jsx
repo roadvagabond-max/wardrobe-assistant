@@ -60,9 +60,13 @@ export function AuthProvider({ children }) {
   const [preferredModel, setPreferredModelState] = useState(() => {
     return localStorage.getItem('preferred_gemini_model') || 'gemini-3.7-flash';
   });
-  const [geminiApiKey, setGeminiApiKey] = useState(() => {
-    return (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
-  });
+
+  // Zero Client-Side Secret Guarantee: clean up any legacy keys on startup
+  useEffect(() => {
+    try {
+      localStorage.removeItem('GEMINI_API_KEY');
+    } catch (_) {}
+  }, []);
 
   // Debounced non-blocking sync to local storage
   useEffect(() => {
@@ -433,28 +437,6 @@ export function AuthProvider({ children }) {
     setIsSimulatingUser(prev => !prev);
   };
 
-  const saveGeminiApiKey = async (newKey) => {
-    const clean = (newKey || '').trim();
-    if (clean) {
-      localStorage.setItem('GEMINI_API_KEY', clean);
-      setGeminiApiKey(clean);
-    } else {
-      localStorage.removeItem('GEMINI_API_KEY');
-      setGeminiApiKey('');
-    }
-
-    if (currentUser && db && isFirebaseConfigured) {
-      try {
-        await setDoc(doc(db, 'users', currentUser.uid), {
-          geminiApiKey: clean || '',
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      } catch (err) {
-        console.warn('Firestore geminiApiKey mentési hiba:', err);
-      }
-    }
-  };
-
   // 🔄 Load Global Admin Whitelist from Firestore on start
   useEffect(() => {
     if (!db || !isFirebaseConfigured) return;
@@ -595,8 +577,6 @@ export function AuthProvider({ children }) {
         updateProfile,
         saveOutfit,
         resetToDemoData,
-        geminiApiKey,
-        saveGeminiApiKey,
         loginWithGoogle: handleGoogleLogin,
         logout: handleLogout
       }}

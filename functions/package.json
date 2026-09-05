@@ -1,0 +1,22 @@
+{
+  "name": "wardrobe-assistant-functions",
+  "description": "Sartorial Wardrobe Assistant Firebase Cloud Functions v2 Backend Proxy",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0"
+  },
+  "private": true
+}
