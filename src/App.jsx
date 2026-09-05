@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/layout/Header';
 import DesktopTabs from './components/layout/DesktopTabs';
 import BottomNav from './components/layout/BottomNav';
+import OutfitsView from './components/outfits/OutfitsView';
 import WardrobeView from './components/wardrobe/WardrobeView';
 import AddClothingModal from './components/wardrobe/AddClothingModal';
 import ItemDetailModal from './components/wardrobe/ItemDetailModal';
-import StylistView from './components/stylist/StylistView';
 import PurchaseAdvisorView from './components/advisor/PurchaseAdvisorView';
-import MissingPiecesView from './components/missing/MissingPiecesView';
+import StylistView from './components/stylist/StylistView';
 import StyleDNAView from './components/profile/StyleDNAView';
 import AuthModal from './components/auth/AuthModal';
 import SettingsModal from './components/settings/SettingsModal';
@@ -15,7 +15,7 @@ import HelpGuideModal from './components/common/HelpGuideModal';
 import { fetchCurrentWeather } from './services/weather';
 import { useAuth } from './context/AuthContext';
 
-const VALID_TABS = ['wardrobe', 'stylist', 'advisor', 'missing', 'profile'];
+const VALID_TABS = ['outfits', 'wardrobe', 'advisor', 'stylist', 'profile'];
 
 const getInitialTab = () => {
   try {
@@ -24,7 +24,7 @@ const getInitialTab = () => {
     const saved = localStorage.getItem('sartorial_active_tab');
     if (VALID_TABS.includes(saved)) return saved;
   } catch (_) {}
-  return 'wardrobe';
+  return 'outfits';
 };
 
 export default function App() {
@@ -123,7 +123,7 @@ export default function App() {
 
   const handlePlanWithItem = (item) => {
     setInitialAnchorItem(item);
-    setActiveTab('stylist');
+    setActiveTab('outfits');
   };
 
   return (
@@ -142,19 +142,19 @@ export default function App() {
 
       {/* Main Content Area with BottomNav clearance padding */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-28 sm:pb-24">
+        {activeTab === 'outfits' && (
+          <OutfitsView
+            weather={weather}
+            setWeather={setWeather}
+            initialAnchorItem={initialAnchorItem}
+          />
+        )}
+
         {activeTab === 'wardrobe' && (
           <WardrobeView
             onAddNewItem={() => setIsAddModalOpen(true)}
             onSelectItem={(item) => setSelectedItem(item)}
             onNavigateTab={setActiveTab}
-          />
-        )}
-
-        {activeTab === 'stylist' && (
-          <StylistView
-            weather={weather}
-            setWeather={setWeather}
-            initialAnchorItem={initialAnchorItem}
           />
         )}
 
@@ -165,8 +165,12 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'missing' && (
-          <MissingPiecesView onTestInAdvisor={handleTestInAdvisor} />
+        {activeTab === 'stylist' && (
+          <StylistView
+            weather={weather}
+            setWeather={setWeather}
+            initialAnchorItem={initialAnchorItem}
+          />
         )}
 
         {activeTab === 'profile' && (

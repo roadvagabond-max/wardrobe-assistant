@@ -1,16 +1,126 @@
-import React, { useState, useMemo } from 'react';
-import { Plus, Search, Shirt, Sparkles, Compass, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { 
+  Plus, Search, Shirt, Sparkles, Compass, AlertCircle, RefreshCw, 
+  ChevronDown, ChevronUp, ExternalLink, ArrowRight, BookmarkPlus, Loader2,
+  Layers, CheckCircle2, ShieldAlert
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeBrandName } from '../../services/webshop';
+import { analyzeWardrobeGaps } from '../../services/gemini';
 import OnboardingGuide from '../common/OnboardingGuide';
 
 export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab }) {
-  const { wardrobe } = useAuth();
+  const { wardrobe, profile } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSeason, setSelectedSeason] = useState('all');
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Capsule Ruhatár Index (CRI) & Gap Analysis Drawer States
+  const [isCriExpanded, setIsCriExpanded] = useState(false);
+  const [gaps, setGaps] = useState(() => {
+    try {
+      const saved = localStorage.getItem('capsule_gaps_cache');
+      return saved ? JSON.parse(saved) : [];
+    } catch (_) {
+      return [];
+    }
+  });
+  const [isLoadingGaps, setIsLoadingGaps] = useState(false);
+  const [wishlistIds, setWishlistIds] = useState(new Set());
+
+  const rulesKey = (profile?.customStylingRules || []).join(';;');
+  const prevRulesKeyRef = useRef(rulesKey);
+
+  // Calculate Capsule Ruhatár Index (CRI 0-100)
+  const criData = useMemo(() => {
+    if (!wardrobe || wardrobe.length === 0) {
+      return { score: 0, readiness: 'Kezdő / Üres', levelColor: 'text-slate-400', progressColor: 'bg-slate-500' };
+    }
+
+    const topsCount = wardrobe.filter(w => w.category === 'tops' || (w.name || '').toLowerCase().includes('ing') || (w.name || '').toLowerCase().includes('póló')).length;
+    const bottomsCount = wardrobe.filter(w => w.category === 'bottoms' || (w.name || '').toLowerCase().includes('nadrág')).length;
+    const outerCount = wardrobe.filter(w => w.category === 'outerwear' || (w.name || '').toLowerCase().includes('zakó') || (w.name || '').toLowerCase().includes('kabát')).length;
+    const shoesCount = wardrobe.filter(w => w.category === 'shoes' || (w.name || '').toLowerCase().includes('cipő') || (w.name || '').toLowerCase().includes('loafer')).length;
+
+    let score = 30; // base score for having items
+
+    // Ratio 3+ rule: at least 1 bottom per 3 tops
+    if (bottomsCount > 0 && topsCount > 0) {
+      const ratio = topsCount / bottomsCount;
+      if (ratio <= 3.5) score += 20;
+      else score += 10;
+    }
+
+    // Category coverage
+    if (topsCount >= 3) score += 15;
+    if (bottomsCount >= 2) score += 15;
+    if (outerCount >= 1) score += 10;
+    if (shoesCount >= 2) score += 10;
+
+    // Quality/Condition penalty
+    const wornCount = wardrobe.filter(w => w.condition && (w.condition.includes('Lecserélendő') || w.condition.includes('Javításra'))).length;
+    score -= (wornCount * 5);
+
+    const clampedScore = Math.max(10, Math.min(100, Math.round(score)));
+
+    let readiness = 'Fejlesztendő alapok';
+    let levelColor = 'text-amber-400';
+    let progressColor = 'bg-amber-500';
+
+    if (clampedScore >= 85) {
+      readiness = 'Kiváló Kapszula Egyensúly';
+      levelColor = 'text-emerald-400';
+      progressColor = 'bg-emerald-500';
+    } else if (clampedScore >= 65) {
+      readiness = 'Jól variálható ruhatár';
+      levelColor = 'text-[var(--accent-gold)]';
+      progressColor = 'bg-[var(--accent-gold)]';
+    }
+
+    return { score: clampedScore, readiness, levelColor, progressColor, topsCount, bottomsCount, outerCount, shoesCount };
+  }, [wardrobe]);
+
+  const loadGaps = async (force = false) => {
+    if (!force && gaps.length > 0) return;
+    if (wardrobe.length === 0) return;
+    setIsLoadingGaps(true);
+    try {
+      const results = await analyzeWardrobeGaps(wardrobe, profile);
+      if (results && results.length > 0) {
+        setGaps(results);
+        localStorage.setItem('capsule_gaps_cache', JSON.stringify(results));
+      }
+    } catch (e) {
+      console.error('Kapszula hiányelemzési hiba:', e);
+    } finally {
+      setIsLoadingGaps(false);
+    }
+  };
+
+  useEffect(() => {
+    if (wardrobe.length > 0 && gaps.length === 0) {
+      loadGaps(false);
+    }
+  }, [wardrobe]);
+
+  useEffect(() => {
+    if (prevRulesKeyRef.current !== rulesKey) {
+      prevRulesKeyRef.current = rulesKey;
+      try { localStorage.removeItem('capsule_gaps_cache'); } catch (_) {}
+      loadGaps(true);
+    }
+  }, [rulesKey]);
+
+  const handleToggleWishlist = (gapId) => {
+    setWishlistIds(prev => {
+      const next = new Set(prev);
+      if (next.has(gapId)) next.delete(gapId);
+      else next.add(gapId);
+      return next;
+    });
+  };
 
   const categories = [
     { id: 'all', label: 'Összes darab' },
@@ -71,7 +181,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
   }, [wardrobe, selectedCategory, selectedSeason, selectedCondition, searchQuery]);
 
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-6 animate-slide-up relative pb-16">
       
       {/* Interactive Onboarding Quick-Start Guide */}
       <OnboardingGuide 
@@ -79,7 +189,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
         onOpenAddModal={onAddNewItem} 
       />
 
-      {/* Top Banner / Actions */}
+      {/* Top Banner & Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text">
@@ -99,14 +209,128 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
         </button>
       </div>
 
-      {/* Seasonal & Fit Strategy Hint Banner */}
-      <div className="p-3 sm:p-3.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between gap-3 text-xs text-[var(--text-secondary)]">
-        <div className="flex items-center gap-2.5">
-          <span className="text-base">🍂</span>
-          <span>
-            <strong>Szezonális tipp:</strong> Mindig az <em>aktuális évszakban hordott ruháiddal kezdd</em> a feltöltést, és csak olyan darabokat tarts meg, amelyek <em>ma is passzolnak rád</em>!
-          </span>
+      {/* Capsule Ruhatár Index (CRI) Bar with Expandable Drawer */}
+      <div className="glass-card p-4 sm:p-5 border-[var(--border-gold)]/45 bg-gradient-to-r from-[#0c1527]/95 via-[#080d1a]/95 to-black/90 shadow-xl space-y-3">
+        
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="badge badge-gold text-[10px]">Kapszula Ruhatár Index (CRI)</span>
+              <span className={`text-xs font-bold ${criData.levelColor}`}>
+                {criData.readiness}
+              </span>
+            </div>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Kapszula egyensúly: <strong>{criData.score} / 100 pont</strong> • {criData.topsCount || 0} Felső / {criData.bottomsCount || 0} Nadrág / {criData.shoesCount || 0} Cipő
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsCriExpanded(!isCriExpanded);
+              if (!isCriExpanded && gaps.length === 0) loadGaps(true);
+            }}
+            className="btn-secondary text-xs py-2 px-3 self-start sm:self-center flex items-center gap-1.5 transition-all"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+            <span>{isCriExpanded ? 'Hiányelemző Becsukása' : 'Hiánypótló Kulcsdarabok'}</span>
+            {isCriExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
         </div>
+
+        {/* Visual Progress Bar */}
+        <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden border border-white/10">
+          <div 
+            className={`h-full ${criData.progressColor} transition-all duration-700 shadow-sm`}
+            style={{ width: `${criData.score}%` }}
+          />
+        </div>
+
+        {/* Expandable Gap Analysis Drawer */}
+        {isCriExpanded && (
+          <div className="pt-3 border-t border-white/10 space-y-4 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-serif font-bold text-white flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-[var(--accent-gold)]" />
+                <span>Kapszula Hiányelemzés & Piaci Keresőszintaxis</span>
+              </span>
+
+              <button
+                type="button"
+                onClick={() => loadGaps(true)}
+                disabled={isLoadingGaps}
+                className="text-[11px] text-[var(--accent-gold)] hover:underline flex items-center gap-1"
+              >
+                <RefreshCw className={`w-3 h-3 ${isLoadingGaps ? 'animate-spin' : ''}`} />
+                <span>Újraelemzés</span>
+              </button>
+            </div>
+
+            {isLoadingGaps ? (
+              <div className="p-6 text-center space-y-2">
+                <Loader2 className="w-6 h-6 text-[var(--accent-gold)] animate-spin mx-auto" />
+                <p className="text-xs text-[var(--text-secondary)]">Gemini 3.7 Flash elemzi a hiányzó kulcsdarabokat...</p>
+              </div>
+            ) : gaps.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {gaps.slice(0, 4).map(gap => {
+                  const isWishlisted = wishlistIds.has(gap.id);
+                  const score = gap.priorityScore || 80;
+
+                  return (
+                    <div key={gap.id} className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-2.5 flex flex-col justify-between">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`badge text-[9px] font-bold ${
+                            score >= 90 ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          }`}>
+                            {gap.priorityLevel || 'Kulcsdarab'} ({score}p)
+                          </span>
+                          <span className="text-[10px] text-[var(--text-muted)] truncate">{gap.season || ''}</span>
+                        </div>
+
+                        <h4 className="text-xs font-bold text-white">{gap.title}</h4>
+                        <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2">{gap.reason}</p>
+
+                        <div className="bg-black/30 p-2 rounded-lg border border-white/5">
+                          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Keresőszintaxis:</span>
+                          <code className="text-[11px] text-[var(--accent-gold-light)] font-mono truncate block">
+                            "{gap.searchKeywords}"
+                          </code>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-white/5 flex items-center gap-2">
+                        <a
+                          href={`https://www.google.com/search?q=${encodeURIComponent(gap.searchKeywords)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary text-[10px] py-1.5 px-2.5 flex-1 text-center flex items-center justify-center gap-1"
+                        >
+                          <span>Keresés</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => onNavigateTab && onNavigateTab('advisor')}
+                          className="btn-gold text-[10px] py-1.5 px-2.5 flex-1 flex items-center justify-center gap-1"
+                        >
+                          <span>Megvegyem?</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--text-muted)] italic">Nincs azonosított hiányzó kulcsdarab.</p>
+            )}
+
+          </div>
+        )}
+
       </div>
 
       {/* Filter & Search Bar */}
@@ -195,7 +419,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
 
       </div>
 
-      {/* Grid of Clothing Items */}
+      {/* Grid of Clothing Items (2-Column Masonry on Mobile, 3-4 on Desktop) */}
       {filteredWardrobe.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {filteredWardrobe.map(item => (
@@ -291,7 +515,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
               A digitális gardróbod még üres
             </h3>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
-              Töltsd fel az első 3-5 ruhádat az <strong>aktuális szezonból</strong> (pl. kedvenc inged, zakód, nadrágod, cipőd), hogy az AI Stylist azonnal dolgozni tudjon velük!
+              Töltsd fel az első 3-5 ruhádat az <strong>aktuális szezonból</strong> (pl. kedvenc inged, zakód, nadrágod, cipőd), hogy az AI azonnal dolgozni tudjon velük!
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
@@ -325,6 +549,22 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
         </div>
       )}
 
+      {/* Floating Action Button (FAB) - Ergonomic Bottom-Right Action */}
+      <div className="fixed bottom-20 sm:bottom-24 right-4 sm:right-8 z-30 pointer-events-none">
+        <button
+          type="button"
+          onClick={onAddNewItem}
+          className="pointer-events-auto btn-gold p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-[0_8px_30px_rgba(212,175,55,0.4)] flex items-center gap-2 transform hover:scale-105 active:scale-95 transition-all duration-200 group"
+          title="Új Ruha Hozzáadása"
+        >
+          <Plus className="w-5 h-5 text-black group-hover:rotate-90 transition-transform duration-300" />
+          <span className="hidden sm:inline font-serif font-bold text-black text-xs uppercase tracking-wider">
+            Új Ruha
+          </span>
+        </button>
+      </div>
+
     </div>
   );
 }
+

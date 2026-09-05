@@ -1,13 +1,13 @@
 import React from 'react';
-import { Layers, Sparkles, ShoppingBag, PlusCircle, UserCheck } from 'lucide-react';
+import { Sparkles, Layers, ShoppingBag, MessageSquare, UserCheck } from 'lucide-react';
 
 export default function DesktopTabs({ activeTab, setActiveTab }) {
   const tabs = [
-    { id: 'wardrobe', label: 'Gardróbom', icon: Layers },
-    { id: 'stylist', label: 'Outfit Stylist', icon: Sparkles },
-    { id: 'advisor', label: 'Vásárlási Tanácsadó', icon: ShoppingBag, badge: '3-Outfit' },
-    { id: 'missing', label: 'Kapszula Elemzés', icon: PlusCircle },
-    { id: 'profile', label: 'Stílus Profil', icon: UserCheck }
+    { id: 'outfits', label: '👔 Szettek', icon: Sparkles },
+    { id: 'wardrobe', label: '🚪 Gardróbom', icon: Layers },
+    { id: 'advisor', label: '🛍️ Megvegyem?', icon: ShoppingBag, badge: 'Audit' },
+    { id: 'stylist', label: '💬 Stylist & Audit', icon: MessageSquare },
+    { id: 'profile', label: '🧬 Stílus DNS', icon: UserCheck }
   ];
 
   return (
@@ -21,9 +21,9 @@ export default function DesktopTabs({ activeTab, setActiveTab }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2.5 px-5 py-2 rounded-xl text-xs font-medium tracking-wide transition-all relative ${
+              className={`flex items-center gap-2.5 px-5 py-2 rounded-xl text-xs font-medium tracking-wide transition-all relative cursor-pointer ${
                 isActive
-                  ? 'bg-white/10 text-white border border-[var(--border-gold)] shadow-sm'
+                  ? 'bg-white/10 text-white border border-[var(--border-gold)] shadow-sm font-bold'
                   : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
               }`}
             >
@@ -41,3 +41,4 @@ export default function DesktopTabs({ activeTab, setActiveTab }) {
     </div>
   );
 }
+

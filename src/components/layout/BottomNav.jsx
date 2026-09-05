@@ -1,13 +1,13 @@
 import React from 'react';
-import { Layers, Sparkles, ShoppingBag, PlusCircle, UserCheck } from 'lucide-react';
+import { Sparkles, Layers, ShoppingBag, MessageSquare, UserCheck } from 'lucide-react';
 
 export default function BottomNav({ activeTab, setActiveTab }) {
   const tabs = [
+    { id: 'outfits', label: 'Szettek', icon: Sparkles },
     { id: 'wardrobe', label: 'Gardrób', icon: Layers },
-    { id: 'stylist', label: 'Stylist', icon: Sparkles },
-    { id: 'advisor', label: 'Tanácsadó', icon: ShoppingBag, badge: '3-Outfit' },
-    { id: 'missing', label: 'Hiányok', icon: PlusCircle },
-    { id: 'profile', label: 'Stílus DNA', icon: UserCheck }
+    { id: 'advisor', label: 'Megvegyem?', icon: ShoppingBag, badge: 'Audit' },
+    { id: 'stylist', label: 'Stylist', icon: MessageSquare },
+    { id: 'profile', label: 'Stílus DNS', icon: UserCheck }
   ];
 
   return (
@@ -22,7 +22,7 @@ export default function BottomNav({ activeTab, setActiveTab }) {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 sm:gap-2 py-2 px-3 sm:px-4 rounded-full transition-all duration-300 relative select-none ${
+              className={`flex items-center gap-1.5 sm:gap-2 py-2 px-3 sm:px-4 rounded-full transition-all duration-300 relative select-none cursor-pointer ${
                 isActive 
                   ? 'bg-[var(--accent-gold)] text-[#080e1a] font-bold shadow-md shadow-[var(--accent-gold)]/35 scale-102' 
                   : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
@@ -46,3 +46,4 @@ export default function BottomNav({ activeTab, setActiveTab }) {
     </div>
   );
 }
+
