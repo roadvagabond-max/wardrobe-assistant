@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.5.3` (Production)
+- **Aktuális Verzió:** `v1.5.4` (Production)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,17 +13,15 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### 1. 🛡️ GCP Service Account Jogosultság (Firebase Rules Deploy)
-- **Leírás:** A GitHub Actions CI/CD service accountja (`FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01`) jelenleg a Cloud Functionst és a Hostingot telepíti automatikusan. A `firestore.rules` közvetlen CI/CD deployjához a Google Cloud IAM konzolon a service accounthoz hozzárendelhető a `roles/firebaserules.admin` (Firebase Rules Admin) szerepkör.
-- **Prioritás:** Alacsony / Opcionális (A jelenlegi Firestore szabályok stabilak, kézzel vagy admin fiókkal is élesíthetők).
+### ✅ Lezárt Javítások (v1.5.4)
+- [x] **Firebase API kulcsok gomb eltávolítása:** Az `AuthModal.jsx`-ből törölve a felesleges, felhasználót zavaró API kulcs konfigurációs gomb (a kulcsot a szerveroldali Secret Manager védi).
+- [x] **Demo Mód gomb eltávolítása:** A belépési felugró ablakból törölve a megtévesztő „Folytatás Helyi Demo Módban” gomb; helyette tiszta, egyértelmű Google Belépési felület működik.
+- [x] **Vendég & Bejelentkezett Felhasználói Adatszeparáció:** Belépés nélkül kizárólag egy semleges, nem valós személyhez köthető bemutató minta kapszula (`SAMPLE_SHOWCASE_WARDROBE`) és általános vendégprofil (`DEFAULT_GUEST_PROFILE`) látható. A valós felhasználó privát adatai (profil, testméretek, egyedi szabályok, ruhatár) csak és kizárólag sikeres Google bejelentkezés után töltődnek be a Firestore-ból, és kijelentkezéskor automatikusan kiürülnek.
 
-### 2. 🧹 Nagy Ruhatárak Megjelenítési Optimalizálása (Virtual List / Infinite Scroll)
-- **Leírás:** 300–500+ ruhadarab feletti ruhatár esetén a DOM méretének optimalizálása érdekében érdemes bevezetni virtuális listázást (pl. `react-window` vagy CSS `content-visibility: auto`).
-- **Prioritás:** Közepes.
-
-### 3. 🌐 PWA Service Worker & Offline Kép Gyorsítótár
-- **Leírás:** Bár a Firestore adatbázis már rendelkezik `persistentLocalCache` offline támogatással, a statikus frontend assetekhez (ikonok, betűtípusok, HTML/JS bundle) érdemes egy teljes értékű Service Worker gyorsítótárat és PWA telepíthetőséget készíteni.
-- **Prioritás:** Magas.
+### 📋 Nyitott Tételek
+- [ ] **GCP Service Account Jogosultság (Firebase Rules Deploy):** A `roles/firebaserules.admin` hozzárendelése a CI/CD service accounthoz a Google Cloud konzolon, ha a jövőben a Firestore szabályok deployját is a CI/CD-re bíznánk.
+- [ ] **Nagy Ruhatárak Megjelenítési Optimalizálása (Virtual List):** 300–500+ darabos ruhatárak esetén `react-window` vagy CSS optimalizáció.
+- [ ] **PWA Service Worker & Offline Kép Gyorsítótár:** Statikus assetek és teljes offline élmény biztosítása.
 
 ---
 
@@ -84,4 +82,4 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ---
 
-*Utoljára frissítve: 2026-09-05 (v1.5.3)*
+*Utoljára frissítve: 2026-09-05 (v1.5.4)*
