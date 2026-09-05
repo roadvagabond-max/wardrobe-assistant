@@ -1475,134 +1475,416 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT (6-8 darabbal):
         timeoutMs: 22000
       });
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
+        const sorted = parsed.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
+        try {
+          localStorage.setItem('sartorial_last_ai_gaps', JSON.stringify(sorted));
+        } catch (_) {}
+        return sorted;
       }
     } catch (e) {
       console.error('Gemini Capsule Gap hiba:', e);
     }
   }
 
-  // Intelligens Fallback ha nincs API kapcsolat
-  const fallbackGaps = [
-    {
-      id: 'gap-chelsea-boots',
-      title: 'Sötétbarna Full-Grain Bőr Chelsea Csizma',
-      recommendedFit: 'Classic last / True to size',
-      priorityScore: 98,
-      priorityLevel: 'Kritikus Alapdarab',
-      impact: '+12 Új Őszi/Téli Outfit Variáció',
-      estimatedPrice: '45 000 - 85 000 Ft',
-      category: 'shoes',
-      season: 'Ősz / Tél',
-      reason: 'A ruhatárad legfontosabb hiányzó őszi-téli sarokköve: vízálló, elegáns és tökéletesen működik flanelnadrággal és gyapjúkabáttal.',
-      isReplacement: false,
-      searchKeywords: 'mens dark brown leather chelsea boots ferfi bor csizma'
-    },
-    {
-      id: 'gap-heavy-tshirt',
-      title: 'Prémium Nehézsúlyú Törtfehér Pamut Póló (220 GSM)',
-      recommendedFit: 'Slim tailored / Regular fit',
-      priorityScore: 88,
-      priorityLevel: 'Fontos Kapszula Bázis',
-      impact: '+10 Új Rétegezhető Szett',
-      estimatedPrice: '12 000 - 22 000 Ft',
-      category: 'tops',
-      season: 'Egész évben',
-      reason: 'Kiváló minőségű, sűrű szövésű bázisdarab, ami zakók és pulóverek alatt tartást és friss kontrasztot nyújt.',
-      isReplacement: false,
-      searchKeywords: 'mens heavyweight white cotton t-shirt feher pamut polo'
-    },
-    {
-      id: 'gap-flannel-trousers',
-      title: 'Sötétszürke Olasz Gyapjú Flanel Nadrág',
-      recommendedFit: 'Slim tailored / Tapered',
-      priorityScore: 84,
-      priorityLevel: 'Fontos Kapszula Bázis',
-      impact: '+8 Új Őszi/Téli Outfit Variáció',
-      estimatedPrice: '28 000 - 52 000 Ft',
-      category: 'bottoms',
-      season: 'Ősz / Tél',
-      reason: 'Meleg és strukturált eleganciát nyújt a hideg évszakokban, tökéletes hidat képezve a zakók és téli kötöttek felé.',
-      isReplacement: false,
-      searchKeywords: 'mens slim fit charcoal wool flannel trousers gyapju nadrag'
-    },
-    {
-      id: 'gap-camel-turtleneck',
-      title: 'Teveszínű (Camel) Merinógyapjú Garbó Pulóver',
-      recommendedFit: 'Slim tailored',
-      priorityScore: 78,
-      priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
-      impact: '+9 Új Elegáns Téli Szett',
-      estimatedPrice: '24 000 - 45 000 Ft',
-      category: 'knitwear',
-      season: 'Ősz / Tél',
-      reason: 'A garbó azonnal kifinomult, olasz sprezzatura karaktert ad zakó alá rétegezve anélkül, hogy inget kellene vasalnod.',
-      isReplacement: false,
-      searchKeywords: 'mens camel merino wool turtleneck pulover garbo'
-    },
-    {
-      id: 'gap-leather-belt',
-      title: 'Dohánybarna Kézműves Bőröv Sárgaréz Csattal',
-      recommendedFit: 'Classic 3.5cm',
-      priorityScore: 74,
-      priorityLevel: 'Fontos Kapszula Bázis',
-      impact: '+15 Szett Harmonizálása',
-      estimatedPrice: '14 000 - 28 000 Ft',
-      category: 'accessories',
-      season: 'Egész évben',
-      reason: 'Összeköti a felső- és alsóruházatot, tökéletes összhangot teremtve a barna loaferrel és chelsea csizmával.',
-      isReplacement: false,
-      searchKeywords: 'mens handmade brown leather belt ferfi bor ov'
-    },
-    {
-      id: 'gap-cashmere-scarf',
-      title: 'Antracitszürke 100% Mongol Kasmír Sál',
-      recommendedFit: 'One size (180x30cm)',
-      priorityScore: 62,
-      priorityLevel: 'Stílusgazdagító / Nice to Have',
-      impact: '+6 Hideg Téli Megjelenés',
-      estimatedPrice: '22 000 - 38 000 Ft',
-      category: 'accessories',
-      season: 'Ősz / Tél',
-      reason: 'A téli szövetkabát elengedhetetlen luxus kísérője, ami védi a nyakat és textúrát ad a hideg utcai szetteknek.',
-      isReplacement: false,
-      searchKeywords: 'mens 100 cashmere charcoal grey scarf ferfi kasmir sal'
-    },
-    {
-      id: 'gap-navy-hopsack-blazer',
-      title: 'Sötétkék Olasz Gyapjú Hopsack Zakó (Unstructured)',
-      recommendedFit: 'Slim tailored / Neapolitan shoulder',
-      priorityScore: 92,
-      priorityLevel: 'Kritikus Alapdarab',
-      impact: '+14 Sokoldalú Smart & Business Szett',
-      estimatedPrice: '55 000 - 110 000 Ft',
-      category: 'outerwear',
-      season: 'Egész évben',
-      reason: 'A leguniverzálisabb sartorial kulcsdarab: lélegző, gyűrődésálló szövésű, inggel és pamut pólóval is tökéletes tartást ad.',
-      isReplacement: false,
-      searchKeywords: 'mens navy wool hopsack blazer ferfi sotetkek zakó'
-    },
-    {
-      id: 'gap-olive-chino',
-      title: 'Olívazöld Prémium Pamut-Twill Chino Nadrág',
-      recommendedFit: 'Slim tailored / Tapered leg',
-      priorityScore: 76,
-      priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
-      impact: '+8 Új Földtónusú Outfit Variáció',
-      estimatedPrice: '18 000 - 36 000 Ft',
-      category: 'bottoms',
-      season: 'Egész évben',
-      reason: 'Kiváló stilisztikai hidat képez a sötétkék zakók, barna loaferek és fehér ingek/pólók között.',
-      isReplacement: false,
-      searchKeywords: 'mens olive green cotton chino trousers ferfi nadrag'
-    }
-  ];
+  // Intelligens, Gardrób-Adaptív Dinamikus Fallback Kapszula Elemző
+  return generateDynamicWardrobeFallbackGaps(wardrobe, profile);
+}
 
+/**
+ * Gardrób-Adaptív Dinamikus Kapszula Hiányelemző Motor
+ * Ha offline van a rendszer vagy az API hívás meghiúsul, nem egy fix statikus listát ad vissza,
+ * hanem valós időben megvizsgálja a felhasználó létező darabjait, nemét, hiányzó kategóriáit és szabályait.
+ */
+export function generateDynamicWardrobeFallbackGaps(wardrobe = [], profile = {}) {
+  const isFemale = profile.gender === 'female' || (profile.styleArchetype || '').toLowerCase().includes('female');
   const rulesLower = (Array.isArray(profile?.customStylingRules) ? profile.customStylingRules.join(' ') : '').toLowerCase();
-  return fallbackGaps.filter(g => {
-    if ((rulesLower.includes('pólóing') || rulesLower.includes('polo')) && g.id?.includes('polo')) return false;
+
+  // 1. Meglévő darabok intelligens auditálása a gardróbban
+  const hasBoots = wardrobe.some(w => w.category === 'shoes' && (
+    (Array.isArray(w.season) && (w.season.includes('osz') || w.season.includes('tel'))) ||
+    w.subCategory === 'boots' || w.subCategory === 'chelsea_boots' || 
+    (w.name || '').toLowerCase().includes('csizma') || (w.name || '').toLowerCase().includes('bakancs')
+  ));
+  const hasLoafers = wardrobe.some(w => w.category === 'shoes' && (
+    (w.name || '').toLowerCase().includes('loafer') || (w.name || '').toLowerCase().includes('mokaszin') || (w.subCategory || '').toLowerCase().includes('loafer')
+  ));
+  const hasSneakers = wardrobe.some(w => w.category === 'shoes' && (
+    (w.name || '').toLowerCase().includes('sneaker') || (w.name || '').toLowerCase().includes('edzőcipő') || (w.name || '').toLowerCase().includes('tornacipő')
+  ));
+  const hasNavyBlazer = wardrobe.some(w => w.category === 'outerwear' && (
+    (w.name || '').toLowerCase().includes('zakó') || (w.name || '').toLowerCase().includes('blazer') || (w.name || '').toLowerCase().includes('blézer')
+  ) && (
+    (w.color || '').toLowerCase().includes('kék') || (w.name || '').toLowerCase().includes('kék') || (w.name || '').toLowerCase().includes('navy')
+  ));
+  const hasOvercoat = wardrobe.some(w => w.category === 'outerwear' && (
+    (w.name || '').toLowerCase().includes('kabát') || (w.name || '').toLowerCase().includes('szövetkabát') || (w.name || '').toLowerCase().includes('overcoat') || (w.name || '').toLowerCase().includes('trench')
+  ));
+  const hasMerinoTurtleneck = wardrobe.some(w => w.category === 'knitwear' && (
+    (w.name || '').toLowerCase().includes('garbó') || (w.name || '').toLowerCase().includes('turtleneck')
+  ));
+  const hasKnitwear = wardrobe.some(w => w.category === 'knitwear');
+  const hasFlannelTrousers = wardrobe.some(w => w.category === 'bottoms' && (
+    (w.name || '').toLowerCase().includes('flanel') || (w.name || '').toLowerCase().includes('gyapjú') || (w.name || '').toLowerCase().includes('öltönynadrág')
+  ));
+  const hasChinos = wardrobe.some(w => w.category === 'bottoms' && (
+    (w.name || '').toLowerCase().includes('chino') || (w.name || '').toLowerCase().includes('pamutnadrág')
+  ));
+  const hasHeavyTee = wardrobe.some(w => w.category === 'tops' && (
+    (w.name || '').toLowerCase().includes('póló') || (w.name || '').toLowerCase().includes('t-shirt')
+  ));
+  const hasOxfordShirt = wardrobe.some(w => w.category === 'tops' && (
+    (w.name || '').toLowerCase().includes('oxford') || (w.name || '').toLowerCase().includes('ocbd') || (w.name || '').toLowerCase().includes('kék ing')
+  ));
+  const hasWhiteShirt = wardrobe.some(w => w.category === 'tops' && (
+    (w.name || '').toLowerCase().includes('fehér ing') || (w.name || '').toLowerCase().includes('white shirt')
+  ));
+  const hasLeatherBelt = wardrobe.some(w => w.category === 'accessories' && (
+    (w.name || '').toLowerCase().includes('öv') || (w.name || '').toLowerCase().includes('belt')
+  ));
+  const hasScarf = wardrobe.some(w => w.category === 'accessories' && (
+    (w.name || '').toLowerCase().includes('sál') || (w.name || '').toLowerCase().includes('scarf')
+  ));
+
+  // 2. Dinamikus Sartorial Katalógus Pool (valós hiányok alapján súlyozva)
+  const candidatePool = [];
+
+  if (isFemale) {
+    if (!hasNavyBlazer) {
+      candidatePool.push({
+        id: 'gap-female-blazer',
+        title: 'Karcsúsított Sötétkék Olasz Gyapjú Blézer',
+        recommendedFit: 'Tailored slim / Cropped waist',
+        priorityScore: 97,
+        priorityLevel: 'Kritikus Alapdarab',
+        impact: '+14 Elegáns Irodai & Kapszula Szett',
+        estimatedPrice: '45 000 - 95 000 Ft',
+        category: 'outerwear',
+        season: 'Egész évben',
+        reason: 'A női kapszula ruhatár sarokköve: ceruzaszoknyával, flanelnadrággal és midi ruhával is azonnali tartást ad.',
+        isReplacement: false,
+        searchKeywords: 'womens navy tailored wool blazer noi kek blezer'
+      });
+    }
+    if (!hasBoots) {
+      candidatePool.push({
+        id: 'gap-female-boots',
+        title: 'Fekete Full-Grain Bőr Magasszárú / Bokacsizma',
+        recommendedFit: 'Classic almond toe / Block heel',
+        priorityScore: 96,
+        priorityLevel: 'Kritikus Alapdarab',
+        impact: '+12 Őszi/Téli Szett',
+        estimatedPrice: '40 000 - 80 000 Ft',
+        category: 'shoes',
+        season: 'Ősz / Tél',
+        reason: 'Nélkülözhetetlen hideg időben a midi ruhák és szűkített nadrágok mellé.',
+        isReplacement: false,
+        searchKeywords: 'womens black leather ankle boots noi bor csizma'
+      });
+    }
+    if (!hasFlannelTrousers) {
+      candidatePool.push({
+        id: 'gap-female-wide-trousers',
+        title: 'Magas Derekú Gyapjú Nadrág (Wide-Leg Szabás)',
+        recommendedFit: 'High waist / Wide leg drape',
+        priorityScore: 90,
+        priorityLevel: 'Fontos Kapszula Bázis',
+        impact: '+10 Chic Irodai Megjelenés',
+        estimatedPrice: '28 000 - 55 000 Ft',
+        category: 'bottoms',
+        season: 'Ősz / Tél',
+        reason: 'Tökéletes sziluettet és kényelmet biztosít finomkötött felsőkkel és blézerekkel.',
+        isReplacement: false,
+        searchKeywords: 'womens high waist wide leg wool trousers noi gyapju nadrag'
+      });
+    }
+    if (!hasWhiteShirt) {
+      candidatePool.push({
+        id: 'gap-female-silk-blouse',
+        title: 'Törtfehér 100% Hernyóselyem Blúz (Silk Crepe)',
+        recommendedFit: 'Relaxed tailored',
+        priorityScore: 88,
+        priorityLevel: 'Fontos Kapszula Bázis',
+        impact: '+9 Kifinomult Smart Szett',
+        estimatedPrice: '24 000 - 48 000 Ft',
+        category: 'tops',
+        season: 'Egész évben',
+        reason: 'Prémium természetes esésű bázisdarab, ami zakó alatt és önmagában is rendkívül elegáns.',
+        isReplacement: false,
+        searchKeywords: 'womens silk blouse tortfeher selyem bluz'
+      });
+    }
+    if (!hasOvercoat) {
+      candidatePool.push({
+        id: 'gap-female-wrap-coat',
+        title: 'Teveszínű (Camel) Öves Gyapjúkabát (Wrap Coat)',
+        recommendedFit: 'Longline belted',
+        priorityScore: 85,
+        priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
+        impact: '+11 Prémium Téli Megjelenés',
+        estimatedPrice: '55 000 - 120 000 Ft',
+        category: 'outerwear',
+        season: 'Ősz / Tél',
+        reason: 'Időtálló, elegáns szabásvonal, ami bármelyik őszi-téli összeállítást azonnal luxus szintre emeli.',
+        isReplacement: false,
+        searchKeywords: 'womens camel wool wrap coat noi teveszinu gyapju kabat'
+      });
+    }
+    if (!hasKnitwear) {
+      candidatePool.push({
+        id: 'gap-female-cashmere-knit',
+        title: 'Krémszínű 100% Kasmír Kereknyakú Pulóver',
+        recommendedFit: 'Soft regular',
+        priorityScore: 82,
+        priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
+        impact: '+8 Meleg & Luxus Réteg',
+        estimatedPrice: '32 000 - 65 000 Ft',
+        category: 'knitwear',
+        season: 'Ősz / Tél',
+        reason: 'Puha, meleg és univerzálisan hordható blézer alatt vagy önálló felsőként.',
+        isReplacement: false,
+        searchKeywords: 'womens cream cashmere crewneck sweater noi kasmir pulover'
+      });
+    }
+    if (!hasLeatherBelt) {
+      candidatePool.push({
+        id: 'gap-female-belt',
+        title: 'Barna Finombőr Deréköv Arany Csatdísszel',
+        recommendedFit: 'Slim 2.5cm / Waist belt',
+        priorityScore: 78,
+        priorityLevel: 'Fontos Kapszula Bázis',
+        impact: '+15 Szett Arányainak Kiemelése',
+        estimatedPrice: '12 000 - 24 000 Ft',
+        category: 'accessories',
+        season: 'Egész évben',
+        reason: 'Kiemeli a derekat ruháknál és nadrágoknál, összefogva a lábbelivel.',
+        isReplacement: false,
+        searchKeywords: 'womens leather waist belt noi bor derikov'
+      });
+    }
+    if (!hasLoafers) {
+      candidatePool.push({
+        id: 'gap-female-loafer',
+        title: 'Sötétbarna Bőr Bit Loafer (Arany Zablacsattal)',
+        recommendedFit: 'Slim almond toe',
+        priorityScore: 76,
+        priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
+        impact: '+10 Átmeneti Időszaki Szett',
+        estimatedPrice: '32 000 - 62 000 Ft',
+        category: 'shoes',
+        season: 'Tavasz / Nyár / Ősz',
+        reason: 'Klasszikus smart casual lábbeli boka fölé érő nadrágokhoz és midi szoknyákhoz.',
+        isReplacement: false,
+        searchKeywords: 'womens leather horsebit loafers noi bor loafer cipő'
+      });
+    }
+  } else {
+    // Férfi / Klasszikus Sartorial Pool
+    if (!hasBoots) {
+      candidatePool.push({
+        id: 'gap-chelsea-boots',
+        title: 'Sötétbarna Full-Grain Bőr Chelsea Csizma',
+        recommendedFit: 'Classic last / True to size',
+        priorityScore: 98,
+        priorityLevel: 'Kritikus Alapdarab',
+        impact: '+12 Új Őszi/Téli Outfit Variáció',
+        estimatedPrice: '45 000 - 85 000 Ft',
+        category: 'shoes',
+        season: 'Ősz / Tél',
+        reason: 'A ruhatárad legfontosabb hiányzó őszi-téli sarokköve: vízálló, elegáns és tökéletesen működik flanelnadrággal és gyapjúkabáttal.',
+        isReplacement: false,
+        searchKeywords: 'mens dark brown leather chelsea boots ferfi bor csizma'
+      });
+    }
+    if (!hasNavyBlazer) {
+      candidatePool.push({
+        id: 'gap-navy-hopsack-blazer',
+        title: 'Sötétkék Olasz Gyapjú Hopsack Zakó (Unstructured)',
+        recommendedFit: 'Slim tailored / Neapolitan shoulder',
+        priorityScore: 95,
+        priorityLevel: 'Kritikus Alapdarab',
+        impact: '+14 Sokoldalú Smart & Business Szett',
+        estimatedPrice: '55 000 - 110 000 Ft',
+        category: 'outerwear',
+        season: 'Egész évben',
+        reason: 'A leguniverzálisabb sartorial kulcsdarab: lélegző, gyűrődésálló szövésű, inggel és pamut pólóval is tökéletes tartást ad.',
+        isReplacement: false,
+        searchKeywords: 'mens navy wool hopsack blazer ferfi sotetkek zakó'
+      });
+    }
+    if (!hasFlannelTrousers) {
+      candidatePool.push({
+        id: 'gap-flannel-trousers',
+        title: 'Sötétszürke Olasz Gyapjú Flanel Nadrág',
+        recommendedFit: 'Slim tailored / Tapered',
+        priorityScore: 90,
+        priorityLevel: 'Fontos Kapszula Bázis',
+        impact: '+8 Új Őszi/Téli Outfit Variáció',
+        estimatedPrice: '28 000 - 52 000 Ft',
+        category: 'bottoms',
+        season: 'Ősz / Tél',
+        reason: 'Meleg és strukturált eleganciát nyújt a hideg évszakokban, tökéletes hidat képezve a zakók és téli kötöttek felé.',
+        isReplacement: false,
+        searchKeywords: 'mens slim fit charcoal wool flannel trousers gyapju nadrag'
+      });
+    }
+    if (!hasOxfordShirt) {
+      candidatePool.push({
+        id: 'gap-oxford-shirt',
+        title: 'Világoskék Oxford Pamut Gombolós Gallérú Ing (OCBD)',
+        recommendedFit: 'Slim tailored / Button-down collar',
+        priorityScore: 89,
+        priorityLevel: 'Fontos Kapszula Bázis',
+        impact: '+11 Új Smart Casual Szett',
+        estimatedPrice: '16 000 - 32 000 Ft',
+        category: 'tops',
+        season: 'Egész évben',
+        reason: 'A casual elegancia kötelező alapja: nyakkendő nélkül, kigombolt gallérral, zakó vagy pulóver alatt is hibátlan textúrát nyújt.',
+        isReplacement: false,
+        searchKeywords: 'mens light blue oxford cotton button down shirt kek oxford ing'
+      });
+    }
+    if (!hasHeavyTee) {
+      candidatePool.push({
+        id: 'gap-heavy-tshirt',
+        title: 'Prémium Nehézsúlyú Törtfehér Pamut Póló (220 GSM)',
+        recommendedFit: 'Slim tailored / Regular fit',
+        priorityScore: 88,
+        priorityLevel: 'Fontos Kapszula Bázis',
+        impact: '+10 Új Rétegezhető Szett',
+        estimatedPrice: '12 000 - 22 000 Ft',
+        category: 'tops',
+        season: 'Egész évben',
+        reason: 'Kiváló minőségű, sűrű szövésű bázisdarab, ami zakók és pulóverek alatt tartást és friss kontrasztot nyújt.',
+        isReplacement: false,
+        searchKeywords: 'mens heavyweight white cotton t-shirt feher pamut polo'
+      });
+    }
+    if (!hasLoafers) {
+      candidatePool.push({
+        id: 'gap-penny-loafer',
+        title: 'Sötétbarna Bőr Penny Loafer (Goodyear Welted)',
+        recommendedFit: 'True to size / Medium width',
+        priorityScore: 86,
+        priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
+        impact: '+12 Elegáns Tavaszi/Nyári Szett',
+        estimatedPrice: '38 000 - 75 000 Ft',
+        category: 'shoes',
+        season: 'Tavasz / Nyár / Ősz',
+        reason: 'A legrugalmasabb sartorial lábbeli: chino-val, lenvászon nadrággal és öltönnyel is hordható zoknival vagy láthatatlan zoknival.',
+        isReplacement: false,
+        searchKeywords: 'mens dark brown leather penny loafers ferfi bor loafer'
+      });
+    }
+    if (!hasMerinoTurtleneck) {
+      candidatePool.push({
+        id: 'gap-camel-turtleneck',
+        title: 'Teveszínű (Camel) Merinógyapjú Garbó Pulóver',
+        recommendedFit: 'Slim tailored',
+        priorityScore: 84,
+        priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
+        impact: '+9 Új Elegáns Téli Szett',
+        estimatedPrice: '24 000 - 45 000 Ft',
+        category: 'knitwear',
+        season: 'Ősz / Tél',
+        reason: 'A garbó azonnal kifinomult, olasz sprezzatura karaktert ad zakó alá rétegezve anélkül, hogy inget kellene vasalnod.',
+        isReplacement: false,
+        searchKeywords: 'mens camel merino wool turtleneck pulover garbo'
+      });
+    }
+    if (!hasOvercoat) {
+      candidatePool.push({
+        id: 'gap-wool-overcoat',
+        title: 'Sötétkék / Teveszínű Gyapjú Szövetkabát',
+        recommendedFit: 'Tailored overcoat (fits over blazer)',
+        priorityScore: 82,
+        priorityLevel: 'Fontos Kapszula Bázis',
+        impact: '+10 Téli Elegáns Megjelenés',
+        estimatedPrice: '65 000 - 130 000 Ft',
+        category: 'outerwear',
+        season: 'Ősz / Tél',
+        reason: 'A téli ruhatár legfontosabb védőbástyája, ami zakóra és vastag pulóverre rétegezve is kifogástalan sziluettet biztosít.',
+        isReplacement: false,
+        searchKeywords: 'mens tailored wool overcoat ferfi gyapju nagykabat'
+      });
+    }
+    if (!hasChinos) {
+      candidatePool.push({
+        id: 'gap-olive-chino',
+        title: 'Olívazöld Prémium Pamut-Twill Chino Nadrág',
+        recommendedFit: 'Slim tailored / Tapered leg',
+        priorityScore: 80,
+        priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
+        impact: '+8 Új Földtónusú Outfit Variáció',
+        estimatedPrice: '18 000 - 36 000 Ft',
+        category: 'bottoms',
+        season: 'Egész évben',
+        reason: 'Kiváló stilisztikai hidat képez a sötétkék zakók, barna loaferek és fehér ingek/pólók között.',
+        isReplacement: false,
+        searchKeywords: 'mens olive green cotton chino trousers ferfi nadrag'
+      });
+    }
+    if (!hasLeatherBelt) {
+      candidatePool.push({
+        id: 'gap-leather-belt',
+        title: 'Dohánybarna Kézműves Bőröv Sárgaréz Csattal',
+        recommendedFit: 'Classic 3.5cm',
+        priorityScore: 78,
+        priorityLevel: 'Fontos Kapszula Bázis',
+        impact: '+15 Szett Harmonizálása',
+        estimatedPrice: '14 000 - 28 000 Ft',
+        category: 'accessories',
+        season: 'Egész évben',
+        reason: 'Összeköti a felső- és alsóruházatot, tökéletes összhangot teremtve a barna loaferrel és chelsea csizmával.',
+        isReplacement: false,
+        searchKeywords: 'mens handmade brown leather belt ferfi bor ov'
+      });
+    }
+    if (!hasSneakers) {
+      candidatePool.push({
+        id: 'gap-white-sneaker',
+        title: 'Tiszta Fehér Bőr Minimalista Sneaker (Margom Talp)',
+        recommendedFit: 'Low top / True to size',
+        priorityScore: 74,
+        priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
+        impact: '+10 Smart Casual Outfit Variáció',
+        estimatedPrice: '28 000 - 55 000 Ft',
+        category: 'shoes',
+        season: 'Tavasz / Nyár / Ősz',
+        reason: 'A modern smart casual elengedhetetlen darabja: chino-val és strukturálatlan zakóval lezser, mégis letisztult összhatást kelt.',
+        isReplacement: false,
+        searchKeywords: 'mens minimalist white leather sneakers tiszta feher bor cipo'
+      });
+    }
+    if (!hasScarf) {
+      candidatePool.push({
+        id: 'gap-cashmere-scarf',
+        title: 'Antracitszürke 100% Mongol Kasmír Sál',
+        recommendedFit: 'One size (180x30cm)',
+        priorityScore: 68,
+        priorityLevel: 'Stílusgazdagító / Nice to Have',
+        impact: '+6 Hideg Téli Megjelenés',
+        estimatedPrice: '22 000 - 38 000 Ft',
+        category: 'accessories',
+        season: 'Ősz / Tél',
+        reason: 'A téli szövetkabát elengedhetetlen luxus kísérője, ami védi a nyakat és textúrát ad a hideg utcai szetteknek.',
+        isReplacement: false,
+        searchKeywords: 'mens 100 cashmere charcoal grey scarf ferfi kasmir sal'
+      });
+    }
+  }
+
+  // Szabályszűrés (egyéni tiltások kizárása)
+  const filtered = candidatePool.filter(g => {
+    const titleLower = g.title.toLowerCase();
+    if ((rulesLower.includes('pólóing') || rulesLower.includes('polo')) && (g.id.includes('polo') || titleLower.includes('pólóing'))) return false;
+    if (rulesLower.includes('fehér nadrág') && g.category === 'bottoms' && titleLower.includes('fehér')) return false;
+    if ((rulesLower.includes('nem szeretem a fehér') || rulesLower.includes('fehér tilos')) && titleLower.includes('fehér nadrág')) return false;
+    if (rulesLower.includes('skinny') && g.recommendedFit.toLowerCase().includes('skinny')) return false;
     return true;
   });
+
+  // Rendezzük prioritási pontszám szerint csökkenő sorrendbe, és adjunk vissza legfeljebb 8 elemet
+  return filtered.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0)).slice(0, 8);
 }
 
 /**
