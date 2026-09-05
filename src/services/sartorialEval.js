@@ -3,34 +3,11 @@
  * Deterministic Test Suite validating all Sartorial Code rules against international tailoring standards.
  */
 
-export interface EvalTestResult {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  inputContext: Record<string, any>;
-  expectedVerdict: string;
-  actualVerdict: string;
-  passed: boolean;
-  explanation: string;
-  timestamp: string;
-}
-
-export interface GoldenEvalSuiteSummary {
-  totalTests: number;
-  passedTests: number;
-  failedTests: number;
-  passRatePercent: number;
-  suiteVerdict: 'PASSED' | 'FAILED';
-  executedAt: string;
-  results: EvalTestResult[];
-}
-
 /**
  * Executes the 6 deterministic Golden Sartorial Tests (TC-1 through TC-6)
  */
-export function runSartorialGoldenEvalSuite(): GoldenEvalSuiteSummary {
-  const results: EvalTestResult[] = [];
+export function runSartorialGoldenEvalSuite() {
+  const results = [];
   const now = new Date().toISOString();
 
   // --------------------------------------------------------------------------
