@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { auth, db, loginWithGoogle, logoutUser, isFirebaseConfigured } from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { INITIAL_WARDROBE, INITIAL_USER_PROFILE, DEFAULT_NEW_USER_PROFILE } from '../data/mockWardrobe';
+import { SAMPLE_SHOWCASE_WARDROBE, DEFAULT_GUEST_PROFILE, DEFAULT_NEW_USER_PROFILE } from '../data/mockWardrobe';
 import { ensureBase64Image } from '../services/imageOptimizer';
 import { 
   getStoredSartorialRules, 
@@ -23,12 +23,12 @@ export function AuthProvider({ children }) {
 
   const [wardrobe, setWardrobe] = useState(() => {
     const saved = localStorage.getItem('wardrobe_items');
-    return saved ? JSON.parse(saved) : INITIAL_WARDROBE;
+    return saved ? JSON.parse(saved) : SAMPLE_SHOWCASE_WARDROBE;
   });
 
   const [profile, setProfile] = useState(() => {
     const saved = localStorage.getItem('user_style_profile');
-    return saved ? JSON.parse(saved) : INITIAL_USER_PROFILE;
+    return saved ? JSON.parse(saved) : DEFAULT_GUEST_PROFILE;
   });
 
   const [savedOutfits, setSavedOutfits] = useState(() => {
@@ -343,12 +343,14 @@ export function AuthProvider({ children }) {
     setSartorialRules(updated);
   };
 
-  // Reset to Demo Data
+  // Reset to Sample Showcase Data
   const resetToDemoData = () => {
-    setWardrobe(INITIAL_WARDROBE);
-    setProfile(INITIAL_USER_PROFILE);
-    localStorage.setItem('wardrobe_items', JSON.stringify(INITIAL_WARDROBE));
-    localStorage.setItem('user_style_profile', JSON.stringify(INITIAL_USER_PROFILE));
+    setWardrobe(SAMPLE_SHOWCASE_WARDROBE);
+    setProfile(DEFAULT_GUEST_PROFILE);
+    try {
+      localStorage.setItem('wardrobe_items', JSON.stringify(SAMPLE_SHOWCASE_WARDROBE));
+      localStorage.setItem('user_style_profile', JSON.stringify(DEFAULT_GUEST_PROFILE));
+    } catch (_) {}
   };
 
   const handleGoogleLogin = async () => {
@@ -372,10 +374,13 @@ export function AuthProvider({ children }) {
     setIsDemoMode(true);
     setRoleState('user');
     localStorage.setItem('user_role', 'user');
-    setWardrobe(INITIAL_WARDROBE);
-    setProfile(INITIAL_USER_PROFILE);
+    setWardrobe(SAMPLE_SHOWCASE_WARDROBE);
+    setProfile(DEFAULT_GUEST_PROFILE);
     setSavedOutfits([]);
     try {
+      localStorage.removeItem('user_style_profile');
+      localStorage.removeItem('wardrobe_items');
+      localStorage.removeItem('saved_outfits');
       localStorage.removeItem('capsule_gaps_cache');
     } catch (_) {}
   };
@@ -582,8 +587,8 @@ export function AuthProvider({ children }) {
       // 6. Reset in-memory state and reload
       setCurrentUser(null);
       setIsDemoMode(true);
-      setWardrobe(INITIAL_WARDROBE);
-      setProfile(INITIAL_USER_PROFILE);
+      setWardrobe(SAMPLE_SHOWCASE_WARDROBE);
+      setProfile(DEFAULT_GUEST_PROFILE);
       setSavedOutfits([]);
 
       window.location.reload();

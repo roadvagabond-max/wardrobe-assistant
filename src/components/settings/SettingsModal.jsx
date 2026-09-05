@@ -329,7 +329,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <button
                   type="button"
                   onClick={() => {
-                    if (window.confirm('Visszaállítod a ruhatáradat az induló olasz sprezzatura alapértékekre?')) {
+                    if (window.confirm('Visszaállítod a ruhatáradat a bemutató mintakollekció alapértékeire?')) {
                       resetToDemoData();
                       window.location.reload();
                     }
@@ -337,7 +337,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   className="text-[11px] text-amber-300 hover:text-amber-200 flex items-center gap-1 transition-colors"
                 >
                   <RefreshCw className="w-3 h-3" />
-                  <span>Minta Gardrób Újratöltése</span>
+                  <span>Minta Gardrób Visszaállítása</span>
                 </button>
               </div>
             </div>
@@ -352,10 +352,10 @@ export default function SettingsModal({ isOpen, onClose }) {
               <div className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-white/5">
                 <div className="min-w-0">
                   <span className="text-white font-medium block truncate">
-                    {currentUser ? currentUser.email : 'Helyi / Demo Fiók'}
+                    {currentUser ? currentUser.email : 'Vendég Munkamenet'}
                   </span>
                   <span className="text-[10px] text-[var(--text-muted)]">
-                    {currentUser ? 'Felhő szinkronizáció aktív' : 'Helyi böngésző tároló'}
+                    {currentUser ? 'Felhő szinkronizáció aktív' : 'Helyi bemutató nézet'}
                   </span>
                 </div>
 

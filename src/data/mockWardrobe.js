@@ -1,4 +1,9 @@
-export const INITIAL_WARDROBE = [
+/**
+ * Sartorial Wardrobe Assistant - Sample Showcase Data & Default Profiles
+ * Generic demonstration capsule items with no personal user data.
+ */
+
+export const SAMPLE_SHOWCASE_WARDROBE = [
   {
     id: 'item-1',
     name: 'Sötétkék Olasz Gyapjú Zakó',
@@ -13,15 +18,15 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Olasz Sprezzatura',
     condition: 'Vadonatúj / Kifogástalan',
     pattern: 'Finom halszálkás',
-    brand: 'Boglioli',
-    size: '50 (IT) / M',
+    brand: 'Sartorial Selection',
+    size: '50 / M',
     imageUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=800&q=80',
     tags: ['strukturálatlan', 'elegáns', 'ikonikus', 'olasz szabás'],
     fit: 'Slim tailored',
     stylingTip: 'Viseld fehér poplin inggel, homokbézs chino nadrággal és barna penny loaferrel a klasszikus olasz sprezzatura hatáshoz.',
     whenToWear: 'Tökéletes üzleti ebédekhez, tárgyalásokhoz, elegáns esti vacsorákhoz és tavaszi-őszi városi programokhoz.',
-    stylingAdvice: 'A férfi ruhatár legfontosabb sarokköve: strukturálatlan vállkialakítása miatt egyszerre elegáns és kényelmes.',
-    createdAt: new Date().toISOString()
+    stylingAdvice: 'A ruhatár legfontosabb sarokköve: strukturálatlan vállkialakítása miatt egyszerre elegáns és kényelmes.',
+    createdAt: '2026-01-10T10:00:00.000Z'
   },
   {
     id: 'item-2',
@@ -37,15 +42,15 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Klasszikus & Időtlen',
     condition: 'Megkímélt / Kiváló',
     pattern: 'Egyszínű',
-    brand: 'Eton',
-    size: '40 / 15.75" (M)',
+    brand: 'Classic Tailoring',
+    size: '40 / M',
     imageUrl: 'https://images.unsplash.com/photo-1620012253295-c15c429fbb41?auto=format&fit=crop&w=800&q=80',
     tags: ['cutaway gallér', 'légáteresztő', 'alapdarab'],
     fit: 'Contemporary',
     stylingTip: 'Kombináld sötétkék zakóval vagy viseld önmagában felhajtott ujjakkal és szövetnadrággal.',
-    whenToWear: 'Bármilyen formális vagy smart casual alkalomra egész évben, a reggeli meetingektől az esti koktélpartikig.',
-    stylingAdvice: 'Kifogástalan esésű prémium ing, ami frissességet és letisztultságot kölcsönöz az arcnak.',
-    createdAt: new Date().toISOString()
+    whenToWear: 'Bármilyen formális vagy smart casual alkalomra egész évben, a reggeli meetingektől az esti vacsorákig.',
+    stylingAdvice: 'Kifogástalan esésű prémium ing, ami frissességet és letisztultságot kölcsönöz a megjelenésnek.',
+    createdAt: '2026-01-10T10:05:00.000Z'
   },
   {
     id: 'item-3',
@@ -61,15 +66,15 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Old Money & Quiet Luxury',
     condition: 'Megkímélt / Kiváló',
     pattern: 'Egyszínű',
-    brand: 'Incotex',
+    brand: 'Smart Casual Collection',
     size: '32/32',
     imageUrl: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=800&q=80',
     tags: ['hajtott szár', 'nyári', 'kényelmes'],
     fit: 'Tapered',
-    stylingTip: 'Párosítsd sötétkék pólóinggel vagy világoskék oxford inggel és fehér bőr sneakerrel vagy barna loaferrel.',
-    whenToWear: 'Tavasztól kora őszig ideális nappali városi sétákhoz, teraszos kávézásokhoz és laza pénteki irodai napokra.',
+    stylingTip: 'Párosítsd sötétkék felsővel vagy világoskék inggel és fehér bőr sneakerrel vagy barna loaferrel.',
+    whenToWear: 'Tavasztól kora őszig ideális nappali városi sétákhoz, teraszos kávézásokhoz és laza irodai napokra.',
     stylingAdvice: 'A len tartalom miatt rendkívül szellős és könnyed viselet még a melegebb napokon is.',
-    createdAt: new Date().toISOString()
+    createdAt: '2026-01-10T10:10:00.000Z'
   },
   {
     id: 'item-4',
@@ -85,15 +90,15 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Olasz Sprezzatura',
     condition: 'Megkímélt / Kiváló',
     pattern: 'Bőrminta',
-    brand: 'Carmina',
-    size: '42.5 (UK 8.5)',
+    brand: 'Heritage Footwear',
+    size: '42.5',
     imageUrl: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?auto=format&fit=crop&w=800&q=80',
-    tags: ['goodyear varrott', 'kézműves', 'klasszikus'],
+    tags: ['varrott talp', 'kézműves', 'klasszikus'],
     fit: 'True to size',
     stylingTip: 'Hordd láthatatlan titokzoknival cropped chino nadrághoz vagy gyapjúszövet nadrághoz.',
     whenToWear: 'Minden tavaszi, nyári és őszi smart casual vagy üzleti alkalomra 15°C felett.',
-    stylingAdvice: 'Az olasz stílus védjegye: kézzel patinázott mélybarna színe bármilyen nadrágszínnel harmonizál.',
-    createdAt: new Date().toISOString()
+    stylingAdvice: 'Az olasz stílus védjegye: mélybarna színe szinte bármilyen nadrágszínnel harmonizál.',
+    createdAt: '2026-01-10T10:15:00.000Z'
   },
   {
     id: 'item-5',
@@ -109,15 +114,15 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Old Money & Quiet Luxury',
     condition: 'Vadonatúj / Kifogástalan',
     pattern: 'Melírozott',
-    brand: 'Loro Piana inspired',
+    brand: 'Fine Knitwear',
     size: 'M',
     imageUrl: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&w=800&q=80',
     tags: ['ultra-puha', 'rétegezhető', 'prémium meleg'],
     fit: 'Regular fit',
     stylingTip: 'Viseld fehér ing gallérjára húzva, sötétszürke flanel nadrággal vagy farmerrel.',
     whenToWear: 'Hűvösebb tavaszi és őszi napokon 5°C és 18°C között irodai és hétvégi viseletre.',
-    stylingAdvice: 'A kasmír puha luxusa felülmúlhatatlan kényelmet és visszafogott gazdagságot sugároz.',
-    createdAt: new Date().toISOString()
+    stylingAdvice: 'A kasmír puha luxusa felülmúlhatatlan kényelmet és visszafogott eleganciát sugároz.',
+    createdAt: '2026-01-10T10:20:00.000Z'
   },
   {
     id: 'item-6',
@@ -133,15 +138,15 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Minimalista',
     condition: 'Megkímélt / Kiváló',
     pattern: 'Egyszínű',
-    brand: 'Common Projects inspired',
+    brand: 'Urban Classic',
     size: '43',
     imageUrl: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=800&q=80',
     tags: ['letisztult', 'sokoldalú', 'modern klasszikus'],
     fit: 'True to size',
     stylingTip: 'Tökéletes híd a sportos és elegáns világ között: hordható laza öltönnyel vagy farmerrel is.',
     whenToWear: 'Városi felfedezésekhez, utazáshoz, modern irodai környezetbe és kötetlen találkozókra.',
-    stylingAdvice: 'A modern férfi ruhatár nélkülözhetetlen darabja, ami azonnal fiatalos lendületet ad bármilyen szettnek.',
-    createdAt: new Date().toISOString()
+    stylingAdvice: 'A modern ruhatár nélkülözhetetlen darabja, ami azonnal fiatalos lendületet ad bármilyen szettnek.',
+    createdAt: '2026-01-10T10:25:00.000Z'
   },
   {
     id: 'item-7',
@@ -157,15 +162,15 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Old Money & Quiet Luxury',
     condition: 'Megkímélt / Kiváló',
     pattern: 'Pique kötés',
-    brand: 'Sunspel inspired',
+    brand: 'Sartorial Essentials',
     size: 'M',
     imageUrl: 'https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?auto=format&fit=crop&w=800&q=80',
-    tags: ['galléros', 'légáteresztő', 'James Bond stílus'],
+    tags: ['galléros', 'légáteresztő', 'letisztult'],
     fit: 'Tailored fit',
-    stylingTip: 'Gombolt gallérral zakó alatt vagy önmagában világos nadrággal és napszemüveggel.',
+    stylingTip: 'Gombolt gallérral dzseki alatt vagy önmagában világos nadrággal és napszemüveggel.',
     whenToWear: 'Meleg nyári napokon, vitorlázáshoz, teraszos rendezvényekre és kötetlen péntekekre.',
     stylingAdvice: 'A galléros pólóing a legegyszerűbb módja annak, hogy pólóban is igényes és elegáns maradj.',
-    createdAt: new Date().toISOString()
+    createdAt: '2026-01-10T10:30:00.000Z'
   },
   {
     id: 'item-8',
@@ -181,39 +186,39 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Klasszikus & Időtlen',
     condition: 'Megkímélt / Kiváló',
     pattern: 'Finom flanel textúra',
-    brand: 'Rota',
+    brand: 'Tailored Woolens',
     size: '50 / 33',
     imageUrl: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=800&q=80',
     tags: ['vasalt él', 'meleg', 'időtlen elegancia'],
     fit: 'Tailored straight',
-    stylingTip: 'Kombináld sötétkék zakóval (a klasszikus sartorial kombináció) vagy kasmír pulóverrel.',
+    stylingTip: 'Kombináld sötétkék zakóval vagy kasmír pulóverrel.',
     whenToWear: 'Őszi és téli üzleti megbeszélésekre, hivatalos eseményekre és elegáns színházi estekre.',
-    stylingAdvice: 'A szürke flanelnadrág a férfidivat egyik legidőtállóbb kincse: textúrája mélységet és eleganciát sugároz.',
-    createdAt: new Date().toISOString()
+    stylingAdvice: 'A szürke flanelnadrág textúrája mélységet és eleganciát sugároz.',
+    createdAt: '2026-01-10T10:35:00.000Z'
   },
   {
     id: 'item-9',
-    name: 'Sötétkék Pamut Vászon Dzseki / Zakó',
+    name: 'Sötétkék Pamut Vászon Dzseki',
     category: 'outerwear',
     subCategory: 'jacket',
     color: 'Sötétkék (Navy)',
     colorHex: '#1b2a4a',
-    material: '100% Olasz Pamut Vászon',
+    material: '100% Pamut Vászon',
     qualityScore: 8.7,
     season: ['tavasz', 'nyar', 'osz'],
     formality: 'Casual (Laza)',
     styleArchetype: 'Smart Urban',
-    condition: 'Játszós / Kopott',
+    condition: 'Megkímélt / Kiváló',
     pattern: 'Vászonkötés',
-    brand: 'Aspesi inspired',
+    brand: 'Urban Heritage',
     size: 'L',
     imageUrl: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=800&q=80',
     tags: ['praktikus', 'lezser', 'rétegezhető'],
     fit: 'Regular fit',
-    stylingTip: 'Viseld fehér pólóval, sötét farmerrel vagy chinóval kötetlen utcai szettekhez.',
+    stylingTip: 'Viseld pamut felsővel, sötét nadrággal vagy chinóval kötetlen utcai szettekhez.',
     whenToWear: 'Tavaszi és kora őszi hétvégéken, laza városi sétákhoz, utazásokhoz és kötetlen találkozókra.',
-    stylingAdvice: 'A zakó és a munkásdzseki modern fúziója: praktikus zsebeivel és strapabíró anyagával a hétköznapok kedvence.',
-    createdAt: new Date().toISOString()
+    stylingAdvice: 'Praktikus zsebeivel és strapabíró anyagával a hétköznapok kényelmes darabja.',
+    createdAt: '2026-01-10T10:40:00.000Z'
   },
   {
     id: 'item-10',
@@ -229,15 +234,15 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Old Money & Quiet Luxury',
     condition: 'Vadonatúj / Kifogástalan',
     pattern: 'Sima gyapjú',
-    brand: 'Tagliatore',
+    brand: 'Sartorial Overcoats',
     size: '50',
     imageUrl: 'https://images.unsplash.com/photo-1544923246-77307dd654cb?auto=format&fit=crop&w=800&q=80',
     tags: ['peak lapel', 'ikonikus', 'statement darab'],
     fit: 'Structured tailored',
-    stylingTip: 'Viseld sötétkék öltöny vagy szürke kasmír pulóver és sötét nadrág fölé gombolatlanul vagy övvel.',
-    whenToWear: 'Késő őszi és téli napokon -5°C és +12°C között prémium utcai és üzleti megjelenéshez.',
+    stylingTip: 'Viseld zakó vagy szürke kasmír pulóver és sötét nadrág fölé.',
+    whenToWear: 'Késő őszi és téli napokon -5°C és +12°C között utcai és üzleti megjelenéshez.',
     stylingAdvice: 'A téli elegancia csúcsa: a meleg teveszín világosítja a téli szürkeséget és fenséges sziluettet nyújt.',
-    createdAt: new Date().toISOString()
+    createdAt: '2026-01-10T10:45:00.000Z'
   },
   {
     id: 'item-11',
@@ -246,14 +251,14 @@ export const INITIAL_WARDROBE = [
     subCategory: 'belt',
     color: 'Dohánybarna / Espresso',
     colorHex: '#4a3525',
-    material: 'Full-grain Olasz Borjúbőr',
+    material: 'Full-grain Borjúbőr',
     qualityScore: 9.7,
     season: ['tavasz', 'nyar', 'osz', 'tel'],
     formality: 'Smart Casual',
     styleArchetype: 'Olasz Sprezzatura',
     condition: 'Vadonatúj / Kifogástalan',
     pattern: 'Bőrminta',
-    brand: 'Carmina inspired',
+    brand: 'Leathercraft Classic',
     size: '95 cm',
     imageUrl: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?auto=format&fit=crop&w=800&q=80',
     tags: ['sárgaréz csat', 'kézműves', 'alapdarab'],
@@ -261,7 +266,7 @@ export const INITIAL_WARDROBE = [
     stylingTip: 'Mindig harmonizáljon a cipőd színével és bőrtextúrájával.',
     whenToWear: 'Minden öltönyös, zakós és chinos összeállításhoz kötelező elem.',
     stylingAdvice: 'A cipővel színben és fényben egyező prémium bőröv összeköti a felső- és alsóruházatot.',
-    createdAt: new Date().toISOString()
+    createdAt: '2026-01-10T10:50:00.000Z'
   },
   {
     id: 'item-12',
@@ -277,7 +282,7 @@ export const INITIAL_WARDROBE = [
     styleArchetype: 'Klasszikus & Időtlen',
     condition: 'Megkímélt / Kiváló',
     pattern: 'Egyszínű',
-    brand: 'Boglioli inspired',
+    brand: 'Formal Leathercraft',
     size: '95 cm',
     imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80',
     tags: ['ezüst csat', 'formális', 'elegáns'],
@@ -285,9 +290,32 @@ export const INITIAL_WARDROBE = [
     stylingTip: 'Fekete oxford cipőhöz és szürke vagy fekete szövetnadrághoz.',
     whenToWear: 'Hivatalos és formális üzleti alkalmakra.',
     stylingAdvice: 'Letisztult ezüst csattal a legmagasabb szintű üzleti megjelenést biztosítja.',
-    createdAt: new Date().toISOString()
+    createdAt: '2026-01-10T10:55:00.000Z'
   }
 ];
+
+// Alias for backward compatibility
+export const INITIAL_WARDROBE = SAMPLE_SHOWCASE_WARDROBE;
+
+export const DEFAULT_GUEST_PROFILE = {
+  name: 'Vendég Felhasználó',
+  title: 'Klasszikus Kapszula Stílusprofil',
+  height: '—',
+  weight: '—',
+  bodyType: 'Normál / Átlagos',
+  skinTone: 'Közép tónus',
+  thermalPreference: 'balanced', // 'coldSensitive' | 'balanced' | 'warmSensitive'
+  displayCompactCards: false,
+  displayCompactTips: false,
+  preferredStyles: ['Klasszikus & Időtlen', 'Smart Urban'],
+  dislikedStyles: [],
+  favoriteColors: ['Sötétkék (Navy)', 'Törtfehér / Krém', 'Dohánybarna / Espresso'],
+  stylePhilosophy: 'Időtlen, letisztult kapszula ruhatár minőségi, sokoldalú alapdarabokkal.',
+  customStylingRules: []
+};
+
+// Alias for backward compatibility
+export const INITIAL_USER_PROFILE = DEFAULT_GUEST_PROFILE;
 
 export const DEFAULT_NEW_USER_PROFILE = {
   name: '',
@@ -304,26 +332,4 @@ export const DEFAULT_NEW_USER_PROFILE = {
   favoriteColors: ['Sötétkék (Navy)', 'Törtfehér / Krém', 'Dohánybarna / Espresso'],
   stylePhilosophy: 'Időtlen, letisztult ruhatár építése minőségi alapdarabokkal.',
   customStylingRules: []
-};
-
-export const INITIAL_USER_PROFILE = {
-  name: 'Attila',
-  title: 'Klasszikus & Sprezzatura Stílusprofil',
-  height: '182 cm',
-  weight: '78 kg',
-  bodyType: 'Atlétikus / Szálkás',
-  skinTone: 'Közép-világos, meleg tónus (Meleg Ősz / Tavasz paletta)',
-  thermalPreference: 'balanced', // 'coldSensitive' | 'balanced' | 'warmSensitive'
-  displayCompactCards: false,
-  displayCompactTips: false,
-  preferredStyles: ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura', 'Smart Urban'],
-  dislikedStyles: ['Logo-heavy Streetwear', 'Túldíszített Fast Fashion'],
-  favoriteColors: ['Sötétkék (Navy)', 'Teveszín (Camel)', 'Törtfehér / Krém', 'Olívazöld (Olive)', 'Dohánybarna / Espresso', 'Antracitszürke (Charcoal)'],
-  stylePhilosophy: 'Időtlen, magas minőségű természetes anyagok (gyapjú, len, kasmír, full-grain bőr), kényelmes, mégis kifogástalanul szabott sziluettek könnyed olasz lazasággal kombinálva.',
-  customStylingRules: [
-    'Nem szeretem a pólóingeket',
-    'Csak 100% természetes anyagok (gyapjú, len, pamut, selyem, kasmír, bőr)',
-    'Kerülöm a túl szűk / skinny szabásokat, a slim tailored és az egyenes sziluettet részesítem előnyben',
-    'Zakóhoz és elegáns szettekhez nem hordok kereknyakú pólót'
-  ]
 };

@@ -100,7 +100,7 @@ export default function Header({ onOpenSettings, onOpenAuth, onOpenHelp, weather
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-[var(--accent-gold-light)] text-xs font-semibold hover:bg-[var(--accent-gold)] hover:text-black transition-all"
             >
               <LogIn className="w-4 h-4" />
-              <span>{isDemoMode ? 'Demo Mód / Belépés' : 'Bejelentkezés'}</span>
+              <span>Bejelentkezés</span>
             </button>
           )}
 

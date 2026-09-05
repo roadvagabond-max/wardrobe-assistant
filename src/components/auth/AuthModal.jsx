@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { X, LogIn, LogOut, Sparkles, User, AlertCircle } from 'lucide-react';
+import { X, LogIn, LogOut, User, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { isFirebaseConfigured } from '../../services/firebase';
 
-export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
-  const { currentUser, isDemoMode, setIsDemoMode, loginWithGoogle, logout, resetToDemoData } = useAuth();
+export default function AuthModal({ isOpen, onClose }) {
+  const { currentUser, loginWithGoogle, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -21,26 +20,19 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
       let errorMsg = err.message || 'Hiba történt a bejelentkezés során.';
       
       if (err.code === 'auth/unauthorized-domain') {
-        errorMsg = 'A domain (roadvagabond-max.github.io) még nincs hozzáadva a Firebase engedélyezett domainjeihez (Firebase Console > Authentication > Settings > Authorized domains).';
+        errorMsg = 'A domain még nincs hozzáadva a Firebase engedélyezett domainjeihez (Firebase Console > Authentication > Settings > Authorized domains).';
       } else if (err.code === 'auth/operation-not-allowed') {
         errorMsg = 'A Google bejelentkezés még nincs bekapcsolva a Firebase Console-ban (Authentication > Sign-in method > Google > Enable).';
       } else if (err.code === 'auth/popup-blocked') {
-        errorMsg = 'A böngésző letiltotta a felugró ablakot. Kérlek engedélyezd a felugró ablakokat!';
+        errorMsg = 'A böngésző letiltotta a felugró ablakot. Kérlek engedélyezd a felugró ablakokat a bejelentkezéshez!';
       } else if (err.code === 'auth/popup-closed-by-user') {
         errorMsg = 'A bejelentkezési ablak be lett zárva a folyamat befejezése előtt.';
-      } else if (err.code === 'auth/invalid-api-key') {
-        errorMsg = 'Érvénytelen Firebase API kulcs. Ellenőrizd a Beállításokban megadott kulcsokat!';
       }
       
       setError(errorMsg);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoSwitch = () => {
-    setIsDemoMode(true);
-    onClose();
   };
 
   return (
@@ -53,7 +45,11 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
             <User className="w-5 h-5 text-[var(--accent-gold)]" />
             <h3 className="font-serif font-bold text-lg text-white">Felhasználói Fiók & Belépés</h3>
           </div>
-          <button onClick={onClose} className="p-1 text-[var(--text-muted)] hover:text-white">
+          <button 
+            onClick={onClose} 
+            className="p-1 text-[var(--text-muted)] hover:text-white transition-colors"
+            title="Bezárás"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -63,17 +59,18 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
               {currentUser.photoURL ? (
-                <img src={currentUser.photoURL} alt="User Avatar" width="48" height="48" className="w-12 h-12 rounded-full" />
+                <img src={currentUser.photoURL} alt="User Avatar" width="48" height="48" className="w-12 h-12 rounded-full object-cover" />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">
                   {currentUser.email?.[0]?.toUpperCase()}
                 </div>
               )}
-              <div>
-                <h4 className="font-bold text-white text-sm">{currentUser.displayName || 'Bejelentkezett Felhasználó'}</h4>
-                <p className="text-xs text-[var(--text-muted)]">{currentUser.email}</p>
-                <span className="inline-block mt-1 text-[10px] text-emerald-400 font-semibold uppercase">
-                  ✓ Személyes felhő szinkronizáció aktív
+              <div className="min-w-0 flex-1">
+                <h4 className="font-bold text-white text-sm truncate">{currentUser.displayName || 'Bejelentkezett Felhasználó'}</h4>
+                <p className="text-xs text-[var(--text-muted)] truncate">{currentUser.email}</p>
+                <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-emerald-400 font-semibold uppercase">
+                  <ShieldCheck className="w-3 h-3" />
+                  Személyes felhő szinkronizáció aktív
                 </span>
               </div>
             </div>
@@ -83,7 +80,7 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
                 await logout();
                 onClose();
               }}
-              className="btn-secondary w-full text-xs text-rose-300 hover:text-rose-200 border-rose-500/20"
+              className="btn-secondary w-full text-xs text-rose-300 hover:text-rose-200 border-rose-500/20 py-2.5"
             >
               <LogOut className="w-4 h-4" />
               <span>Kijelentkezés</span>
@@ -93,7 +90,7 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
           <div className="space-y-4">
             
             <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-              Jelenleg a saját, elkülönített <strong>helyi munkamenetedben</strong> dolgozol. Lépj be a Google fiókoddal a felhő alapú Firestore szinkronizációhoz!
+              Jelentkezz be Google fiókoddal a saját személyes ruhatárad, stílusprofilod és mentett szettjeid eléréséhez, valamint az AI funkciók használatához!
             </p>
 
             {error && (
@@ -106,30 +103,15 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading}
-              className="btn-gold w-full py-3 text-sm shadow-md"
+              className="btn-gold w-full py-3 text-sm font-semibold shadow-md flex items-center justify-center gap-2"
             >
               <LogIn className="w-4 h-4" />
               <span>{loading ? 'Bejelentkezés folyamatban...' : 'Belépés Google Fiókkal'}</span>
             </button>
 
-            <div className="pt-2 border-t border-white/5 space-y-2">
-              <button
-                onClick={handleDemoSwitch}
-                className="btn-secondary w-full text-xs"
-              >
-                <span>Folytatás Helyi Demo Módban</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenSettings();
-                }}
-                className="w-full text-center text-xs text-[var(--accent-gold-light)] hover:underline pt-1 block"
-              >
-                Firebase API kulcsok beállítása ⚙️
-              </button>
-            </div>
+            <p className="text-[11px] text-center text-[var(--text-muted)] pt-2 border-t border-white/5">
+              Belépés nélkül a bemutató mintakollekció tekinthető meg.
+            </p>
 
           </div>
         )}

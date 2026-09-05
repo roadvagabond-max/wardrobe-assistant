@@ -9,7 +9,6 @@ import { useAuth } from '../../context/AuthContext';
 import { analyzeColorSeason } from '../../services/gemini';
 import { ensureBase64Image } from '../../services/imageOptimizer';
 import { normalizeBrandName } from '../../services/webshop';
-import { INITIAL_USER_PROFILE } from '../../data/mockWardrobe';
 import { SARTORIAL_CATEGORIES } from '../../services/sartorialRules';
 import { runSartorialGoldenEvalSuite } from '../../services/sartorialEval';
 import confetti from 'canvas-confetti';
@@ -104,9 +103,9 @@ export default function StyleDNAView() {
     setFormData(profile);
   }, [profile]);
 
-  const currentRules = Array.isArray(profile.customStylingRules) 
+  const currentRules = Array.isArray(profile?.customStylingRules) 
     ? profile.customStylingRules 
-    : (INITIAL_USER_PROFILE.customStylingRules || []);
+    : [];
 
   const handleAddRule = async (ruleToAdd) => {
     const text = (ruleToAdd || newRuleInput).trim();
