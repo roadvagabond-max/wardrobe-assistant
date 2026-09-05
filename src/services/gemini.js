@@ -1486,7 +1486,45 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT (6-8 darabbal):
     }
   }
 
-  // Intelligens, Gardrób-Adaptív Dinamikus Fallback Kapszula Elemző
+  // 1. SZINT: Legutóbbi sikeres valódi AI hiánylista beolvasása a helyi gyorsítótárból (Cache-First Fallback)
+  try {
+    const cachedRaw = typeof localStorage !== 'undefined'
+      ? (localStorage.getItem('sartorial_last_ai_gaps') || localStorage.getItem('capsule_gaps_cache'))
+      : null;
+
+    if (cachedRaw) {
+      const cachedGaps = JSON.parse(cachedRaw);
+      if (Array.isArray(cachedGaps) && cachedGaps.length > 0) {
+        // Intelligensen kiszűrjük azokat a darabokat, amiket a felhasználó azóta már felvitt a gardróbba
+        const filteredCached = cachedGaps.filter(gap => {
+          const gapTitle = (gap.title || '').toLowerCase();
+          const gapCat = gap.category;
+          
+          const alreadyOwned = wardrobe.some(w => {
+            const wName = (w.name || '').toLowerCase();
+            const wSub = (w.subCategory || '').toLowerCase();
+            if (gapCat && w.category && w.category !== gapCat) return false;
+            if (gapTitle.includes('chelsea') && (wName.includes('chelsea') || wSub.includes('chelsea'))) return true;
+            if (gapTitle.includes('loafer') && (wName.includes('loafer') || wSub.includes('loafer'))) return true;
+            if (gapTitle.includes('hopsack') && (wName.includes('hopsack') || (wName.includes('zakó') && wName.includes('kék')))) return true;
+            if (gapTitle.includes('flanel') && (wName.includes('flanel') || (wName.includes('nadrág') && wName.includes('szürke')))) return true;
+            if (gapTitle.includes('garbó') && (wName.includes('garbó') || wSub.includes('garbo'))) return true;
+            if (gapTitle.includes('bőröv') && (wName.includes('öv') || wSub.includes('belt'))) return true;
+            return false;
+          });
+          return !alreadyOwned;
+        });
+
+        if (filteredCached.length > 0) {
+          return filteredCached;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Hiba a gyorsítótárazott AI hiánylista beolvasásakor:', err);
+  }
+
+  // 2. SZINT (Hidegindítás): Gardrób-Adaptív Dinamikus Fallback Kapszula Elemző
   return generateDynamicWardrobeFallbackGaps(wardrobe, profile);
 }
 
