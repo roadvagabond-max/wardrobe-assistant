@@ -254,6 +254,11 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
               <span className="text-xs font-serif font-bold text-white flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-[var(--accent-gold)]" />
                 <span>Kapszula Hiányelemzés & Piaci Keresőszintaxis</span>
+                {gaps.length > 0 && (
+                  <span className="badge badge-gold text-[10px] ml-1">
+                    {gaps.length} db kulcsdarab
+                  </span>
+                )}
               </span>
 
               <button
@@ -274,7 +279,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
               </div>
             ) : gaps.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {gaps.slice(0, 4).map(gap => {
+                {gaps.map(gap => {
                   const isWishlisted = wishlistIds.has(gap.id);
                   const score = gap.priorityScore || 80;
 

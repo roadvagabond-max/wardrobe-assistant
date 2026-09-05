@@ -1567,6 +1567,34 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT (6-8 darabbal):
       reason: 'A téli szövetkabát elengedhetetlen luxus kísérője, ami védi a nyakat és textúrát ad a hideg utcai szetteknek.',
       isReplacement: false,
       searchKeywords: 'mens 100 cashmere charcoal grey scarf ferfi kasmir sal'
+    },
+    {
+      id: 'gap-navy-hopsack-blazer',
+      title: 'Sötétkék Olasz Gyapjú Hopsack Zakó (Unstructured)',
+      recommendedFit: 'Slim tailored / Neapolitan shoulder',
+      priorityScore: 92,
+      priorityLevel: 'Kritikus Alapdarab',
+      impact: '+14 Sokoldalú Smart & Business Szett',
+      estimatedPrice: '55 000 - 110 000 Ft',
+      category: 'outerwear',
+      season: 'Egész évben',
+      reason: 'A leguniverzálisabb sartorial kulcsdarab: lélegző, gyűrődésálló szövésű, inggel és pamut pólóval is tökéletes tartást ad.',
+      isReplacement: false,
+      searchKeywords: 'mens navy wool hopsack blazer ferfi sotetkek zakó'
+    },
+    {
+      id: 'gap-olive-chino',
+      title: 'Olívazöld Prémium Pamut-Twill Chino Nadrág',
+      recommendedFit: 'Slim tailored / Tapered leg',
+      priorityScore: 76,
+      priorityLevel: 'Nagy Varianciát Adó Kulcsdarab',
+      impact: '+8 Új Földtónusú Outfit Variáció',
+      estimatedPrice: '18 000 - 36 000 Ft',
+      category: 'bottoms',
+      season: 'Egész évben',
+      reason: 'Kiváló stilisztikai hidat képez a sötétkék zakók, barna loaferek és fehér ingek/pólók között.',
+      isReplacement: false,
+      searchKeywords: 'mens olive green cotton chino trousers ferfi nadrag'
     }
   ];
 

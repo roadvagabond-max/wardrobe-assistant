@@ -450,14 +450,19 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
             <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
-              className="bg-black/50 border border-white/10 rounded-lg px-2.5 py-1 text-white text-xs focus:outline-none focus:border-[var(--border-gold)]"
+              className="bg-black/50 border border-white/10 rounded-lg px-2.5 py-1 text-white text-xs focus:outline-none focus:border-[var(--border-gold)] cursor-pointer"
             >
-              {CITIES.map(city => (
-                <option key={city.name} value={city.name} className="bg-[#0b101d] text-white">
-                  {city.name} ({city.temp}°C)
+              {CITIES.map(cityName => (
+                <option key={cityName} value={cityName} className="bg-[#0b101d] text-white">
+                  {cityName}
                 </option>
               ))}
             </select>
+            {weather?.temperature != null && (
+              <span className="text-[var(--accent-gold)] font-semibold text-xs px-2 py-0.5 rounded-md bg-[var(--accent-gold)]/10 border border-[var(--border-gold)]/30">
+                {weather.temperature}°C
+              </span>
+            )}
           </div>
 
           {/* Anchor Item Selector Trigger */}
