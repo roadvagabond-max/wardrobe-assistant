@@ -5,11 +5,11 @@
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import admin from "firebase-admin";
+import { initializeApp, getApps } from "firebase-admin/app";
 
 // Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-  admin.initializeApp();
+if (getApps().length === 0) {
+  initializeApp();
 }
 
 // Google Cloud Secret Manager definition for Gemini Master Key
