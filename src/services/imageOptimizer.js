@@ -4,18 +4,66 @@
  * is converted to optimized Base64 JPEG so Gemini Vision can directly see the garment pixels.
  */
 
+/**
+ * Spec Section 8.3: Binary Magic Bytes Inspection
+ * Validates raster image formats (JPEG, PNG, WebP, GIF) from binary headers.
+ */
+export async function validateImageMagicBytes(fileOrBlob) {
+  if (!fileOrBlob || !(fileOrBlob instanceof Blob || fileOrBlob instanceof File)) {
+    return { valid: true, mime: 'unknown' };
+  }
+
+  try {
+    const slice = fileOrBlob.slice(0, 16);
+    const arrayBuffer = await slice.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+
+    // JPEG: FF D8 FF
+    if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+      return { valid: true, mime: 'image/jpeg' };
+    }
+
+    // PNG: 89 50 4E 47
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+      return { valid: true, mime: 'image/png' };
+    }
+
+    // WebP: 52 49 46 46 (RIFF) ... 57 45 42 50 (WEBP)
+    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
+      if (bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+        return { valid: true, mime: 'image/webp' };
+      }
+    }
+
+    // GIF: 47 49 46 38 (GIF8)
+    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+      return { valid: true, mime: 'image/gif' };
+    }
+
+    return { valid: false, mime: 'invalid', error: 'Érvénytelen vagy sérült képfájl (Magic Bytes hiba)!' };
+  } catch (err) {
+    console.warn('Magic bytes ellenőrzési figyelmeztetés:', err);
+    return { valid: true, mime: 'unknown' };
+  }
+}
+
 export async function ensureBase64Image(fileOrUrl, maxWidth = 520, maxHeight = 520, quality = 0.72) {
   if (!fileOrUrl) return null;
+
+  // Validate magic bytes if File or Blob
+  if (fileOrUrl instanceof Blob || fileOrUrl instanceof File) {
+    const magicCheck = await validateImageMagicBytes(fileOrUrl);
+    if (!magicCheck.valid) {
+      console.warn('Fájl elutasítva érvénytelen magic bytes miatt:', magicCheck.error);
+      return null;
+    }
+    const base64 = await readFileAsDataUrl(fileOrUrl);
+    return optimizeBase64String(base64, maxWidth, maxHeight, quality);
+  }
 
   // 1. If it's already a base64 Data URL, optimize it
   if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('data:')) {
     return optimizeBase64String(fileOrUrl, maxWidth, maxHeight, quality);
-  }
-
-  // 2. If it's a File or Blob
-  if (fileOrUrl instanceof Blob || fileOrUrl instanceof File) {
-    const base64 = await readFileAsDataUrl(fileOrUrl);
-    return optimizeBase64String(base64, maxWidth, maxHeight, quality);
   }
 
   // 3. If it's a remote HTTP/HTTPS URL

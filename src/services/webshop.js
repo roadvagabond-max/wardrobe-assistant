@@ -44,6 +44,64 @@ function isBotBlockedOrError(text = '') {
 }
 
 /**
+ * Spec Section 8.3: SSRF & Safe Webshop URL Validation
+ * Enforces HTTPS and blocks private network ranges, loopback, and cloud metadata IPs.
+ */
+export function validateSafeWebshopUrl(urlString = '') {
+  if (!urlString || typeof urlString !== 'string') return { valid: false, error: 'Üres webshop URL' };
+  const trimmed = urlString.trim();
+
+  // If it's a raw SKU (not a URL), it's safe
+  if (!trimmed.includes('://') && !trimmed.includes('.com') && !trimmed.includes('.hu') && !trimmed.includes('/')) {
+    return { valid: true, isSku: true };
+  }
+
+  // Enforce HTTPS
+  if (!trimmed.startsWith('https://')) {
+    return { valid: false, error: 'Kizárólag biztonságos HTTPS webshop linkek fogadhatók el!' };
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.toLowerCase();
+
+    // Check for loopback, local IPs, private RFC1918 subnets and cloud metadata IP (169.254.169.254)
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host.startsWith('10.') ||
+      host.startsWith('192.168.') ||
+      host.startsWith('172.16.') ||
+      host.startsWith('172.17.') ||
+      host.startsWith('172.18.') ||
+      host.startsWith('172.19.') ||
+      host.startsWith('172.20.') ||
+      host.startsWith('172.21.') ||
+      host.startsWith('172.22.') ||
+      host.startsWith('172.23.') ||
+      host.startsWith('172.24.') ||
+      host.startsWith('172.25.') ||
+      host.startsWith('172.26.') ||
+      host.startsWith('172.27.') ||
+      host.startsWith('172.28.') ||
+      host.startsWith('172.29.') ||
+      host.startsWith('172.30.') ||
+      host.startsWith('172.31.') ||
+      host === '169.254.169.254' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal')
+    ) {
+      return { valid: false, error: 'Biztonsági korlátozás: belső vagy privát hálózati címek nem engedélyezettek (SSRF védelem)!' };
+    }
+
+    return { valid: true, url: trimmed };
+  } catch (_) {
+    return { valid: false, error: 'Érvénytelen webcím formátum!' };
+  }
+}
+
+/**
  * Helper to test which candidate CDN image loads successfully in browser
  */
 export function findFirstWorkingImageUrl(candidateUrls = [], timeoutMs = 1500) {
@@ -399,6 +457,22 @@ export async function extractWebshopData(rawInput = '') {
       productCode: '',
       rawInput: '',
       rawText: ''
+    };
+  }
+
+  // SSRF Safety Check for incoming webshop URLs
+  const safetyCheck = validateSafeWebshopUrl(cleanInput);
+  if (!safetyCheck.valid) {
+    console.warn('Webshop URL biztonsági szűrés miatt elutasítva:', safetyCheck.error);
+    return {
+      imageUrl: '',
+      images: [],
+      title: '',
+      description: safetyCheck.error,
+      brand: '',
+      productCode: '',
+      rawInput: cleanInput,
+      rawText: `⚠️ ${safetyCheck.error}`
     };
   }
 

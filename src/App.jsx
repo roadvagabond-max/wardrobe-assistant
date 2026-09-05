@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/layout/Header';
+import OfflineBanner from './components/layout/OfflineBanner';
 import DesktopTabs from './components/layout/DesktopTabs';
 import BottomNav from './components/layout/BottomNav';
 import OutfitsView from './components/outfits/OutfitsView';
@@ -136,6 +137,9 @@ export default function App() {
         onOpenHelp={() => setIsHelpModalOpen(true)}
         weather={weather}
       />
+
+      {/* Discrete Offline & Network Status Banner */}
+      <OfflineBanner />
 
       {/* Desktop Tabs */}
       <DesktopTabs activeTab={activeTab} setActiveTab={setActiveTab} />

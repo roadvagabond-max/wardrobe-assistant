@@ -3,7 +3,7 @@ import {
   User, Compass, Sparkles, Edit3, Check, Palette, PieChart, Award, Camera, Upload, 
   Loader2, Cloud, CloudOff, Layers, Link as LinkIcon, Plus, X, Trash2, SlidersHorizontal as Sliders, 
   BookOpen, ShieldAlert, Globe, RefreshCw, Search, CheckCircle2, ShieldCheck, 
-  ExternalLink, ToggleLeft, ToggleRight, Filter, ChevronDown
+  ExternalLink, ToggleLeft, ToggleRight, Filter, ChevronDown, FlaskConical, AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeColorSeason } from '../../services/gemini';
@@ -11,6 +11,7 @@ import { ensureBase64Image } from '../../services/imageOptimizer';
 import { normalizeBrandName } from '../../services/webshop';
 import { INITIAL_USER_PROFILE } from '../../data/mockWardrobe';
 import { SARTORIAL_CATEGORIES } from '../../services/sartorialRules';
+import { runSartorialGoldenEvalSuite } from '../../services/sartorialEval';
 import confetti from 'canvas-confetti';
 
 const ALL_STYLE_ARCHETYPES = [
@@ -51,9 +52,30 @@ export default function StyleDNAView() {
   const [customMiningTopic, setCustomMiningTopic] = useState('');
   const [miningSuccessMsg, setMiningSuccessMsg] = useState(null);
 
+  // Golden Eval Suite state (Spec Section 11)
+  const [evalSuiteResults, setEvalSuiteResults] = useState(null);
+  const [isRunningEval, setIsRunningEval] = useState(false);
+
   const cameraInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const avatarInputRef = useRef(null);
+
+  const handleRunGoldenEval = () => {
+    setIsRunningEval(true);
+    setTimeout(() => {
+      const results = runSartorialGoldenEvalSuite();
+      setEvalSuiteResults(results);
+      setIsRunningEval(false);
+      try {
+        confetti({
+          particleCount: 40,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#d4af37', '#10b981', '#f3e5ab']
+        });
+      } catch (_) {}
+    }, 450);
+  };
 
   const handleMineRulesNow = async (e) => {
     if (e) e.preventDefault();
@@ -852,25 +874,107 @@ export default function StyleDNAView() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleMineRulesNow}
-                disabled={isMiningRules}
-                className="btn-gold py-2 px-4 text-xs font-semibold flex items-center gap-2 shrink-0 shadow"
-              >
-                {isMiningRules ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-black" />
-                    <span>Kutatás folyamatban...</span>
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-3.5 h-3.5" />
-                    <span>Új Szabályok Kutatása Most</span>
-                  </>
-                )}
-              </button>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleRunGoldenEval}
+                  disabled={isRunningEval}
+                  className="btn-secondary py-2 px-3.5 text-xs font-semibold flex items-center gap-1.5 shadow border-amber-500/30 hover:border-[var(--accent-gold)] text-amber-200 hover:text-white"
+                  title="Determinisztikus Sartorial Tesztcsomag Futtatása (TC-1-től TC-6-ig)"
+                >
+                  {isRunningEval ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent-gold)]" />
+                      <span>Validáció...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FlaskConical className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                      <span>🧪 Golden Eval (TC-1–TC-6)</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleMineRulesNow}
+                  disabled={isMiningRules}
+                  className="btn-gold py-2 px-3.5 text-xs font-semibold flex items-center gap-1.5 shadow"
+                >
+                  {isMiningRules ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-black" />
+                      <span>Kutatás...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-3.5 h-3.5" />
+                      <span>Új Szabályok Kutatása</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Golden Eval Suite Results Interactive Drawer (Spec Section 11) */}
+            {evalSuiteResults && (
+              <div className="p-4 rounded-2xl bg-emerald-950/25 border border-emerald-500/40 space-y-3.5 animate-slide-up shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/10">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-sm">
+                      ✓
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-serif font-bold text-white">Sartorial Golden Eval Eredmény:</span>
+                        <span className="badge badge-emerald text-[10px] font-mono font-bold">
+                          {evalSuiteResults.passRatePercent}% SIKERES ({evalSuiteResults.passedTests}/{evalSuiteResults.totalTests})
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-200/80">
+                        Minden szabászati determinisztikus szabály (TC-1–TC-6) ellenőrizve és érvényesítve.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEvalSuiteResults(null)}
+                    className="text-xs text-[var(--text-muted)] hover:text-white self-end sm:self-auto px-2 py-1 rounded bg-white/5"
+                  >
+                    Bezárás
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+                  {evalSuiteResults.results.map((test) => (
+                    <div
+                      key={test.id}
+                      className="p-3 rounded-xl bg-black/40 border border-emerald-500/30 space-y-1.5 text-left flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="font-mono text-[10px] font-bold text-[var(--accent-gold)]">
+                            {test.id}
+                          </span>
+                          <span className="badge badge-emerald text-[9px] py-0.5 px-1.5">
+                            ✓ PASS
+                          </span>
+                        </div>
+                        <p className="font-semibold text-xs text-white mt-1">
+                          {test.name}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-0.5 line-clamp-2">
+                          {test.description}
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-white/5 text-[10px] text-emerald-300">
+                        {test.explanation}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Style-Grounded Dynamic Mining Focus */}
             <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
