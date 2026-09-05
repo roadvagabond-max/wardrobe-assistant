@@ -39,7 +39,7 @@ export function AuthProvider({ children }) {
   const [sartorialRules, setSartorialRules] = useState(() => getStoredSartorialRules());
   const [isMiningRules, setIsMiningRules] = useState(false);
 
-  const DEFAULT_ADMIN_EMAILS = [];
+  const DEFAULT_ADMIN_EMAILS = ['roadvagabond@gmail.com'];
 
   const [adminEmails, setAdminEmails] = useState(() => {
     try {
@@ -185,19 +185,6 @@ export function AuthProvider({ children }) {
               }
               if (data.savedOutfits) {
                 setSavedOutfits(data.savedOutfits);
-              }
-              if (data.geminiApiKey && typeof data.geminiApiKey === 'string' && data.geminiApiKey.trim()) {
-                const cloudKey = data.geminiApiKey.trim();
-                localStorage.setItem('GEMINI_API_KEY', cloudKey);
-                setGeminiApiKey(cloudKey);
-              } else {
-                const localKey = (localStorage.getItem('GEMINI_API_KEY') || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
-                if (localKey) {
-                  await setDoc(userDocRef, {
-                    geminiApiKey: localKey,
-                    updatedAt: new Date().toISOString()
-                  }, { merge: true });
-                }
               }
             } else {
               const newProfile = {

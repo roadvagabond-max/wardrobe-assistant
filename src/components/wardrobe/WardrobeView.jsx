@@ -424,18 +424,25 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
 
       </div>
 
-      {/* Grid of Clothing Items (2-Column Masonry on Mobile, 3-4 on Desktop) */}
+      {/* Grid of Clothing Items (Dynamic Dense/Compact vs Normal Grid) */}
       {filteredWardrobe.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className={profile?.displayCompactCards 
+          ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3.5" 
+          : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
+        }>
           {filteredWardrobe.map(item => (
             <div
               key={item.id}
               onClick={() => onSelectItem(item)}
-              className="glass-card overflow-hidden group cursor-pointer border-[var(--border-subtle)] hover:border-[var(--border-gold)] transition-all duration-300 flex flex-col justify-between hover:scale-[1.02]"
+              className={`glass-card overflow-hidden group cursor-pointer border-[var(--border-subtle)] hover:border-[var(--border-gold)] transition-all duration-300 flex flex-col justify-between hover:scale-[1.02] ${
+                profile?.displayCompactCards ? 'rounded-xl' : 'rounded-2xl'
+              }`}
             >
               <div>
                 {/* Image Container (Uncropped, Proportional object-contain) */}
-                <div className="relative aspect-[4/3] w-full bg-[#07090e] p-2 flex items-center justify-center overflow-hidden">
+                <div className={`relative aspect-[4/3] w-full bg-[#07090e] flex items-center justify-center overflow-hidden ${
+                  profile?.displayCompactCards ? 'p-1.5' : 'p-2'
+                }`}>
                   <img
                     src={item.imageUrl}
                     alt={item.name}
@@ -448,13 +455,17 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                   />
                   
                   {/* Category Badge */}
-                  <span className="absolute top-2 left-2 badge badge-gold text-[10px] uppercase font-bold tracking-wider backdrop-blur-md">
+                  <span className={`absolute badge badge-gold uppercase font-bold tracking-wider backdrop-blur-md ${
+                    profile?.displayCompactCards ? 'top-1.5 left-1.5 text-[8.5px] px-1.5 py-0.5' : 'top-2 left-2 text-[10px]'
+                  }`}>
                     {item.category === 'outerwear' ? 'Zakó' : item.category === 'knitwear' ? 'Kötött' : item.category === 'tops' ? 'Felső' : item.category === 'bottoms' ? 'Nadrág' : item.category === 'shoes' ? 'Cipő' : item.category === 'skirts' ? 'Szoknya' : item.category}
                   </span>
 
                   {/* Condition Badge */}
                   {item.condition && (
-                    <span className={`absolute bottom-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded shadow ${
+                    <span className={`absolute bottom-1.5 right-1.5 font-bold px-1.5 py-0.5 rounded shadow ${
+                      profile?.displayCompactCards ? 'text-[8px]' : 'text-[9px]'
+                    } ${
                       item.condition.includes('Lecserélendő')
                         ? 'bg-rose-500/80 text-white'
                         : item.condition.includes('Játszós')
@@ -467,34 +478,36 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                 </div>
 
                 {/* Card Info */}
-                <div className="p-3.5 space-y-1.5">
-                  <h3 className="font-serif font-bold text-white text-sm line-clamp-1 group-hover:text-[var(--accent-gold)] transition-colors">
+                <div className={profile?.displayCompactCards ? 'p-2 space-y-1' : 'p-3.5 space-y-1.5'}>
+                  <h3 className={`font-serif font-bold text-white line-clamp-1 group-hover:text-[var(--accent-gold)] transition-colors ${
+                    profile?.displayCompactCards ? 'text-xs' : 'text-sm'
+                  }`}>
                     {item.name}
                   </h3>
 
                   {/* Brand & Size Info */}
                   {(item.brand || item.size) && (
-                    <div className="flex items-center justify-between text-[11px] text-[var(--accent-gold-light)] font-medium">
+                    <div className="flex items-center justify-between text-[10.5px] text-[var(--accent-gold-light)] font-medium">
                       <span className="truncate">{item.brand || ''}</span>
                       {item.size && (
-                        <span className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-white text-[10px] shrink-0 font-bold">
+                        <span className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-white text-[9.5px] shrink-0 font-bold">
                           {item.size}
                         </span>
                       )}
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+                  <div className="flex items-center justify-between text-[10.5px] text-[var(--text-muted)]">
                     <span className="truncate">{item.material || 'Természetes'}</span>
                     <div className="flex items-center gap-1 shrink-0">
                       {item.colorHex && (
                         <span className="w-2.5 h-2.5 rounded-full border border-white/30" style={{ backgroundColor: item.colorHex }} />
                       )}
-                      <span className="text-white text-[11px]">{item.color}</span>
+                      <span className="text-white text-[10.5px]">{item.color}</span>
                     </div>
                   </div>
 
-                  {item.styleArchetype && (
+                  {item.styleArchetype && !profile?.displayCompactCards && (
                     <span className="text-[10px] text-[var(--accent-gold-light)] block truncate font-medium">
                       ✦ {item.styleArchetype}
                     </span>
@@ -502,11 +515,12 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                 </div>
               </div>
 
-              {/* Card Footer with Tags */}
-              <div className="p-3.5 pt-0 flex items-center justify-between text-[10px] text-[var(--text-muted)] border-t border-white/5">
-                <span className="capitalize">{item.formality || 'Smart Casual'}</span>
-                <span className="text-[var(--accent-gold)] font-bold">Részletek ➔</span>
-              </div>
+              {!profile?.displayCompactCards && (
+                <div className="p-3.5 pt-0 flex items-center justify-between text-[10px] text-[var(--text-muted)] border-t border-white/5">
+                  <span className="capitalize">{item.formality || 'Smart Casual'}</span>
+                  <span className="text-[var(--accent-gold)] font-bold">Részletek ➔</span>
+                </div>
+              )}
             </div>
           ))}
         </div>

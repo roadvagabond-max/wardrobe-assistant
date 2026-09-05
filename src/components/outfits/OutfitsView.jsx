@@ -350,16 +350,16 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
 
         {/* Weather Indicator Card */}
         {weather && (
-          <div className="flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl bg-[#080d1a]/80 border border-[var(--border-gold)]/40 shadow-lg shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-[var(--accent-gold)]/15 border border-[var(--border-gold)]/50 flex items-center justify-center text-[var(--accent-gold)] text-lg font-bold">
+          <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-2xl bg-[#080d1a]/80 border border-[var(--border-gold)]/40 shadow-lg shrink-0">
+            <div className="min-w-[48px] px-2 h-9 sm:h-10 rounded-xl bg-[var(--accent-gold)]/15 border border-[var(--border-gold)]/50 flex items-center justify-center text-[var(--accent-gold)] text-sm sm:text-base font-bold whitespace-nowrap shrink-0">
               {weather.temperature}°C
             </div>
-            <div>
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
-                <CloudSun className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                <span>{weather.city || selectedCity}</span>
+            <div className="min-w-0 pr-1">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-white truncate">
+                <CloudSun className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
+                <span className="truncate">{weather.city || 'Helyi időjárás'}</span>
               </div>
-              <p className="text-[11px] text-[var(--text-secondary)]">
+              <p className="text-[10px] sm:text-[11px] text-[var(--text-secondary)] truncate">
                 {weather.condition || 'Kellemes idő'}
               </p>
             </div>
@@ -571,22 +571,39 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
                     </div>
 
                     {/* Reasoning & Layering Notes */}
-                    <div className="space-y-2 text-xs">
-                      {outfit.culturalFitReasoning && (
-                        <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 text-[var(--text-secondary)] leading-relaxed">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-gold-light)] block mb-0.5">
-                            Stílusharmónia & Esemény-összhang:
-                          </span>
-                          {outfit.culturalFitReasoning}
-                        </div>
-                      )}
+                    {profile?.displayCompactTips ? (
+                      <div className="space-y-1.5 text-xs">
+                        {outfit.culturalFitReasoning && (
+                          <div className="p-1.5 px-2.5 rounded-lg bg-black/30 border border-white/5 text-[var(--text-secondary)] text-[11px] truncate flex items-center gap-1.5">
+                            <span className="text-[var(--accent-gold)] font-bold shrink-0">Stílus:</span>
+                            <span className="truncate">{outfit.culturalFitReasoning}</span>
+                          </div>
+                        )}
+                        {outfit.layeringAdvice && (
+                          <div className="p-1.5 px-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10.5px] text-amber-200/90 truncate flex items-center gap-1.5">
+                            <span className="text-amber-300 font-bold shrink-0">Réteg:</span>
+                            <span className="truncate">{outfit.layerAdvice || outfit.layeringAdvice}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2 text-xs">
+                        {outfit.culturalFitReasoning && (
+                          <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 text-[var(--text-secondary)] leading-relaxed">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-gold-light)] block mb-0.5">
+                              Stílusharmónia & Esemény-összhang:
+                            </span>
+                            {outfit.culturalFitReasoning}
+                          </div>
+                        )}
 
-                      {outfit.layeringAdvice && (
-                        <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-snug">
-                          <strong>Rétegezés:</strong> {outfit.layerAdvice || outfit.layeringAdvice}
-                        </div>
-                      )}
-                    </div>
+                        {outfit.layeringAdvice && (
+                          <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-snug">
+                            <strong>Rétegezés:</strong> {outfit.layerAdvice || outfit.layeringAdvice}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Garment Items List with Swap Actions */}
                     <div className="space-y-2 pt-1">
