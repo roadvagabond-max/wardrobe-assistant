@@ -672,10 +672,16 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
         : [];
       const dynamicSartorialRules = formatRulesForPrompt();
 
+      const thermalDesc = styleProfile.thermalPreference === 'coldSensitive'
+        ? 'Fázósabb alkat (szereti a meleg rétegeket és a védő textúrákat hűvösben)'
+        : styleProfile.thermalPreference === 'warmSensitive'
+        ? 'Melegkedvelő alkat (a szellős pamut/len anyagokat és könnyed rétegeket részesíti előnyben)'
+        : 'Kiegyensúlyozott / Normál hőérzet';
+
       const prompt = `Te egy világklasszis személyi stylist, divatelemző és kapszula ruhatár döntéstámogató vagy.
 ELEMEZD A MEGADOTT RUHADARABOT KIZÁRÓLAG A WEBSHOPBAN / FOTÓN TALÁLT VALÓS ADATOK ALAPJÁN!
 ${itemName ? `Megadott név: "${itemName}"` : ''} ${itemPrice ? `Ár: "${itemPrice}"` : ''} ${webshopTextInfo ? `Webshop info: ${webshopTextInfo}` : ''}
-Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: styleProfile.weight, body: styleProfile.bodyType, skin: styleProfile.skinTone, styles: styleProfile.preferredStyles, philosophy: styleProfile.stylePhilosophy })}
+Felhasználó profilja: ${JSON.stringify({ height: styleProfile.height, weight: styleProfile.weight, body: styleProfile.bodyType, skin: styleProfile.skinTone, thermal: thermalDesc, styles: styleProfile.preferredStyles, philosophy: styleProfile.stylePhilosophy })}
 
 🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI:
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
@@ -1006,6 +1012,7 @@ FELHASZNÁLÓ STÍLUSPROFILJA:
 - Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
 - Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
 - Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
+- Öltözködési Hőérzet & Komfort: ${styleProfile.thermalPreference === 'coldSensitive' ? 'Fázósabb alkat (hűvösebb időben a meleg rétegeket, finomkötött kasmírt/merinót és védelmet nyújtó textúrákat részesíti előnyben)' : styleProfile.thermalPreference === 'warmSensitive' ? 'Melegkedvelő alkat (könnyebben kimelegszik, a szellős, könnyű len és pamut textíliákat és letisztultabb rétegeket preferálja)' : 'Kiegyensúlyozott / Normál hőérzet'}
 
 🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI (SZIGORÚAN KÖTELEZŐ BETARTANI!):
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
@@ -1813,6 +1820,7 @@ FELHASZNÁLÓ STÍLUSPROFILJA:
 - Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
 - Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
 - Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
+- Öltözködési Hőérzet & Komfort: ${styleProfile.thermalPreference === 'coldSensitive' ? 'Fázósabb alkat (hűvösben melegebb textúrák, finomkötöttek és rétegek előnyben)' : styleProfile.thermalPreference === 'warmSensitive' ? 'Melegkedvelő alkat (könnyed, szellős pamut/len preferálása)' : 'Kiegyensúlyozott / Normál hőérzet'}
 
 🚫 FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI (Ha a felhasználó által választott szettben ezek bármelyike sérül, jelezd a figyelmeztetésben és a tanácsokban!):
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
@@ -1991,6 +1999,7 @@ FELHASZNÁLÓ STÍLUSPROFILJA:
 - Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
 - Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
 - Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
+- Öltözködési Hőérzet: ${styleProfile.thermalPreference === 'coldSensitive' ? 'Fázósabb' : styleProfile.thermalPreference === 'warmSensitive' ? 'Melegkedvelő' : 'Normál'}
 - Cipőméret & Ruhaméret: ${styleProfile.shoeSize || '42.5'}, Felső: ${styleProfile.topSize || 'M / 50'}, Nadrág: ${styleProfile.pantSize || '32/32'}
 
 🚫 FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI (MINDIG SZIGORÚAN TARTSD BE!):

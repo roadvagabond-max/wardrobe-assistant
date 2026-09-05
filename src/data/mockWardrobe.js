@@ -296,6 +296,9 @@ export const DEFAULT_NEW_USER_PROFILE = {
   weight: '—',
   bodyType: 'Normál / Átlagos',
   skinTone: 'Közép tónus',
+  thermalPreference: 'balanced', // 'coldSensitive' | 'balanced' | 'warmSensitive'
+  displayCompactCards: false,
+  displayCompactTips: false,
   preferredStyles: ['Klasszikus & Időtlen', 'Smart Urban'],
   dislikedStyles: [],
   favoriteColors: ['Sötétkék (Navy)', 'Törtfehér / Krém', 'Dohánybarna / Espresso'],
@@ -310,6 +313,9 @@ export const INITIAL_USER_PROFILE = {
   weight: '78 kg',
   bodyType: 'Atlétikus / Szálkás',
   skinTone: 'Közép-világos, meleg tónus (Meleg Ősz / Tavasz paletta)',
+  thermalPreference: 'balanced', // 'coldSensitive' | 'balanced' | 'warmSensitive'
+  displayCompactCards: false,
+  displayCompactTips: false,
   preferredStyles: ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura', 'Smart Urban'],
   dislikedStyles: ['Logo-heavy Streetwear', 'Túldíszített Fast Fashion'],
   favoriteColors: ['Sötétkék (Navy)', 'Teveszín (Camel)', 'Törtfehér / Krém', 'Olívazöld (Olive)', 'Dohánybarna / Espresso', 'Antracitszürke (Charcoal)'],

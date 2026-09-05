@@ -30,9 +30,6 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
   const [customEvent, setCustomEvent] = useState(() => {
     return localStorage.getItem('sartorial_last_custom_event') || '';
   });
-  const [selectedCity, setSelectedCity] = useState(() => {
-    return localStorage.getItem('sartorial_last_selected_city') || 'Budapest';
-  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRefreshingIndex, setIsRefreshingIndex] = useState(null);
   const [generatedOutfits, setGeneratedOutfits] = useState(() => {
@@ -113,12 +110,6 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
 
   useEffect(() => {
     try {
-      if (selectedCity) localStorage.setItem('sartorial_last_selected_city', selectedCity);
-    } catch (e) {}
-  }, [selectedCity]);
-
-  useEffect(() => {
-    try {
       localStorage.setItem('sartorial_last_anchor_items', JSON.stringify(anchorItems || []));
     } catch (e) {}
   }, [anchorItems]);
@@ -129,15 +120,6 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
       setAnchorItems(prev => [...prev, initialAnchorItem]);
     }
   }, [initialAnchorItem, anchorItems]);
-
-  // Load weather when city changes
-  useEffect(() => {
-    async function loadCityWeather() {
-      const data = await fetchCurrentWeather(selectedCity);
-      setWeather(data);
-    }
-    loadCityWeather();
-  }, [selectedCity, setWeather]);
 
   const saveEventToHistory = (evt) => {
     if (!evt || DEFAULT_EVENT_PRESETS.includes(evt)) return;
@@ -317,7 +299,7 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
     const success = await saveOutfit({
       ...outfit,
       eventContext: customEvent.trim() || selectedEvent,
-      cityName: selectedCity,
+      cityName: weather?.city || 'Budapest',
       temperature: weather?.temperature
     });
 
@@ -441,27 +423,21 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
           </div>
         </div>
 
-        {/* Fine-tune Controls: City Weather & Anchor Piece */}
+        {/* Fine-tune Controls: Local Weather Status & Anchor Piece */}
         <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
           
-          {/* City selector */}
+          {/* Automatic Local Weather Indicator */}
           <div className="flex items-center gap-2">
-            <span className="text-[var(--text-muted)]">Helyszín:</span>
-            <select
-              value={selectedCity}
-              onChange={(e) => setSelectedCity(e.target.value)}
-              className="bg-black/50 border border-white/10 rounded-lg px-2.5 py-1 text-white text-xs focus:outline-none focus:border-[var(--border-gold)] cursor-pointer"
-            >
-              {CITIES.map(cityName => (
-                <option key={cityName} value={cityName} className="bg-[#0b101d] text-white">
-                  {cityName}
-                </option>
-              ))}
-            </select>
-            {weather?.temperature != null && (
-              <span className="text-[var(--accent-gold)] font-semibold text-xs px-2 py-0.5 rounded-md bg-[var(--accent-gold)]/10 border border-[var(--border-gold)]/30">
-                {weather.temperature}°C
+            <span className="text-[var(--text-muted)]">Helyi időjárás:</span>
+            {weather ? (
+              <span className="text-white font-medium flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-lg border border-white/10">
+                <span>{weather.icon || '🌤️'}</span>
+                <span>{weather.city || 'Helyi időjárás'}</span>
+                <strong className="text-[var(--accent-gold)]">{weather.temperature}°C</strong>
+                <span className="text-[var(--text-muted)] text-[10px]">({weather.condition})</span>
               </span>
+            ) : (
+              <span className="text-[var(--text-muted)] italic">Időjárás lekérése...</span>
             )}
           </div>
 

@@ -31,6 +31,20 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Install Cloud Functions dependencies
+        run: |
+          if [ -d "functions" ]; then
+            cd functions && npm install --legacy-peer-deps && cd ..
+          fi
+
+      - name: Deploy to Firebase Functions
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions
+        env:
+          GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}'
+        continue-on-error: true
+
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:

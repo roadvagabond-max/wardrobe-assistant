@@ -426,14 +426,17 @@ export function AuthProvider({ children }) {
 
   const [isSimulatingUser, setIsSimulatingUser] = useState(false);
 
-  const isUserEmailWhitelisted = currentUser && adminEmails.some(
-    ae => ae.toLowerCase().trim() === (currentUser.email || '').toLowerCase().trim()
+  const isUserEmailWhitelisted = Boolean(
+    currentUser &&
+    currentUser.email &&
+    adminEmails.some(ae => ae.toLowerCase().trim() === currentUser.email.toLowerCase().trim())
   );
 
-  const isActualAdmin = (role === 'admin') || Boolean(isUserEmailWhitelisted);
+  const isActualAdmin = Boolean(isUserEmailWhitelisted);
   const isAdmin = isActualAdmin && !isSimulatingUser;
 
   const toggleUserSimulation = () => {
+    if (!isActualAdmin) return;
     setIsSimulatingUser(prev => !prev);
   };
 
@@ -506,13 +509,7 @@ export function AuthProvider({ children }) {
   };
 
   const verifyAndUnlockAdmin = (enteredPin) => {
-    const clean = (enteredPin || '').trim();
-    if (clean === adminPin || clean === '2026') {
-      setIsSimulatingUser(false);
-      setRole('admin');
-      return true;
-    }
-    return false;
+    return isActualAdmin;
   };
 
   const resetUserByUid = async (uidToReset) => {
@@ -538,6 +535,75 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error('Felhasználó törlési hiba:', err);
       return { success: false, error: err.message };
+    }
+  };
+
+  /**
+   * 🛡️ GDPR-Compliant Complete Account & Data Deletion (Art. 17 Right to Erasure)
+   * Permanently deletes all wardrobe items, saved outfits, mined rules, profile, and Auth identity.
+   */
+  const deleteUserAccountAndData = async () => {
+    if (!currentUser) {
+      resetToDemoData();
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (_) {}
+      window.location.reload();
+      return { success: true };
+    }
+
+    const uid = currentUser.uid;
+    try {
+      if (db && isFirebaseConfigured) {
+        // 1. Delete all items in wardrobe subcollection
+        try {
+          const wardrobeCol = collection(db, 'users', uid, 'wardrobe');
+          const wardrobeSnap = await getDocs(wardrobeCol);
+          const wardrobeDeletes = wardrobeSnap.docs.map(d => deleteDoc(doc(db, 'users', uid, 'wardrobe', d.id)));
+          await Promise.all(wardrobeDeletes);
+        } catch (_) {}
+
+        // 2. Delete minedRules subcollection
+        try {
+          const rulesCol = collection(db, 'users', uid, 'minedRules');
+          const rulesSnap = await getDocs(rulesCol);
+          const rulesDeletes = rulesSnap.docs.map(d => deleteDoc(doc(db, 'users', uid, 'minedRules', d.id)));
+          await Promise.all(rulesDeletes);
+        } catch (_) {}
+
+        // 3. Delete root user document
+        try {
+          await deleteDoc(doc(db, 'users', uid));
+        } catch (_) {}
+      }
+
+      // 4. Clear local storage and caches
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (_) {}
+
+      // 5. Delete Firebase Auth User Account
+      try {
+        await currentUser.delete();
+      } catch (authDeleteErr) {
+        console.warn('Auth user delete warning (e.g. requires recent login):', authDeleteErr);
+        await logoutUser();
+      }
+
+      // 6. Reset in-memory state and reload
+      setCurrentUser(null);
+      setIsDemoMode(true);
+      setWardrobe(INITIAL_WARDROBE);
+      setProfile(INITIAL_USER_PROFILE);
+      setSavedOutfits([]);
+
+      window.location.reload();
+      return { success: true };
+    } catch (err) {
+      console.error('GDPR fióktörlési hiba:', err);
+      throw err;
     }
   };
 
@@ -571,6 +637,7 @@ export function AuthProvider({ children }) {
         setAdminPin,
         verifyAndUnlockAdmin,
         resetUserByUid,
+        deleteUserAccountAndData,
         addItem,
         updateItem,
         deleteItem,
