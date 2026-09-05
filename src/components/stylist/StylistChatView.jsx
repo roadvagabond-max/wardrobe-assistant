@@ -108,7 +108,7 @@ export default function StylistChatView({ weather }) {
         ...prev,
         {
           role: 'model',
-          content: `⚠️ Sajnálom, nem sikerült választ kérnem a Gemini AI-tól (${err.message || 'Hálózati hiba'}). Kérlek ellenőrizd az API kulcsodat a Beállításokban!`,
+          content: `⚠️ ${err.message || 'Sajnálom, nem sikerült választ kérnem a Gemini AI-tól. Kérlek próbáld újra pár másodperc múlva!'}`,
           timestamp: new Date().toISOString(),
           isError: true
         }

@@ -41,6 +41,7 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
     }
   });
   const [savedIds, setSavedIds] = useState(new Set());
+  const [generationError, setGenerationError] = useState(null);
 
   // Individual Garment Swap States
   const [swappingItemKey, setSwappingItemKey] = useState(null); // "${outfitIndex}-${itemId}"
@@ -134,6 +135,7 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
   // 1. Generate Outfits
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setGenerationError(null);
     const eventName = customEvent.trim() || selectedEvent;
     if (customEvent.trim()) saveEventToHistory(customEvent.trim());
 
@@ -157,6 +159,7 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
       } catch (_) {}
     } catch (e) {
       console.error('Hiba az outfitek generálásakor:', e);
+      setGenerationError(e.message || 'Hiba történt a szettek generálása során. Kérlek próbáld újra!');
     } finally {
       setIsGenerating(false);
     }
@@ -483,6 +486,24 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
               </>
             )}
           </button>
+
+          {/* Generation Error Alert */}
+          {generationError && (
+            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs sm:text-sm flex items-start gap-3 animate-fadeIn">
+              <ShieldAlert className="w-5 h-5 flex-shrink-0 text-rose-400 mt-0.5" />
+              <div className="flex-1 space-y-1">
+                <p className="font-semibold text-rose-200">AI Szettgenerálási Figyelmeztetés</p>
+                <p className="text-rose-300/90 leading-relaxed">{generationError}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGenerationError(null)}
+                className="text-rose-400 hover:text-white text-xs font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
       </div>
