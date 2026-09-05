@@ -37,10 +37,10 @@ jobs:
             cd functions && npm install --legacy-peer-deps && cd ..
           fi
 
-      - name: Deploy to Firebase Functions and Firestore Rules
+      - name: Deploy to Firebase Functions
         uses: w9jds/firebase-action@master
         with:
-          args: deploy --only functions,firestore:rules --force
+          args: deploy --only functions --force
         env:
           GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}'
 
