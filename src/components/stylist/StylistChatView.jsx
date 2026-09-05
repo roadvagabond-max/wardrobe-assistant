@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles, Trash2, Bot, User, RefreshCw, MessageSquare, Loader2, ArrowRight, Layers, Compass, HelpCircle } from 'lucide-react';
+import { Send, Sparkles, Trash2, Bot, User, RefreshCw, MessageSquare, Loader2, ArrowRight, Layers, Compass, HelpCircle, Plus, Eye, Shirt } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { chatWithMasterStylist, formatStylistJsonToMarkdown, isGeminiConfigured } from '../../services/gemini';
+import GarmentLightboxModal from '../common/GarmentLightboxModal';
 
 const QUICK_PROMPTS = [
   'Mit vegyek fel holnap a meglévő ruháimból?',
@@ -24,7 +25,7 @@ export default function StylistChatView({ weather }) {
     return [
       {
         role: 'model',
-        content: `Üdvözöllek! Én vagyok a személyes **Sartorial Mester Stylistod**. 👔✨\n\nIsmerem a teljes digitális gardróbodat (${wardrobe.length} db ruha), a stílus DNS-edet, az egyéni szabályaidat és az aktuális időjárást (${weather?.city || 'Budapest'}, ${weather?.temperature ?? 21}°C).\n\nKérdezz bármit: szett-kombinációkról, alkalomhoz illő öltözködésről, rétegezésről vagy hiányzó darabokról!`,
+        content: `Üdvözöllek! Én vagyok a személyes **Sartorial Mester Stylistod**. 👔✨\n\nIsmerem a teljes digitális gardróbodat (${wardrobe.length} db ruha), a stílus DNS-edet és az egyéni szabályaidat.\n\nKérdezz bármit: szett-kombinációkról, alkalomhoz illő öltözködésről, rétegezésről vagy hiányzó kulcsdarabokról!`,
         timestamp: new Date().toISOString()
       }
     ];
@@ -32,6 +33,11 @@ export default function StylistChatView({ weather }) {
 
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Lightbox viewer state for embedded item cards
+  const [lightboxItems, setLightboxItems] = useState([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -74,7 +80,7 @@ export default function StylistChatView({ weather }) {
     setIsLoading(true);
 
     try {
-      // Send conversation history (filter out greeting model message if it's the very first)
+      // Send conversation history with a sliding window of recent messages
       const apiMessages = newHistory.map(m => ({
         role: m.role === 'model' ? 'model' : 'user',
         content: m.content
@@ -119,17 +125,22 @@ export default function StylistChatView({ weather }) {
     }
   };
 
+  // Start a fresh new topic (Spec & Topic Boundary Guard)
+  const handleNewTopic = () => {
+    const resetMsg = [
+      {
+        role: 'model',
+        content: `Üdvözöllek! Új témát kezdtünk. Milyen stíluskérdésben, szett-ötletben vagy ruhatár-elemzésben segíthetek ma? ✨`,
+        timestamp: new Date().toISOString()
+      }
+    ];
+    setMessages(resetMsg);
+    localStorage.setItem('stylist_chat_history', JSON.stringify(resetMsg));
+  };
+
   const handleClearHistory = () => {
     if (window.confirm('Biztosan törölni szeretnéd a csevegési előzményeket?')) {
-      const resetMsg = [
-        {
-          role: 'model',
-          content: `Csevegés alaphelyzetbe állítva. Készen állok az új kérdéseidre a gardróbod és stílusod alapján!`,
-          timestamp: new Date().toISOString()
-        }
-      ];
-      setMessages(resetMsg);
-      localStorage.setItem('stylist_chat_history', JSON.stringify(resetMsg));
+      handleNewTopic();
     }
   };
 
@@ -148,10 +159,29 @@ export default function StylistChatView({ weather }) {
     return escaped.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
   };
 
-  // Rich text / markdown renderer with JSON auto-formatting
+  // Open garment in Lightbox
+  const handleOpenGarmentLightbox = (item) => {
+    if (!item) return;
+    setLightboxItems([item]);
+    setLightboxIndex(0);
+    setIsLightboxOpen(true);
+  };
+
+  // Rich text / markdown renderer with JSON auto-formatting & embedded garment cards
   const renderFormattedContent = (rawContent) => {
-    const formattedContent = formatStylistJsonToMarkdown(rawContent);
+    // 1. Extract {{item:ID}} tags and identify referenced items
+    const itemMatches = [...rawContent.matchAll(/\{\{item:([a-zA-Z0-9_\-]+)\}\}/g)];
+    const referencedIds = [...new Set(itemMatches.map(m => m[1]))];
+    const referencedGarments = referencedIds
+      .map(id => wardrobe.find(w => String(w.id) === String(id)))
+      .filter(Boolean);
+
+    // 2. Clean out raw {{item:ID}} tokens from text display
+    const cleanedContent = rawContent.replace(/\{\{item:[a-zA-Z0-9_\-]+\}\}/g, '').trim();
+
+    const formattedContent = formatStylistJsonToMarkdown(cleanedContent);
     const paragraphs = formattedContent.split('\n\n');
+
     return (
       <div className="space-y-3 text-xs sm:text-sm leading-relaxed">
         {paragraphs.map((p, pIdx) => {
@@ -203,6 +233,52 @@ export default function StylistChatView({ weather }) {
             }} />
           );
         })}
+
+        {/* Embedded Interactive Garment Cards Shelf */}
+        {referencedGarments.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--accent-gold)]">
+              <Sparkles className="w-3 h-3" />
+              <span>Hivatkozott ruhatári darabok ({referencedGarments.length} db):</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {referencedGarments.map((garment) => (
+                <button
+                  key={garment.id}
+                  type="button"
+                  onClick={() => handleOpenGarmentLightbox(garment)}
+                  className="p-2 rounded-xl bg-black/40 hover:bg-white/10 border border-[var(--border-gold)]/50 hover:border-[var(--accent-gold)] flex items-center gap-2.5 transition-all text-left group active:scale-[0.98]"
+                >
+                  <div className="w-11 h-11 rounded-lg overflow-hidden bg-neutral-900 border border-white/10 shrink-0 flex items-center justify-center relative">
+                    {garment.imageUrl ? (
+                      <img
+                        src={garment.imageUrl}
+                        alt={garment.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <Shirt className="w-5 h-5 text-[var(--text-muted)]" />
+                    )}
+                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Eye className="w-4 h-4 text-[var(--accent-gold)]" />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-white truncate group-hover:text-[var(--accent-gold)] transition-colors">
+                      {garment.name}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-muted)] truncate">
+                      {garment.brand ? `${garment.brand} • ` : ''}{garment.color || garment.category}
+                    </p>
+                  </div>
+                  <span className="p-1 rounded-lg bg-white/5 text-[var(--text-muted)] group-hover:text-[var(--accent-gold)] shrink-0">
+                    <Eye className="w-3.5 h-3.5" />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -210,7 +286,7 @@ export default function StylistChatView({ weather }) {
   return (
     <div className="space-y-4 flex flex-col h-[75vh] min-h-[500px]">
       
-      {/* Top Bar with Context Pills & Clear Button */}
+      {/* Top Bar with Context Pills & Action Buttons */}
       <div className="flex items-center justify-between pb-3 border-b border-white/10 flex-wrap gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="badge badge-gold flex items-center gap-1 text-[11px]">
@@ -227,15 +303,26 @@ export default function StylistChatView({ weather }) {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleClearHistory}
-          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-all text-xs flex items-center gap-1"
-          title="Beszélgetés törlése"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Előzmények törlése</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleNewTopic}
+            className="btn-gold py-1.5 px-2.5 rounded-xl text-xs font-semibold flex items-center gap-1 shadow-sm active:scale-95"
+            title="Új téma indítása (tiszta kontextussal)"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Új Téma</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleClearHistory}
+            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-all text-xs flex items-center gap-1"
+            title="Beszélgetés törlése"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Banner if Gemini is not yet configured */}
@@ -363,6 +450,15 @@ export default function StylistChatView({ weather }) {
           <Send className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Lightbox Modal for Referenced Garments */}
+      <GarmentLightboxModal
+        isOpen={isLightboxOpen}
+        items={lightboxItems}
+        initialIndex={lightboxIndex}
+        onClose={() => setIsLightboxOpen(false)}
+        outfitTitle="Hivatkozott Ruhatári Darab"
+      />
 
     </div>
   );
