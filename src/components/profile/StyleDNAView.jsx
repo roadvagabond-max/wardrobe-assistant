@@ -3,6 +3,7 @@ import { User, Sparkles, Sliders, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeColorSeason } from '../../services/gemini';
 import { ensureBase64Image } from '../../services/imageOptimizer';
+import { deduplicateColors } from '../common/ColorPalettePicker';
 
 // Subcomponents
 import ProfileIdentityCard from './components/ProfileIdentityCard';
@@ -63,15 +64,14 @@ export default function StyleDNAView() {
         setColorSeasonResult(result);
 
         if (result) {
-          const currentFavs = Array.isArray(profile.favoriteColors) ? profile.favoriteColors : [];
-          const newPalette = result.recommendedPalette && result.recommendedPalette.length > 0
-            ? Array.from(new Set([...currentFavs, ...result.recommendedPalette]))
-            : currentFavs;
+          const rawRecommended = Array.isArray(result.recommendedPalette) ? result.recommendedPalette : [];
+          const cleanPalette = deduplicateColors(rawRecommended).slice(0, 5);
 
           const fullUpdate = {
             ...immediateUpdate,
             skinTone: `${result.seasonName} - ${result.skinTone}`,
-            favoriteColors: newPalette
+            favoriteColors: cleanPalette.length > 0 ? cleanPalette : (profile.favoriteColors || ['Sötétkék', 'Törtfehér', 'Dohánybarna']),
+            avoidColors: Array.isArray(result.avoidPalette) ? deduplicateColors(result.avoidPalette) : []
           };
           await updateProfile(fullUpdate);
         }

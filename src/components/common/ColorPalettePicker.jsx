@@ -20,6 +20,51 @@ export const CURATED_FASHION_COLORS = [
   { name: 'Terrakotta / Rozsda', hex: '#b7410e' }
 ];
 
+/**
+ * Normalizes color names by stripping English aliases in parentheses or secondary slashes.
+ * e.g. "Sötétkék (Navy)" -> "Sötétkék", "Törtfehér / Krém" -> "Törtfehér", "Olívazöld (Olive)" -> "Olívazöld"
+ */
+export function normalizeColorName(colorStr) {
+  if (!colorStr || typeof colorStr !== 'string') return '';
+  let cleaned = colorStr.trim();
+  // Remove parenthesized content: "Sötétkék (Navy)" -> "Sötétkék"
+  cleaned = cleaned.replace(/\s*\([^)]*\)/g, '').trim();
+  // Remove secondary slash aliases if present: "Törtfehér / Krém" -> "Törtfehér", "Dohánybarna / Espresso" -> "Dohánybarna"
+  if (cleaned.includes('/')) {
+    cleaned = cleaned.split('/')[0].trim();
+  }
+  return cleaned;
+}
+
+/**
+ * Checks if two color strings match semantically (case- and alias-insensitive)
+ */
+export function areColorsMatching(c1, c2) {
+  if (!c1 || !c2) return false;
+  const n1 = normalizeColorName(c1).toLowerCase();
+  const n2 = normalizeColorName(c2).toLowerCase();
+  if (!n1 || !n2) return false;
+  return n1 === n2 || n1.includes(n2) || n2.includes(n1);
+}
+
+/**
+ * Deduplicates an array of color strings using semantic normalization
+ */
+export function deduplicateColors(colors = []) {
+  if (!Array.isArray(colors)) return [];
+  const result = [];
+  colors.forEach(col => {
+    if (!col || typeof col !== 'string') return;
+    const normalized = normalizeColorName(col);
+    if (!normalized) return;
+    const alreadyExists = result.some(existing => areColorsMatching(existing, normalized));
+    if (!alreadyExists) {
+      result.push(normalized);
+    }
+  });
+  return result;
+}
+
 export default function ColorPalettePicker({ selectedColor, selectedHex, onSelectColor }) {
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef(null);

@@ -1010,7 +1010,7 @@ Nem sablonos kliséket készítünk, hanem a FELHASZNÁLÓ SAJÁT SZEMÉLYES ST�
 FELHASZNÁLÓ STÍLUSPROFILJA:
 - Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura'])}
 - Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
-- Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
+- Kedvenc Színpaletta: ${styleProfile.favoriteColors && styleProfile.favoriteColors.length > 0 ? JSON.stringify(styleProfile.favoriteColors) : 'Nincs egyedileg rögzítve (Alkalmazz a ruhatár meglévő darabjaihoz és az eseményhez illő klasszikus, harmonikus színkombinációkat)'}
 - Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
 - Öltözködési Hőérzet & Komfort: ${styleProfile.thermalPreference === 'coldSensitive' ? 'Fázósabb alkat (hűvösebb időben a meleg rétegeket, finomkötött kasmírt/merinót és védelmet nyújtó textúrákat részesíti előnyben)' : styleProfile.thermalPreference === 'warmSensitive' ? 'Melegkedvelő alkat (könnyebben kimelegszik, a szellős, könnyű len és pamut textíliákat és letisztultabb rétegeket preferálja)' : 'Kiegyensúlyozott / Normál hőérzet'}
 
@@ -1818,7 +1818,7 @@ A FELADATOD: Végezz szigorú, mégis építő jellegű, professzionális Stílu
 FELHASZNÁLÓ STÍLUSPROFILJA:
 - Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura'])}
 - Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
-- Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
+- Kedvenc Színpaletta: ${styleProfile.favoriteColors && styleProfile.favoriteColors.length > 0 ? JSON.stringify(styleProfile.favoriteColors) : 'Nincs rögzítve (Időtlen, harmonikus kapszula színek)'}
 - Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
 - Öltözködési Hőérzet & Komfort: ${styleProfile.thermalPreference === 'coldSensitive' ? 'Fázósabb alkat (hűvösben melegebb textúrák, finomkötöttek és rétegek előnyben)' : styleProfile.thermalPreference === 'warmSensitive' ? 'Melegkedvelő alkat (könnyed, szellős pamut/len preferálása)' : 'Kiegyensúlyozott / Normál hőérzet'}
 
@@ -1997,7 +1997,7 @@ Teljes mélységében ismered a felhasználó SAJÁT DIGITÁLIS RUHATÁRÁT, SZE
 FELHASZNÁLÓ STÍLUSPROFILJA:
 - Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || ['Klasszikus & Időtlen', 'Old Money & Quiet Luxury', 'Olasz Sprezzatura'])}
 - Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult elegancia, prémium természetes anyagok és tökéletes szabás'}"
-- Kedvenc Színpaletta: ${JSON.stringify(styleProfile.favoriteColors || ['Sötétkék', 'Homokbézs', 'Fekete', 'Olívazöld', 'Törtfehér'])}
+- Kedvenc Színpaletta: ${styleProfile.favoriteColors && styleProfile.favoriteColors.length > 0 ? JSON.stringify(styleProfile.favoriteColors) : 'Nincs rögzítve (Alkalmazz a ruhatárhoz illő természetes harmóniát)'}
 - Testalkat és Magasság: ${styleProfile.bodyType || 'Atlétikus'}, ${styleProfile.height || '180 cm'} (${styleProfile.skinTone || 'Természetes bőrtónus'})
 - Öltözködési Hőérzet: ${styleProfile.thermalPreference === 'coldSensitive' ? 'Fázósabb' : styleProfile.thermalPreference === 'warmSensitive' ? 'Melegkedvelő' : 'Normál'}
 - Cipőméret & Ruhaméret: ${styleProfile.shoeSize || '42.5'}, Felső: ${styleProfile.topSize || 'M / 50'}, Nadrág: ${styleProfile.pantSize || '32/32'}

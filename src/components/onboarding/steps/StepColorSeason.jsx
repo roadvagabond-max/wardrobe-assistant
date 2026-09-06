@@ -2,16 +2,17 @@ import React, { useState, useRef } from 'react';
 import { Sparkles, Camera, Upload, Loader2, Check, ArrowRight, ArrowLeft, RefreshCw, X, AlertCircle } from 'lucide-react';
 import { analyzeColorSeason } from '../../../services/gemini';
 import { ensureBase64Image } from '../../../services/imageOptimizer';
+import { normalizeColorName, deduplicateColors } from '../../common/ColorPalettePicker';
 
 const SEASON_PRESETS = [
-  { name: 'Meleg Ősz (Warm Autumn)', skinTone: 'Meleg arany / olíva altónus', palette: ['Sötétkék', 'Dohánybarna', 'Olívazöld', 'Teveszín', 'Törtfehér', 'Bordó'] },
-  { name: 'Sötét Ősz (Dark Autumn)', skinTone: 'Mély meleg tónus', palette: ['Espresso barna', 'Mély smaragdzöld', 'Sötétkék', 'Mustársárga', 'Terrakotta'] },
-  { name: 'Világos Tavasz (Light Spring)', skinTone: 'Világos meleg barackos tónus', palette: ['Világoskék', 'Homokbézs', 'Korall', 'Türkiz', 'Meleg fehér'] },
-  { name: 'Meleg Tavasz (Warm Spring)', skinTone: 'Aranyló meleg tónus', palette: ['Tevebarna', 'Élénk kék', 'Meleg zöld', 'Krémfehér', 'Aranybarna'] },
-  { name: 'Hideg Tél (Cool Winter)', skinTone: 'Hideg kontrasztos tónus', palette: ['Tiszta fekete', 'Hófehér', 'Királykék', 'Smaragdzöld', 'Rubinvörös'] },
-  { name: 'Sötét Tél (Dark Winter)', skinTone: 'Mély hideg tónus', palette: ['Antracitszürke', 'Éjfekete', 'Mély bordó', 'Kobaltkék', 'Hideg fehér'] },
-  { name: 'Lágy Nyár (Soft Summer)', skinTone: 'Lágy füstös hideg tónus', palette: ['Palakék', 'Zsályazöld', 'Középszürke', 'Mályva', 'Törtfehér'] },
-  { name: 'Hideg Nyár (Cool Summer)', skinTone: 'Rózsás hideg tónus', palette: ['Tengerkék', 'Levendula', 'Finomszürke', 'Málnapiros', 'Kékesszürke'] }
+  { name: 'Meleg Ősz (Warm Autumn)', skinTone: 'Meleg arany / olíva altónus', palette: ['Sötétkék', 'Dohánybarna', 'Olívazöld', 'Törtfehér'] },
+  { name: 'Sötét Ősz (Dark Autumn)', skinTone: 'Mély meleg tónus', palette: ['Espresso barna', 'Mély smaragdzöld', 'Sötétkék', 'Mustársárga'] },
+  { name: 'Világos Tavasz (Light Spring)', skinTone: 'Világos meleg barackos tónus', palette: ['Világoskék', 'Homokbézs', 'Korall', 'Meleg fehér'] },
+  { name: 'Meleg Tavasz (Warm Spring)', skinTone: 'Aranyló meleg tónus', palette: ['Tevebarna', 'Élénk kék', 'Meleg zöld', 'Krémfehér'] },
+  { name: 'Hideg Tél (Cool Winter)', skinTone: 'Hideg kontrasztos tónus', palette: ['Fekete', 'Hófehér', 'Királykék', 'Smaragdzöld'] },
+  { name: 'Sötét Tél (Dark Winter)', skinTone: 'Mély hideg tónus', palette: ['Antracitszürke', 'Éjfekete', 'Bordó', 'Kobaltkék'] },
+  { name: 'Lágy Nyár (Soft Summer)', skinTone: 'Lágy füstös hideg tónus', palette: ['Palakék', 'Zsályazöld', 'Középszürke', 'Mályva'] },
+  { name: 'Hideg Nyár (Cool Summer)', skinTone: 'Rózsás hideg tónus', palette: ['Tengerkék', 'Levendula', 'Finomszürke', 'Málnapiros'] }
 ];
 
 export default function StepColorSeason({ formData, setFormData, onNext, onBack, onSkip }) {
@@ -45,17 +46,16 @@ export default function StepColorSeason({ formData, setFormData, onNext, onBack,
       setAnalysisResult(result);
 
       if (result) {
-        const currentFavs = Array.isArray(formData.favoriteColors) ? formData.favoriteColors : [];
-        const newPalette = result.recommendedPalette && result.recommendedPalette.length > 0
-          ? Array.from(new Set([...currentFavs, ...result.recommendedPalette]))
-          : currentFavs;
+        // Clean, focused capsule palette (max 4-5 canonicalized colors)
+        const rawRecommended = Array.isArray(result.recommendedPalette) ? result.recommendedPalette : [];
+        const cleanPalette = deduplicateColors(rawRecommended).slice(0, 5);
 
         setFormData(prev => ({
           ...prev,
           avatarUrl: base64,
           skinTone: `${result.seasonName} - ${result.skinTone}`,
-          favoriteColors: newPalette,
-          avoidColors: result.avoidPalette || []
+          favoriteColors: cleanPalette.length > 0 ? cleanPalette : ['Sötétkék', 'Törtfehér', 'Dohánybarna'],
+          avoidColors: Array.isArray(result.avoidPalette) ? deduplicateColors(result.avoidPalette) : []
         }));
       }
     } catch (err) {

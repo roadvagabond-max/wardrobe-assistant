@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.6.0` (Production)
+- **Aktuális Verzió:** `v1.6.1` (Production)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,14 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.6.0)
+### ✅ Lezárt Javítások (v1.5.4 – v1.6.1)
+- [x] **Kanonizált Színintelligencia & 3-Szintű Színkezelési Logika (v1.6.1):**
+  - Tiszta lap az új felhasználóknak (`favoriteColors: []` alapértelmezés).
+  - Kanonizált szín-normalizáló és deduplikáló motor (`normalizeColorName`, `areColorsMatching`, `deduplicateColors`), amely megszünteti a zárójeles és magyar nevek álduplikációit (pl. `'Sötétkék (Navy)'` vs. `'Sötétkék'`).
+  - Tiszta beállítás (Replace) az elszálló merge helyett AI fotóelemzéskor és évszaktípus választáskor.
+  - Fókuszált 4–5 színű kapszula paletták (2–3 semleges bázis + 1–2 akcentus).
+  - A feltöltött ruhák valós színkészletének (`Wardrobe Color Inventory`) világos elválasztása az egyéni kedvencektől (`DynamicColorPaletteCard.jsx`), egykattintásos `+` kedvenccé tétellel és $\ge 3$ darabos intelligens megjelenítési feltétellel.
+  - Tiszta prompt formázás a `gemini.js`-ben fiktív beégetett színek nélkül.
 - [x] **Onboarding Munkafolyamat & Kategória-Érzékeny Szettkészültségi Rendszer (v1.6.0):** 5-lépéses interaktív Onboarding Varázsló (`OnboardingModal.jsx`, `StepIdentity.jsx`, `StepColorSeason.jsx`, `StepStyles.jsx`, `StepAddFirstItem.jsx`, `StepSummaryLaunch.jsx`), kötelező Név/Nem validációval, teljes Skip lehetőséggel, női és férfi stílusarchetipusokkal, beépített 1. ruha felvitellel, valamint kategória-érzékeny szettkészlet ellenőrzéssel (min. 1 felső, 1 alsó, 1 cipő) és `ModuleFirstTimeGuide.jsx` modul-tájékoztatókkal.
 - [x] **Stílusprofil Modul Átfogó Rendbetétele & Moduláris Felbontása (v1.5.9):** A korábbi 1280 soros monolitikus kód felbontása 8 tiszta alkomponensre (`ProfileIdentityCard`, `ProfileEditModal`, `ColorSeasonCard`, `DynamicColorPaletteCard`, `WardrobeAnalyticsCard`, `CustomRulesCard`, `SartorialKnowledgeHub`, `BrandSizingMatrixCard`). Szekcionált dashboard elrendezés (Opció B), Nem (Gender: Férfi/Női/Unisex) integráció, Hőtűrés áthelyezése a profilba, automatikus háttér-tanuló színpaletta, valamint az "Avatár", "DNS/DNA" és "Sartorial" kifejezések kivezetése a felületről.
 - [x] **Firebase API kulcsok gomb eltávolítása:** Az `AuthModal.jsx`-ből törölve a felesleges, felhasználót zavaró API kulcs konfigurációs gomb (a kulcsot a szerveroldali Secret Manager védi).
@@ -32,11 +39,11 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
   - A felhasználói felület letisztítása a felesleges, zavaró technikai badge-ektől (pl. `PurchaseAdvisorView.jsx`-ben az *„Egyéni stílusszabály-ellenőrzés aktív (X)”* doboz, felesleges debug/státusz jelölők).
 - [ ] **Magyarázó Blokkok Háttérbe Helyezése („Hogyan segít az AI...”, Edukációs Panelek):**
   - A nézeteken (Vásárlási Tanácsadó, Stylist, Kapszula Gap) közvetlenül helyet foglaló nagy magyarázó kártyák (pl. *„Hogyan segít az AI megelőzni a rossz vásárlási döntéseket?”*) átalakítása diszkrét, lenyitható („Tudj meg többet” / collapsible accordion vagy súgó modál) formátumba.
-- [ ] **Stílus Profil — Kedvelt Színek Meghatározása, Változása & Frissülési Működési Logikája:**
-  - A színpaletta teljes működési logikájának átvilágítása és finomhangolása:
-    - Hogyan jön létre a kedvelt színek listája (fotó alapú színtípus elemzés vs. manuális választás vs. gardrób színmegoszlás)?
-    - Hogyan változik/frissül a paletta az új ruhák bekerülésével és a stílusfejlődéssel?
-    - Transzparens és könnyen szerkeszthető színpaletta-kezelő felület a `StyleDNAView.jsx`-ben, összehangolva az AI Stylist színválasztásaival.
+- [ ] **Kapszula Ruhatár Index & Értékelési Formula Mélyreható Felülvizsgálata:**
+  - A kapszula ruhatár telítettségi és minőségi index számítási algoritmusának finomítása (szezonális lefedettség, állapotarányok, funkcionális hiányok súlyozása).
+- [ ] **GCP Service Account Jogosultság (Firebase Rules Deploy):** A `roles/firebaserules.admin` hozzárendelése a CI/CD service accounthoz a Google Cloud konzolon, ha a jövőben a Firestore szabályok deployját is a CI/CD-re bíznánk.
+- [ ] **Nagy Ruhatárak Megjelenítési Optimalizálása (Virtual List):** 300–500+ darabos ruhatárak esetén `react-window` vagy CSS optimalizáció.
+- [ ] **PWA Service Worker & Offline Kép Gyorsítótár:** Statikus assetek és teljes offline élmény biztosítása.
 - [ ] **Kapszula Ruhatár Index & Értékelési Formula Mélyreható Felülvizsgálata:**
   - A kapszula ruhatár telítettségi és minőségi index számítási algoritmusának finomítása (szezonális lefedettség, állapotarányok, funkcionális hiányok súlyozása).
 - [ ] **GCP Service Account Jogosultság (Firebase Rules Deploy):** A `roles/firebaserules.admin` hozzárendelése a CI/CD service accounthoz a Google Cloud konzolon, ha a jövőben a Firestore szabályok deployját is a CI/CD-re bíznánk.
