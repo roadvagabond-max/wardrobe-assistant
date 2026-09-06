@@ -13,6 +13,7 @@ import StyleDNAView from './components/profile/StyleDNAView';
 import AuthModal from './components/auth/AuthModal';
 import SettingsModal from './components/settings/SettingsModal';
 import HelpGuideModal from './components/common/HelpGuideModal';
+import OnboardingModal from './components/onboarding/OnboardingModal';
 import { fetchCurrentWeather } from './services/weather';
 import { useAuth } from './context/AuthContext';
 
@@ -29,7 +30,7 @@ const getInitialTab = () => {
 };
 
 export default function App() {
-  const { wardrobe, addItem } = useAuth();
+  const { wardrobe, profile, currentUser, addItem } = useAuth();
   const [activeTab, setActiveTabState] = useState(getInitialTab);
   const [weather, setWeather] = useState(null);
 
@@ -50,6 +51,7 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [initialAnchorItem, setInitialAnchorItem] = useState(null);
   const [advisorPrefill, setAdvisorPrefill] = useState(null);
 
@@ -108,14 +110,28 @@ export default function App() {
 
     const handleOpenSettings = () => setIsSettingsModalOpen(true);
     const handleOpenHelp = () => setIsHelpModalOpen(true);
+    const handleOpenOnboarding = () => setIsOnboardingModalOpen(true);
+
     window.addEventListener('open-settings', handleOpenSettings);
     window.addEventListener('open-help', handleOpenHelp);
+    window.addEventListener('open-onboarding', handleOpenOnboarding);
 
     return () => {
       window.removeEventListener('open-settings', handleOpenSettings);
       window.removeEventListener('open-help', handleOpenHelp);
+      window.removeEventListener('open-onboarding', handleOpenOnboarding);
     };
   }, []);
+
+  // Auto-open Onboarding Modal for newly authenticated users who haven't completed onboarding
+  useEffect(() => {
+    if (currentUser && profile && profile.onboardingCompleted === false) {
+      const skippedKey = `sartorial_onboarding_skipped_${currentUser.uid}`;
+      if (!sessionStorage.getItem(skippedKey)) {
+        setIsOnboardingModalOpen(true);
+      }
+    }
+  }, [currentUser, profile?.onboardingCompleted]);
 
   const handleTestInAdvisor = (gapItem) => {
     setAdvisorPrefill(gapItem);
@@ -216,6 +232,21 @@ export default function App() {
         onClose={() => setIsHelpModalOpen(false)}
       />
 
+      <OnboardingModal
+        isOpen={isOnboardingModalOpen}
+        onClose={() => {
+          setIsOnboardingModalOpen(false);
+          if (currentUser) {
+            sessionStorage.setItem(`sartorial_onboarding_skipped_${currentUser.uid}`, 'true');
+          }
+        }}
+        onFinish={(updatedProfile) => {
+          setIsOnboardingModalOpen(false);
+          setActiveTab('wardrobe');
+        }}
+      />
+
     </div>
   );
 }
+

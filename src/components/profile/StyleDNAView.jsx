@@ -113,8 +113,17 @@ export default function StyleDNAView() {
           </p>
         </div>
 
-        {/* Quick-Jump Navigation Pills */}
+        {/* Quick-Jump Navigation Pills & Onboarding Launcher */}
         <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-black/40 border border-white/10 self-start sm:self-center">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-onboarding'))}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--accent-gold)] text-black shadow hover:opacity-90 transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Stílusprofil Varázsló Újraindítása"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-black" />
+            <span>Varázsló</span>
+          </button>
           <button
             type="button"
             onClick={() => scrollToSection('identity-section')}

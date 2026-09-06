@@ -9,6 +9,7 @@ import { fetchCurrentWeather } from '../../services/weather';
 import confetti from 'canvas-confetti';
 import StylistChatView from './StylistChatView';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
+import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 
 const SLOT_DEFINITIONS = [
   { key: 'tops', label: 'Bázis Felső (Ing / Póló)', icon: '👔', category: 'tops', required: true },
@@ -221,6 +222,22 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
           </button>
         </div>
       </div>
+
+      {/* First-time module guidance */}
+      <ModuleFirstTimeGuide 
+        moduleId="stylist"
+        title="Hogyan működik a Stylist Modul?"
+        subtitle="Személyes mester stylist konzultáció és 6-slotos interaktív szettépítő"
+        description="A Stylist közvetlen beszélgetésben áll veled, és teljes mélységében ismeri a testalkatodat, színtípusodat és egyéni szabályaidat."
+        points={[
+          "Már ruhatár nélkül is tudsz kérdezni: az AI a testalkatodhoz, színtípusodhoz és a kívánt eseményhez ad profi tanácsot.",
+          "A gardróbod feltöltése után a beszélgetésben a konkrét meglévő ruháidból ajánl szetteket, amikre kattintva megnyílik a fotós kártya.",
+          "A '6-Slotos Szettépítő' fülön te magad is összeállíthatsz egy szettet a kategória-slotokból, amit az AI azonnal leauditál."
+        ]}
+        actionLabel="Irány a Gardrób"
+        onAction={() => { window.location.hash = '#wardrobe'; }}
+        wardrobeCount={wardrobe?.length || 0}
+      />
 
       {/* ========================================================================= */}
       {/* MODE 1: MASTER STYLIST CHAT */}

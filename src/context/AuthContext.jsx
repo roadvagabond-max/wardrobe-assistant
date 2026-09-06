@@ -356,6 +356,18 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Complete Onboarding Helper
+  const completeOnboarding = async (updatedProfileData = {}) => {
+    const finalProfile = {
+      ...profile,
+      ...updatedProfileData,
+      onboardingCompleted: true,
+      updatedAt: new Date().toISOString()
+    };
+    await updateProfile(finalProfile);
+    return finalProfile;
+  };
+
   // Save an Outfit
   const saveOutfit = (outfit) => {
     setSavedOutfits(prev => [
@@ -363,6 +375,7 @@ export function AuthProvider({ children }) {
       ...prev
     ]);
   };
+
 
   // Sartorial Rules Actions
   const mineNewRules = async (focusTopic = '') => {
@@ -724,6 +737,7 @@ export function AuthProvider({ children }) {
         updateItem,
         deleteItem,
         updateProfile,
+        completeOnboarding,
         saveOutfit,
         resetToDemoData,
         loginWithGoogle: handleGoogleLogin,

@@ -69,14 +69,25 @@ export default function ProfileIdentityCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onEditClick}
-          className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-1.5 self-start sm:self-center"
-        >
-          <Edit3 className="w-3.5 h-3.5" />
-          <span>Profil Szerkesztése</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-onboarding'))}
+            className="btn-gold text-xs py-2 px-3 flex items-center gap-1.5 shadow"
+            title="Stílusprofil Varázsló Újraindítása"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Varázsló</span>
+          </button>
+          <button
+            type="button"
+            onClick={onEditClick}
+            className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-1.5"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>Szerkesztés</span>
+          </button>
+        </div>
       </div>
 
       {/* Attributes Grid: Thermal preference + Body Type & Measurements */}

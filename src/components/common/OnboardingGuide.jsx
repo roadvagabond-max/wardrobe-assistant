@@ -171,6 +171,14 @@ export default function OnboardingGuide({ onNavigateTab, onOpenAddModal }) {
                 <span>Mindig a <strong>mostani szezonban hordott ruháiddal kezdd</strong> a feltöltést, és csak olyan darabokat rögzíts, amelyek <strong>méretben és állapotban ma is tökéletesen passzolnak rád</strong>!</span>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-onboarding'))}
+              className="btn-gold text-[11px] py-1.5 px-3 flex items-center gap-1 shrink-0 shadow cursor-pointer whitespace-nowrap"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Varázsló Indítása</span>
+            </button>
           </div>
 
           {/* Steps Grid */}

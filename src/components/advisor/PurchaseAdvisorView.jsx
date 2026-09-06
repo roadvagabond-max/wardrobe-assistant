@@ -6,6 +6,7 @@ import { extractWebshopData } from '../../services/webshop';
 import { optimizeImageForUpload, getSmartGarmentImage, ensureBase64Image } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
+import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 
 export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
   const { wardrobe, profile, addItem } = useAuth();
@@ -305,6 +306,22 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           </div>
         )}
       </div>
+
+      {/* First-time module guidance */}
+      <ModuleFirstTimeGuide 
+        moduleId="advisor"
+        title="Hogyan működik a Vásárlási Tanácsadó?"
+        subtitle="4-pilléres minőségi, szabásbeli és kombinálhatósági döntésteszt még a vásárlás előtt"
+        description="Bármilyen kiszemelt új ruhát lefotózhatsz a próbafülkében vagy beillesztheted a webshop linkjét/termékkódját. Az AI azonnal elemzi az anyagminőséget, műszáltartalmat, szabást és a színtípusodhoz való illeszkedést."
+        points={[
+          "Már ruhatár nélkül is azonnal működik: ellenőrzi az anyagösszetételt, minőséget, szabást és színeket a profilod alapján.",
+          "A gardróbod feltöltése után a meglévő darabjaidból 3 teszt szettet is épít, és figyelmeztet, ha már van hasonló ruhád.",
+          "Ha a darab elnyeri a tetszésedet, 1 kattintással átemelheted a ruhatáradba."
+        ]}
+        actionLabel="Gardrób megtekintése"
+        onAction={() => { window.location.hash = '#wardrobe'; }}
+        wardrobeCount={wardrobe?.length || 0}
+      />
 
       {/* Helpful 4-Pillar Guidance Banner */}
       <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-black/40 to-transparent border border-amber-500/30 text-xs space-y-2">

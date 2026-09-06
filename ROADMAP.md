@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.5.9` (Production)
+- **Aktuális Verzió:** `v1.6.0` (Production)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,8 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.5.9)
+### ✅ Lezárt Javítások (v1.5.4 – v1.6.0)
+- [x] **Onboarding Munkafolyamat & Kategória-Érzékeny Szettkészültségi Rendszer (v1.6.0):** 5-lépéses interaktív Onboarding Varázsló (`OnboardingModal.jsx`, `StepIdentity.jsx`, `StepColorSeason.jsx`, `StepStyles.jsx`, `StepAddFirstItem.jsx`, `StepSummaryLaunch.jsx`), kötelező Név/Nem validációval, teljes Skip lehetőséggel, női és férfi stílusarchetipusokkal, beépített 1. ruha felvitellel, valamint kategória-érzékeny szettkészlet ellenőrzéssel (min. 1 felső, 1 alsó, 1 cipő) és `ModuleFirstTimeGuide.jsx` modul-tájékoztatókkal.
 - [x] **Stílusprofil Modul Átfogó Rendbetétele & Moduláris Felbontása (v1.5.9):** A korábbi 1280 soros monolitikus kód felbontása 8 tiszta alkomponensre (`ProfileIdentityCard`, `ProfileEditModal`, `ColorSeasonCard`, `DynamicColorPaletteCard`, `WardrobeAnalyticsCard`, `CustomRulesCard`, `SartorialKnowledgeHub`, `BrandSizingMatrixCard`). Szekcionált dashboard elrendezés (Opció B), Nem (Gender: Férfi/Női/Unisex) integráció, Hőtűrés áthelyezése a profilba, automatikus háttér-tanuló színpaletta, valamint az "Avatár", "DNS/DNA" és "Sartorial" kifejezések kivezetése a felületről.
 - [x] **Firebase API kulcsok gomb eltávolítása:** Az `AuthModal.jsx`-ből törölve a felesleges, felhasználót zavaró API kulcs konfigurációs gomb (a kulcsot a szerveroldali Secret Manager védi).
 - [x] **Demo Mód gomb eltávolítása:** A belépési felugró ablakból törölve a megtévesztő „Folytatás Helyi Demo Módban” gomb; helyette tiszta, egyértelmű Google Belépési felület működik.

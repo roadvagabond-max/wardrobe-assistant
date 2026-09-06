@@ -311,8 +311,10 @@ export const DEFAULT_GUEST_PROFILE = {
   preferredStyles: ['Klasszikus & Időtlen', 'Smart Urban'],
   dislikedStyles: [],
   favoriteColors: ['Sötétkék (Navy)', 'Törtfehér / Krém', 'Dohánybarna / Espresso'],
+  avoidColors: [],
   stylePhilosophy: 'Időtlen, letisztult kapszula ruhatár minőségi, sokoldalú alapdarabokkal.',
-  customStylingRules: []
+  customStylingRules: [],
+  onboardingCompleted: true
 };
 
 // Alias for backward compatibility
@@ -322,16 +324,19 @@ export const DEFAULT_NEW_USER_PROFILE = {
   name: '',
   gender: 'Férfi',
   title: 'Klasszikus & Időtlen Stílusprofil',
-  height: '—',
-  weight: '—',
+  height: '',
+  weight: '',
   bodyType: 'Normál / Átlagos',
-  skinTone: 'Közép tónus',
+  skinTone: '',
   thermalPreference: 'balanced', // 'coldSensitive' | 'balanced' | 'warmSensitive'
   displayCompactCards: false,
   displayCompactTips: false,
   preferredStyles: ['Klasszikus & Időtlen', 'Smart Urban'],
   dislikedStyles: [],
   favoriteColors: ['Sötétkék (Navy)', 'Törtfehér / Krém', 'Dohánybarna / Espresso'],
+  avoidColors: [],
   stylePhilosophy: 'Időtlen, letisztult ruhatár építése minőségi alapdarabokkal.',
-  customStylingRules: []
+  customStylingRules: [],
+  onboardingCompleted: false
 };
+

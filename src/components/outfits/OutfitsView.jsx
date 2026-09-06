@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, CloudSun, Calendar, Compass, ArrowRight, Bookmark, Check, RefreshCw, 
   Loader2, Plus, X, Layers, Lock, Unlock, CheckCircle2, ShieldAlert,
-  Maximize2, Grid, ChevronRight, Feather, SlidersHorizontal as Sliders
+  Maximize2, Grid, ChevronRight, Feather, SlidersHorizontal as Sliders, Shirt
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { generateEventOutfits, swapOutfitItem, enforceAnatomicalOutfitLayers } from '../../services/gemini';
 import { fetchCurrentWeather, CITIES } from '../../services/weather';
 import confetti from 'canvas-confetti';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
+import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 
 const DEFAULT_EVENT_PRESETS = [
   '☕ Kávérandi & Séta',
@@ -151,8 +152,23 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
     });
   };
 
+  // Category Readiness Check (Base Anatomical Blueprint: Min 1 top, 1 bottom, 1 shoes)
+  const topsCount = (wardrobe || []).filter(w => w.category === 'tops' || (w.name || '').toLowerCase().includes('ing') || (w.name || '').toLowerCase().includes('póló')).length;
+  const bottomsCount = (wardrobe || []).filter(w => w.category === 'bottoms' || w.category === 'skirts' || (w.name || '').toLowerCase().includes('nadrág')).length;
+  const shoesCount = (wardrobe || []).filter(w => w.category === 'shoes' || (w.name || '').toLowerCase().includes('cipő') || (w.name || '').toLowerCase().includes('loafer') || (w.name || '').toLowerCase().includes('sneaker') || (w.name || '').toLowerCase().includes('csizma')).length;
+  const isOutfitReady = topsCount >= 1 && bottomsCount >= 1 && shoesCount >= 1;
+
   // 1. Generate Outfits
   const handleGenerate = async () => {
+    if (!isOutfitReady) {
+      const missingCats = [];
+      if (topsCount < 1) missingCats.push('1 db Felső (ing vagy póló)');
+      if (bottomsCount < 1) missingCats.push('1 db Nadrág vagy szoknya');
+      if (shoesCount < 1) missingCats.push('1 db Lábbeli (cipő vagy csizma)');
+      setGenerationError(`A szettgeneráláshoz még a következő alapkategóriák szükségesek a ruhatáradból: ${missingCats.join(', ')}.`);
+      return;
+    }
+
     setIsGenerating(true);
     setGenerationError(null);
     const eventName = customEvent.trim() || selectedEvent;
@@ -167,6 +183,7 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
         anchorItemIds: anchorItems.map(a => a.id)
       });
       setGeneratedOutfits(outfits);
+
 
       try {
         confetti({
@@ -385,6 +402,63 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
           </div>
         )}
       </div>
+
+      {/* First-time module guidance */}
+      <ModuleFirstTimeGuide 
+        moduleId="outfits"
+        title="Hogyan működik a Szettkérő?"
+        subtitle="Személyre szabott esemény- és időjárás-hangolt szettek kizárólag a meglévő ruháidból"
+        description="A Sartorial Assistant nem talál ki fantomruhákat: az AI kizárólag a saját fizikai ruhatárad darabjaiból állít össze anatómiailag és kulturálisan harmonikus szetteket."
+        points={[
+          "A szettkészítéshez legalább 1 db Felső (ing/póló), 1 db Nadrág és 1 db Lábbeli szükséges a gardróbodban.",
+          "Az AI szigorúan betartja a gallérharmóniát, az ujjhosszt és az időjárási rétegrendet.",
+          "Kijelölhetsz kötelező kulcsdarabot (Anchor Item) is, ami köré épülnek a szettek."
+        ]}
+        actionLabel="Irány a Gardrób – Ruhák feltöltése"
+        onAction={() => {
+          window.location.hash = '#wardrobe';
+        }}
+        wardrobeCount={wardrobe?.length || 0}
+      />
+
+      {/* Category Readiness Warning Banner (if incomplete outfit set) */}
+      {!isOutfitReady && (
+        <div className="glass-card p-4 sm:p-5 border-amber-500/40 bg-gradient-to-r from-amber-950/30 via-black/50 to-amber-950/20 rounded-2xl space-y-3 animate-slide-up">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-amber-300 font-bold text-xs sm:text-sm">
+              <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
+              <span>
+                {wardrobe.length === 0
+                  ? 'A szettgeneráláshoz tölts fel néhány alapdarabot a ruhatáradba!'
+                  : 'A komplett szettekhez még hiányzik néhány alapkategória:'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { window.location.hash = '#wardrobe'; }}
+              className="btn-gold text-xs py-1.5 px-3 flex items-center gap-1 shrink-0 shadow"
+            >
+              <Shirt className="w-3.5 h-3.5" />
+              <span>Ruhák Hozzáadása</span>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2 py-1 text-center text-xs">
+            <div className={`p-2.5 rounded-xl border ${topsCount >= 1 ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300' : 'bg-black/40 border-rose-500/40 text-rose-300'}`}>
+              <div className="font-bold">👕 Felső</div>
+              <div className="text-[11px] mt-0.5">{topsCount >= 1 ? `✅ ${topsCount} db` : '❌ Hiányzik'}</div>
+            </div>
+            <div className={`p-2.5 rounded-xl border ${bottomsCount >= 1 ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300' : 'bg-black/40 border-rose-500/40 text-rose-300'}`}>
+              <div className="font-bold">👖 Nadrág / Alsó</div>
+              <div className="text-[11px] mt-0.5">{bottomsCount >= 1 ? `✅ ${bottomsCount} db` : '❌ Hiányzik'}</div>
+            </div>
+            <div className={`p-2.5 rounded-xl border ${shoesCount >= 1 ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300' : 'bg-black/40 border-rose-500/40 text-rose-300'}`}>
+              <div className="font-bold">👞 Lábbeli</div>
+              <div className="text-[11px] mt-0.5">{shoesCount >= 1 ? `✅ ${shoesCount} db` : '❌ Hiányzik'}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Request Box (Free-text + Context Chips) */}
       <div className="glass-card p-4 sm:p-6 space-y-4 border-[var(--border-gold)]/50 shadow-xl bg-gradient-to-b from-[#0e1628]/90 to-[#070b14]/90">
