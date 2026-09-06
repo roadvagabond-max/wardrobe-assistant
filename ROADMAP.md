@@ -39,6 +39,9 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Email & Jelszó Autentikáció (Firebase Email/Password Auth):** Standard Email + Jelszavas bejelentkezés, új fiók regisztráció (névvel és minimum 6 karakteres jelszóval), jelszó-visszaállító link küldése (`sendPasswordResetEmail`), valamint magyar nyelvű hibakezelés integrálva a Google OAuth alternatívájaként az `AuthModal.jsx`, `AuthContext.jsx` és `firebase.js` rétegekbe.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
+- [ ] **Az 5 lépéses kezdő segítség (Onboarding & Onboarding Guide) felülvizsgálata:**
+  - Az interaktív varázsló (`OnboardingModal.jsx` és alkomponensei: `StepIdentity.jsx`, `StepColorSeason.jsx`, `StepStyles.jsx`, `StepAddFirstItem.jsx`, `StepSummaryLaunch.jsx`) és a felületi teendőlista (`OnboardingGuide.jsx`) átfogó auditja és felülvizsgálata.
+  - A lépések egyszerűsítése, demográfiai és nemi harmónia ellenőrzése, redundanciák megszüntetése, valamint a felhasználói élmény és az első ruha felvitel folyamatának további optimalizálása.
 - [ ] **„Megvegyem?” Átnevezés & „Audit” Szó Kivezetése a UI-ból:**
   - A korábbi „Vásárlási Döntésteszt / Audit” helyett emberközeli, világos megnevezés: **„Megvegyem? (Nézzük meg, mennyire érdemes megvenned a kiszemelt darabot!)”**.
   - Az „Audit” szó (Stílus Audit, Szabás Audit, Minőségi Audit stb.) teljes kivezetése a felhasználói felületről és gombokról; helyette természetes kifejezések: *Elemzés, Stílus-ellenőrzés, Szakértői vélemény, Összhang-vizsgálat*.
@@ -46,11 +49,6 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
   - A felhasználói felület letisztítása a felesleges, zavaró technikai badge-ektől (pl. `PurchaseAdvisorView.jsx`-ben az *„Egyéni stílusszabály-ellenőrzés aktív (X)”* doboz, felesleges debug/státusz jelölők).
 - [ ] **Magyarázó Blokkok Háttérbe Helyezése („Hogyan segít az AI...”, Edukációs Panelek):**
   - A nézeteken (Vásárlási Tanácsadó, Stylist, Kapszula Gap) közvetlenül helyet foglaló nagy magyarázó kártyák (pl. *„Hogyan segít az AI megelőzni a rossz vásárlási döntéseket?”*) átalakítása diszkrét, lenyitható („Tudj meg többet” / collapsible accordion vagy súgó modál) formátumba.
-- [ ] **Kapszula Ruhatár Index & Értékelési Formula Mélyreható Felülvizsgálata:**
-  - A kapszula ruhatár telítettségi és minőségi index számítási algoritmusának finomítása (szezonális lefedettség, állapotarányok, funkcionális hiányok súlyozása).
-- [ ] **GCP Service Account Jogosultság (Firebase Rules Deploy):** A `roles/firebaserules.admin` hozzárendelése a CI/CD service accounthoz a Google Cloud konzolon, ha a jövőben a Firestore szabályok deployját is a CI/CD-re bíznánk.
-- [ ] **Nagy Ruhatárak Megjelenítési Optimalizálása (Virtual List):** 300–500+ darabos ruhatárak esetén `react-window` vagy CSS optimalizáció.
-- [ ] **PWA Service Worker & Offline Kép Gyorsítótár:** Statikus assetek és teljes offline élmény biztosítása.
 - [ ] **Kapszula Ruhatár Index & Értékelési Formula Mélyreható Felülvizsgálata:**
   - A kapszula ruhatár telítettségi és minőségi index számítási algoritmusának finomítása (szezonális lefedettség, állapotarányok, funkcionális hiányok súlyozása).
 - [ ] **GCP Service Account Jogosultság (Firebase Rules Deploy):** A `roles/firebaserules.admin` hozzárendelése a CI/CD service accounthoz a Google Cloud konzolon, ha a jövőben a Firestore szabályok deployját is a CI/CD-re bíznánk.
