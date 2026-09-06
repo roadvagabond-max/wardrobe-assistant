@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.5.7` (Production)
+- **Aktuális Verzió:** `v1.5.8` (Production)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,13 +13,14 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4)
+### ✅ Lezárt Javítások (v1.5.4 – v1.5.8)
 - [x] **Firebase API kulcsok gomb eltávolítása:** Az `AuthModal.jsx`-ből törölve a felesleges, felhasználót zavaró API kulcs konfigurációs gomb (a kulcsot a szerveroldali Secret Manager védi).
 - [x] **Demo Mód gomb eltávolítása:** A belépési felugró ablakból törölve a megtévesztő „Folytatás Helyi Demo Módban” gomb; helyette tiszta, egyértelmű Google Belépési felület működik.
 - [x] **Vendég & Bejelentkezett Felhasználói Adatszeparáció:** Belépés nélkül kizárólag egy semleges, nem valós személyhez köthető bemutató minta kapszula (`SAMPLE_SHOWCASE_WARDROBE`) és általános vendégprofil (`DEFAULT_GUEST_PROFILE`) látható. A valós felhasználó privát adatai (profil, testméretek, egyedi szabályok, ruhatár) csak és kizárólag sikeres Google bejelentkezés után töltődnek be a Firestore-ból, és kijelentkezéskor automatikusan kiürülnek.
 - [x] **Vendég Munkamenet LocalStorage Tisztítása & Szett/Profil Izoláció:** A `clearGuestSessionStorage` motorral kijelentkezéskor és demó resetkor a böngésző helyi tárolójából (`localStorage`) teljesen és automatikusan törlődnek a generált szettek (`sartorial_last_generated_outfits`, `saved_outfits`, `sartorial_last_anchor_items`, `sartorial_last_custom_event`, `stylist_chat_history`), garantálva a tiszta vendégállapotot.
 - [x] **Minta Ruhatár (`SAMPLE_SHOWCASE_WARDROBE`) Ruha-Kép Egyezés & Jogtiszta Fotók:** A 12 db bemutató ruha és a fallback fotók auditálása és cseréje. A képeltérések (női ruha ➔ férfi nadrág, hátizsák ➔ öv, pufidzseki ➔ teveszínű kabát) megszűntek; a darabok 100%-ban jogtiszta, megegyező Unsplash divatfotókkal és valós, népszerű márkákkal (Massimo Dutti, Eton, SuitSupply, Zara, Mango Man, Berwick 1707) futnak.
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
+- [x] **Email & Jelszó Autentikáció (Firebase Email/Password Auth):** Standard Email + Jelszavas bejelentkezés, új fiók regisztráció (névvel és minimum 6 karakteres jelszóval), jelszó-visszaállító link küldése (`sendPasswordResetEmail`), valamint magyar nyelvű hibakezelés integrálva a Google OAuth alternatívájaként az `AuthModal.jsx`, `AuthContext.jsx` és `firebase.js` rétegekbe.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
 - [ ] **„Megvegyem?” Átnevezés & „Audit” Szó Kivezetése a UI-ból:**
@@ -34,7 +35,6 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
     - Hogyan jön létre a kedvelt színek listája (fotó alapú színtípus elemzés vs. manuális választás vs. gardrób színmegoszlás)?
     - Hogyan változik/frissül a paletta az új ruhák bekerülésével és a stílusfejlődéssel?
     - Transzparens és könnyen szerkeszthető színpaletta-kezelő felület a `StyleDNAView.jsx`-ben, összehangolva az AI Stylist színválasztásaival.
-- [ ] **Multi-Provider Felhasználói Hitelesítés (Email/Password & Facebook Auth):** A Google fiókos belépés mellé hagyományos Email + Jelszavas regisztráció/bejelentkezés (jelszóemlékeztetővel), valamint Facebook OAuth bejelentkezés integrálása az `AuthModal.jsx`-be és a `firebase.js`-be.
 - [ ] **GCP Service Account Jogosultság (Firebase Rules Deploy):** A `roles/firebaserules.admin` hozzárendelése a CI/CD service accounthoz a Google Cloud konzolon, ha a jövőben a Firestore szabályok deployját is a CI/CD-re bíznánk.
 - [ ] **Nagy Ruhatárak Megjelenítési Optimalizálása (Virtual List):** 300–500+ darabos ruhatárak esetén `react-window` vagy CSS optimalizáció.
 - [ ] **PWA Service Worker & Offline Kép Gyorsítótár:** Statikus assetek és teljes offline élmény biztosítása.

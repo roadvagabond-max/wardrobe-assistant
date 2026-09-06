@@ -1,5 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { auth, db, loginWithGoogle, logoutUser, isFirebaseConfigured } from '../services/firebase';
+import { 
+  auth, 
+  db, 
+  loginWithGoogle, 
+  loginWithEmail, 
+  registerWithEmail, 
+  sendPasswordReset, 
+  logoutUser, 
+  isFirebaseConfigured, 
+  getAuthErrorMessage 
+} from '../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { SAMPLE_SHOWCASE_WARDROBE, DEFAULT_GUEST_PROFILE, DEFAULT_NEW_USER_PROFILE } from '../data/mockWardrobe';
@@ -416,6 +426,39 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const handleEmailLogin = async (email, password) => {
+    try {
+      const res = await loginWithEmail(email, password);
+      setCurrentUser(res.user);
+      setIsDemoMode(false);
+      return res.user;
+    } catch (err) {
+      console.error('Email bejelentkezési hiba:', err);
+      throw err;
+    }
+  };
+
+  const handleEmailRegister = async (email, password, displayName = '') => {
+    try {
+      const res = await registerWithEmail(email, password, displayName);
+      setCurrentUser(res.user);
+      setIsDemoMode(false);
+      return res.user;
+    } catch (err) {
+      console.error('Email regisztrációs hiba:', err);
+      throw err;
+    }
+  };
+
+  const handlePasswordReset = async (email) => {
+    try {
+      return await sendPasswordReset(email);
+    } catch (err) {
+      console.error('Jelszó-visszaállítási hiba:', err);
+      throw err;
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logoutUser();
@@ -684,6 +727,10 @@ export function AuthProvider({ children }) {
         saveOutfit,
         resetToDemoData,
         loginWithGoogle: handleGoogleLogin,
+        loginWithEmail: handleEmailLogin,
+        registerWithEmail: handleEmailRegister,
+        sendPasswordReset: handlePasswordReset,
+        getAuthErrorMessage,
         logout: handleLogout
       }}
     >
