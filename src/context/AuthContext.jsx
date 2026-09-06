@@ -14,6 +14,7 @@ import {
   deleteRule as deleteStoredRule 
 } from '../services/sartorialRules';
 
+const AuthContext = createContext(null);
 const SHOWCASE_VERSION_KEY = 'sartorial_showcase_version';
 const CURRENT_SHOWCASE_VERSION = 'v1.5.5_20260906_v1';
 
