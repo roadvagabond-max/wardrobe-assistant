@@ -18,7 +18,7 @@ export default function Header({ onOpenSettings, onOpenAuth, onOpenHelp, weather
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <h1 className="text-base sm:text-lg lg:text-xl font-bold tracking-tight font-serif gold-gradient-text truncate">
-                SARTORIAL WARDROBE
+                AI WARDROBE ASSISTANT
               </h1>
               {isAdmin ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-500/10 shrink-0 animate-pulse">
@@ -61,11 +61,11 @@ export default function Header({ onOpenSettings, onOpenAuth, onOpenHelp, weather
             <span>{wardrobe.length} db ruha</span>
           </div>
 
-          {/* Sartorial Help Guide Button */}
+          {/* Help Guide Button */}
           <button 
             onClick={onOpenHelp}
             className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:text-amber-200 transition-all flex items-center gap-1.5 shadow-sm"
-            title="Sartorial Útmutató & Súgó"
+            title="Útmutató & Súgó"
             aria-label="Súgó és Útmutató megnyitása"
           >
             <HelpCircle className="w-4 h-4 sm:w-4 sm:h-4 text-[var(--accent-gold)]" />
@@ -76,7 +76,7 @@ export default function Header({ onOpenSettings, onOpenAuth, onOpenHelp, weather
           <button 
             onClick={onOpenSettings}
             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[var(--text-secondary)] hover:text-white transition-colors"
-            title="Beállítások & API Kulcsok"
+            title="Beállítások"
           >
             <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
@@ -88,7 +88,7 @@ export default function Header({ onOpenSettings, onOpenAuth, onOpenHelp, weather
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-all"
             >
               {currentUser.photoURL ? (
-                <img src={currentUser.photoURL} alt="Avatar" width="20" height="20" className="w-5 h-5 rounded-full object-cover" />
+                <img src={currentUser.photoURL} alt="Profilkép" width="20" height="20" className="w-5 h-5 rounded-full object-cover" />
               ) : (
                 <User className="w-4 h-4" />
               )}

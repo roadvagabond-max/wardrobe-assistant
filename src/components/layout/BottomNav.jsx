@@ -7,7 +7,7 @@ export default function BottomNav({ activeTab, setActiveTab }) {
     { id: 'wardrobe', label: 'Gardrób', icon: Layers },
     { id: 'advisor', label: 'Megvegyem?', icon: ShoppingBag, badge: 'Audit' },
     { id: 'stylist', label: 'Stylist', icon: MessageSquare },
-    { id: 'profile', label: 'Stílus DNS', icon: UserCheck }
+    { id: 'profile', label: 'Stílusprofil', icon: UserCheck }
   ];
 
   return (
