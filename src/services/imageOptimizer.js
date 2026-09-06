@@ -186,20 +186,20 @@ export function getSmartGarmentImage(category = 'outerwear', colorName = 'bézs'
       beige: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80',
       navy: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=640&q=80',
       blue: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=640&q=80',
-      grey: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=640&q=80',
+      grey: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=640&q=80',
       black: 'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?w=640&q=80',
       default: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80'
     },
     shoes: {
-      brown: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=640&q=80',
-      black: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=640&q=80',
+      brown: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=640&q=80',
+      black: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=640&q=80',
       white: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=640&q=80',
-      default: 'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=640&q=80'
+      default: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=640&q=80'
     },
     accessories: {
-      brown: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=640&q=80',
-      black: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=640&q=80',
-      default: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=640&q=80'
+      brown: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=640&q=80',
+      black: 'https://images.unsplash.com/photo-1605518216938-7c31b7b14ad0?w=640&q=80',
+      default: 'https://images.unsplash.com/photo-1624222247344-550fb60583dc?w=640&q=80'
     }
   };
 

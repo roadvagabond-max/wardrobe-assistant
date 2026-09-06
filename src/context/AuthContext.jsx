@@ -343,14 +343,28 @@ export function AuthProvider({ children }) {
     setSartorialRules(updated);
   };
 
+  // Complete Guest Session Storage Isolation
+  const clearGuestSessionStorage = () => {
+    try {
+      localStorage.removeItem('sartorial_last_generated_outfits');
+      localStorage.removeItem('sartorial_last_anchor_items');
+      localStorage.removeItem('sartorial_last_custom_event');
+      localStorage.removeItem('sartorial_last_selected_event');
+      localStorage.removeItem('saved_outfits');
+      localStorage.removeItem('stylist_chat_history');
+      localStorage.removeItem('capsule_gaps_cache');
+      localStorage.removeItem('sartorial_last_ai_gaps');
+      localStorage.removeItem('user_style_profile');
+      localStorage.removeItem('wardrobe_items');
+    } catch (_) {}
+  };
+
   // Reset to Sample Showcase Data
   const resetToDemoData = () => {
+    clearGuestSessionStorage();
     setWardrobe(SAMPLE_SHOWCASE_WARDROBE);
     setProfile(DEFAULT_GUEST_PROFILE);
-    try {
-      localStorage.setItem('wardrobe_items', JSON.stringify(SAMPLE_SHOWCASE_WARDROBE));
-      localStorage.setItem('user_style_profile', JSON.stringify(DEFAULT_GUEST_PROFILE));
-    } catch (_) {}
+    setSavedOutfits([]);
   };
 
   const handleGoogleLogin = async () => {
@@ -370,6 +384,7 @@ export function AuthProvider({ children }) {
     } catch (e) {
       console.warn('Logout figyelmeztetés:', e);
     }
+    clearGuestSessionStorage();
     setCurrentUser(null);
     setIsDemoMode(true);
     setRoleState('user');
@@ -377,12 +392,6 @@ export function AuthProvider({ children }) {
     setWardrobe(SAMPLE_SHOWCASE_WARDROBE);
     setProfile(DEFAULT_GUEST_PROFILE);
     setSavedOutfits([]);
-    try {
-      localStorage.removeItem('user_style_profile');
-      localStorage.removeItem('wardrobe_items');
-      localStorage.removeItem('saved_outfits');
-      localStorage.removeItem('capsule_gaps_cache');
-    } catch (_) {}
   };
 
   const setRole = async (newRole) => {

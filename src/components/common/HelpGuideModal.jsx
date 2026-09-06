@@ -114,112 +114,112 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
               </div>
             </div>
 
-            <div className="p-4 rounded-xl bg-black/50 border border-white/5 space-y-1.5">
-              <h5 className="font-bold text-white text-xs">💡 Pro Tipp:</h5>
-              <p className="text-[11px] leading-relaxed">
-                Minden ruhához érdemes megadni a <strong>márkát</strong> és a <strong>méretet</strong> is (pl. <em>Boglioli - 50</em>, <em>Eton - 40</em>, <em>Incotex - 32/32</em>). A Stílus DNS ebből automatikusan felépíti a személyes mérettérképedet, ami új ruhák vásárlásakor megmondja a pontos ajánlott méretedet!
-              </p>
+              <div className="p-4 rounded-xl bg-black/50 border border-white/5 space-y-1.5">
+                <h5 className="font-bold text-white text-xs">💡 Pro Tipp:</h5>
+                <p className="text-[11px] leading-relaxed">
+                  Minden ruhához érdemes megadni a <strong>márkát</strong> és a <strong>méretet</strong> is (pl. <em>Massimo Dutti - 50 / M</em>, <em>Eton - 40</em>, <em>Zara - 32/32</em>, <em>Berwick - 42.5</em>). A Stílus DNS ebből automatikusan felépíti a személyes mérettérképedet, ami új ruhák vásárlásakor megmondja a pontos ajánlott méretedet!
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Tab 2: Színtípus & Stílus DNS */}
-        {activeTab === 'dna' && (
-          <div className="space-y-4 text-xs text-[var(--text-secondary)] animate-fade-in">
-            <div className="p-4 rounded-xl bg-black/40 border border-[var(--border-gold)]/60 space-y-3">
-              <div className="flex items-center gap-2">
-                <Camera className="w-4 h-4 text-[var(--accent-gold)]" />
-                <h4 className="font-serif font-bold text-white text-sm">
-                  AI Színtípus Meghatározás Természetes Fényű Szelfiből
+          {/* Tab 2: Színtípus & Stílus DNS */}
+          {activeTab === 'dna' && (
+            <div className="space-y-4 text-xs text-[var(--text-secondary)] animate-fade-in">
+              <div className="p-4 rounded-xl bg-black/40 border border-[var(--border-gold)]/60 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-[var(--accent-gold)]" />
+                  <h4 className="font-serif font-bold text-white text-sm">
+                    AI Színtípus Meghatározás Természetes Fényű Szelfiből
+                  </h4>
+                </div>
+                <p className="leading-relaxed">
+                  Készíts egy szelfit természetes ablakfényben (lehetőleg smink és erős napszemüveg nélkül). A <strong>Gemini 3.7 Flash</strong> multimodális neurális modell elemzi a bőröd alaptónusát (hideg/meleg), a szemed és hajad kontrasztját, és besorol a 12 évszakos színelméletbe (pl. <em>Meleg Ősz</em>, <em>Lágy Nyár</em>, <em>Sötét Tél</em>).
+                </p>
+                <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-[11px] text-amber-200">
+                  ✦ <strong>Automatikus integráció:</strong> A meghatározott ragyogó színpaletta automatikusan frissíti a kedvenc színeidet, és az AI Stylist előnyben részesíti ezeket a szettek összeállításakor!
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2">
+                <h4 className="font-serif font-bold text-white text-sm flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-amber-300" />
+                  <span>Egyéni Stílusszabályok (Szabad Szöveges Tanítás)</span>
                 </h4>
-              </div>
-              <p className="leading-relaxed">
-                Készíts egy szelfit természetes ablakfényben (lehetőleg smink és erős napszemüveg nélkül). A <strong>Gemini 3.7 Flash</strong> multimodális neurális modell elemzi a bőröd alaptónusát (hideg/meleg), a szemed és hajad kontrasztját, és besorol a 12 évszakos színelméletbe (pl. <em>Meleg Ősz</em>, <em>Lágy Nyár</em>, <em>Sötét Tél</em>).
-              </p>
-              <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-[11px] text-amber-200">
-                ✦ <strong>Automatikus integráció:</strong> A meghatározott ragyogó színpaletta automatikusan frissíti a kedvenc színeidet, és az AI Stylist előnyben részesíti ezeket a szettek összeállításakor!
+                <p className="leading-relaxed">
+                  A Stílus DNS felületen szabadon megfogalmazhatsz bármilyen szabályt magyarul. Példák:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div className="p-2.5 rounded-lg bg-black/60 border border-rose-500/20 text-rose-300">
+                    ❌ <em>"Nem szeretem a galléros pólóingeket"</em>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-black/60 border border-emerald-500/20 text-emerald-300">
+                    ✅ <em>"Csak 100% természetes anyagok (gyapjú, len, pamut)"</em>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-black/60 border border-rose-500/20 text-rose-300">
+                    ❌ <em>"Kerülöm a skinny, túl szűk nadrágokat"</em>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-black/60 border border-emerald-500/20 text-emerald-300">
+                    ✅ <em>"Zakóhoz mindig hosszú ujjú inget hordok"</em>
+                  </div>
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)] pt-1">
+                  Az AI minden szettgenerálásnál, kapszula auditnál és vásárlási ellenőrzésnél azonnal érvényesíti ezeket a szabályokat!
+                </p>
               </div>
             </div>
+          )}
 
-            <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2">
-              <h4 className="font-serif font-bold text-white text-sm flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-amber-300" />
-                <span>Egyéni Stílusszabályok (Szabad Szöveges Tanítás)</span>
+          {/* Tab 3: Ruhafelvitel */}
+          {activeTab === 'upload' && (
+            <div className="space-y-4 text-xs text-[var(--text-secondary)] animate-fade-in">
+              <h4 className="font-serif font-bold text-white text-sm">
+                4 Szupergyors Módszer Ruhák Rögzítésére:
               </h4>
-              <p className="leading-relaxed">
-                A Stílus DNS felületen szabadon megfogalmazhatsz bármilyen szabályt magyarul. Példák:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
-                <div className="p-2.5 rounded-lg bg-black/60 border border-rose-500/20 text-rose-300">
-                  ❌ <em>"Nem szeretem a galléros pólóingeket"</em>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
+                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                    <span>1. Fotózás / Kamera</span>
+                  </span>
+                  <p className="text-[11px] leading-relaxed">
+                    Fotózd le a ruhát terítve vagy vállfán, természetes fényben. Az AI másodpercek alatt felismeri a kategóriát, színt és anyagot.
+                  </p>
                 </div>
-                <div className="p-2.5 rounded-lg bg-black/60 border border-emerald-500/20 text-emerald-300">
-                  ✅ <em>"Csak 100% természetes anyagok (gyapjú, len, pamut)"</em>
+
+                <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
+                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <span>📋</span>
+                    <span>2. Vágólap (Ctrl+V)</span>
+                  </span>
+                  <p className="text-[11px] leading-relaxed">
+                    Bármelyik webshopban jobb klikk a ruhafotóra ➔ <em>"Kép másolása"</em>, majd nyomj <kbd className="px-1 py-0.5 bg-white/10 rounded font-mono text-[10px] text-white">Ctrl + V</kbd>-t az appban!
+                  </p>
                 </div>
-                <div className="p-2.5 rounded-lg bg-black/60 border border-rose-500/20 text-rose-300">
-                  ❌ <em>"Kerülöm a skinny, túl szűk nadrágokat"</em>
+
+                <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
+                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <span>🔗</span>
+                    <span>3. Webshop URL Link</span>
+                  </span>
+                  <p className="text-[11px] leading-relaxed">
+                    Másold be a termék linkjét (Zara, Massimo Dutti, Reserved, H&M, Mango). A rendszer automatikusan letölti a gyári képet és leírást.
+                  </p>
                 </div>
-                <div className="p-2.5 rounded-lg bg-black/60 border border-emerald-500/20 text-emerald-300">
-                  ✅ <em>"Zakóhoz mindig hosszú ujjú inget hordok"</em>
+
+                <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
+                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <span>🏷️</span>
+                    <span>4. Termékkód (SKU)</span>
+                  </span>
+                  <p className="text-[11px] leading-relaxed">
+                    Pl. Next Direct termékkódok (pl. <em>AA1234</em>). A rendszer 0 másodperc alatt kikeresi a CDN képet a gyári szerverekről.
+                  </p>
                 </div>
-              </div>
-              <p className="text-[11px] text-[var(--text-muted)] pt-1">
-                Az AI minden szettgenerálásnál, kapszula auditnál és vásárlási ellenőrzésnél azonnal érvényesíti ezeket a szabályokat!
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 3: Ruhafelvitel */}
-        {activeTab === 'upload' && (
-          <div className="space-y-4 text-xs text-[var(--text-secondary)] animate-fade-in">
-            <h4 className="font-serif font-bold text-white text-sm">
-              4 Szupergyors Módszer Ruhák Rögzítésére:
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
-                <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                  <Camera className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                  <span>1. Fotózás / Kamera</span>
-                </span>
-                <p className="text-[11px] leading-relaxed">
-                  Fotózd le a ruhát terítve vagy vállfán, természetes fényben. Az AI másodpercek alatt felismeri a kategóriát, színt és anyagot.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
-                <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                  <span>📋</span>
-                  <span>2. Vágólap (Ctrl+V)</span>
-                </span>
-                <p className="text-[11px] leading-relaxed">
-                  Bármelyik webshopban jobb klikk a ruhafotóra ➔ <em>"Kép másolása"</em>, majd nyomj <kbd className="px-1 py-0.5 bg-white/10 rounded font-mono text-[10px] text-white">Ctrl + V</kbd>-t az appban!
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
-                <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                  <span>🔗</span>
-                  <span>3. Webshop URL Link</span>
-                </span>
-                <p className="text-[11px] leading-relaxed">
-                  Másold be a termék linkjét (Zara, Massimo Dutti, Reserved, H&M, Mango). A rendszer automatikusan letölti a gyári képet és leírást.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
-                <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                  <span>🏷️</span>
-                  <span>4. Termékkód (SKU)</span>
-                </span>
-                <p className="text-[11px] leading-relaxed">
-                  Pl. Next Direct termékkódok (pl. <em>AA6536</em>). A rendszer 0 másodperc alatt kikeresi a CDN képet a gyári szerverekről.
-                </p>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Tab 4: AI Stylist & Rétegezés */}
         {activeTab === 'stylist' && (
