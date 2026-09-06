@@ -1,21 +1,15 @@
 import React, { useState } from 'react';
 import { Sparkles, Plus, Check, X } from 'lucide-react';
-
-const PRESET_RULES = [
-  'Nem szeretem a pólóingeket',
-  'Csak 100% természetes anyagok (gyapjú, len, pamut, selyem, kasmír, bőr)',
-  'Kerülöm a túl szűk / skinny szabásokat, a slim tailored sziluettet részesítem előnyben',
-  'Zakóhoz és elegáns szettekhez nem hordok kereknyakú pólót',
-  'Kerülöm a műszálas poliésztert és akrilt',
-  'Zakóhoz és öltönyhöz csak velúrt vagy minőségi bőrcipőt hordok',
-  'Fekete felsőrészek helyett a sötétkéket, teveszínt és antracitot preferálom'
-];
+import { getProfileDemographics, getDemographicPresetRules } from '../../../services/demographics';
 
 export default function CustomRulesCard({ 
   profile, 
   onUpdateProfile 
 }) {
   const [newRuleInput, setNewRuleInput] = useState('');
+
+  const demographics = getProfileDemographics(profile);
+  const presetRules = getDemographicPresetRules(demographics);
 
   const currentRules = Array.isArray(profile?.customStylingRules) 
     ? profile.customStylingRules 
@@ -99,7 +93,7 @@ export default function CustomRulesCard({
           Gyakori tanítási javaslatok (Kattints a hozzáadáshoz):
         </span>
         <div className="flex flex-wrap gap-1.5">
-          {PRESET_RULES.map((preset, pIdx) => {
+          {presetRules.map((preset, pIdx) => {
             const isAdded = currentRules.includes(preset);
             return (
               <button

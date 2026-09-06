@@ -148,6 +148,9 @@ export async function analyzeClothingImage(imageBase64OrUrl, webshopContext = {}
       ].filter(Boolean).join('\n');
 
       const demographics = getProfileDemographics(userProfile);
+      const demographicRules = getDemographicSartorialInstructions(demographics, userProfile);
+      const dynamicSartorialRules = formatRulesForPrompt(null, demographics);
+
       const userProfileInfo = userProfile && Object.keys(userProfile).length > 0 ? `
 --- FELHASZNÁLÓI STÍLUSPROFIL & ADOTTSÁGOK ---
 Név: ${userProfile.name || 'Felhasználó'}
@@ -174,43 +177,51 @@ ${targetFocusInstruction}
 ${webshopTextInfo ? `\n--- WEBSHOP TERMÉKADATOK ÉS LINK ---\n${webshopTextInfo}\n` : ''}
 ${userProfileInfo}
 
+${demographicRules}
+
+👔 AKTÍV SARTORIAL HARMÓNIA- ÉS RÉTEGEZÉSI SZABÁLYZAT:
+${dynamicSartorialRules}
+
 SZABÁLYOK:
 1. "category": "outerwear" (Zakó & Kabát) | "knitwear" (Pulóverek & Kötöttáru) | "tops" (Ingek & Felsők & Pólók) | "bottoms" (Nadrág) | "shoes" (Cipő & Lábbeli) | "dresses" (Ruhák & Egyrészesek) | "skirts" (Szoknyák) | "accessories" (Kiegészítők).
 2. "formality": "Casual (Laza)" | "Smart Casual" | "Business Casual" | "Business Formal" | "Black Tie & Formal".
-3. "styleArchetype": "Klasszikus & Időtlen" | "Old Money & Quiet Luxury" | "Smart Urban" | "Streetwear" | "Olasz Sprezzatura" | "Minimalista" | "Vintage & Retro".
+3. "styleArchetype": ${demographics.isChild ? '"Kényelmes & Játszós" | "Óvodai / Iskolai Alapdarab" | "Csinos Ünnepi" | "Sportos & Laza" | "Meleg Réteges"' : '"Klasszikus & Időtlen" | "Old Money & Quiet Luxury" | "Smart Urban" | "Streetwear" | "Olasz Sprezzatura" | "Minimalista" | "Vintage & Retro"'}.
 4. "condition": "Vadonatúj / Kifogástalan" | "Megkímélt / Kiváló" | "Játszós / Kopott" | "Javításra vár" | "Lecserélendő".
 5. Gallér- és Ujjtípus Specifikáció (Kiemelten fontos):
-   - A névben ("name") és címkékben ("tags") pontosan tüntesd fel a gallér- és ujjtípust: pl. 'Állógalléros Ing', 'Kereknyakú Merinó Pulóver', 'Garbó Pulóver', 'Rövid Ujjú Kötött Póló', 'Csónaknyakú Felső', 'Hosszú Ujjú Slim Fit Ing'!
-6. Szöveges ajánlások:
-   - "stylingTip": Mivel érdemes kombinálni/hordani a sartorial szabályok szerint? (Pl. állógalléros ingnél jelezd, hogy nyitott kardigánnal vagy önmagában viselendő, sosem zárt pulóverrel vagy hajtókás zakóval).
+   - A névben ("name") és címkékben ("tags") pontosan tüntesd fel a gallér- és ujjtípust: pl. 'Állógalléros Ing', 'Kereknyakú Merinó Pulóver', 'Garbó Pulóver', 'Rövid Ujjú Kötött Póló', 'Csónaknyakú Felső', 'Hosszú Ujjú Slim Fit Ing', 'Puha Pamut Gyerekpulóver'!
+6. Szöveges ajánlások & Korosztályos Rétegezés:
+   - "stylingTip": Mivel érdemes kombinálni/hordani a korosztálynak és nemnek megfelelő szabályok szerint?
+     * GYERMEK ÉS BABA RUHÁKNÁL: Pulóver vagy kötöttáru alá KIZÁRÓLAG puha pamut bodyt, pamut pólót vagy hosszú ujjú pamut alsót javasolj! SOHA NE javasolj merev galléros inget a gyerekpulóver alá!
+     * FELNŐTT NŐI RUHÁKNÁL: Nőies szabások, finom rétegek, dekoltázs és lágy esésű anyagok harmóniája.
+     * FELNŐTT FÉRFI RUHÁKNÁL: Férfi szabások és a választott stílusirányzatnak megfelelő rétegek.
    - "whenToWear": Mikor és milyen alkalmakkor érdemes viselni? (Események, napszakok, hőmérsékleti sáv).
    - "colorHarmony": Hogyan harmonizál a darab színe a felhasználó bőrtónusával / színtípusával?
-   - "bodyFitAdvice": Hogyan áll a szabás a felhasználó testalkatán?
+   - "bodyFitAdvice": Hogyan áll a szabás a felhasználó testalkatán és életkorában?
    - "stylingAdvice": Szakértői stílusjellemzés a darabról.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
-  "name": "Pontos és elegáns magyar megnevezés a gallér- és ujjhosszal (pl. 'Navy Kék Állógalléros Len Ing' vagy 'Homokbézs Rövid Ujjú Kötött Póló')",
+  "name": "Pontos és elegáns magyar megnevezés a gallér- és ujjhosszal (pl. 'Navy Kék Állógalléros Len Ing' vagy 'Homokbézs Pamut Kereknyakú Gyerekpulóver')",
   "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "dresses" | "skirts" | "accessories",
   "subCategory": "blazer" | "knitwear" | "shirt" | "t-shirt" | "polo" | "trousers" | "jeans" | "loafers" | "sneakers" | "dress" | "skirt" | "coat" | "other",
   "color": "Valódi fő szín magyarul (pl. Sötétkék, Fekete, Fehér, Homokbézs, Olívazöld)",
   "colorHex": "#hex_színkód",
-  "material": "Részletes anyag és szövés (pl. 100% Pima Pamut Pique)",
-  "brand": "Márkanév / Gyártó ha felismerhető (pl. Massimo Dutti, Zara, Boglioli)",
-  "size": "Méretjelölés ha kivehető vagy webshopból kinyerhető (pl. 'M', 'L', '50', '32/32', '42.5')",
+  "material": "Részletes anyag és szövés (pl. 100% Organikus Pamut)",
+  "brand": "Márkanév / Gyártó ha felismerhető (pl. Massimo Dutti, Zara, Next Direct)",
+  "size": "Méretjelölés ha kivehető vagy webshopból kinyerhető (pl. 'M', 'L', '104/110', '4-5 év', '32/32')",
   "qualityScore": 9.2,
   "season": ["tavasz", "nyar", "osz", "tel"],
-  "formality": "Smart Casual",
-  "styleArchetype": "Old Money & Quiet Luxury",
+  "formality": "Casual (Laza)",
+  "styleArchetype": "Smart Urban",
   "condition": "Vadonatúj / Kifogástalan",
-  "stylingTip": "Mivel hordd: Konkrét kombinációs javaslatok a gallér- és rétegzési szabályok szerint",
+  "stylingTip": "Mivel hordd: Konkrét kombinációs javaslatok a korosztálynak megfelelő rétegezési szabályok szerint",
   "whenToWear": "Mikor hordd: Események és hőmérséklet",
   "colorHarmony": "A szín és tónus harmóniája a felhasználóval",
-  "bodyFitAdvice": "Hogyan áll a szabás a felhasználó testalkatán",
-  "stylingAdvice": "Karakteres, sokoldalú darab.",
+  "bodyFitAdvice": "Hogyan áll a szabás a felhasználó testalkatán és életkorában",
+  "stylingAdvice": "Karakteres, kényelmes és praktikus darab.",
   "personalMatchScore": 95,
   "imageUrl": "Ha a Google Keresési találatokban találsz közvetlen termékfotó URL-t, add meg, különben hagyd üresen",
-  "tags": ["alapdarab", "állógallér", "hosszú ujjú", "pamut"]
+  "tags": ["alapdarab", "pamut", "kényelmes"]
 }`;
 
       const parts = [{ text: prompt }];
@@ -683,16 +694,16 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
       const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
         ? styleProfile.customStylingRules
         : [];
-      const dynamicSartorialRules = formatRulesForPrompt();
+
+      const demographics = getProfileDemographics(styleProfile);
+      const demographicRules = getDemographicSartorialInstructions(demographics, styleProfile);
+      const dynamicSartorialRules = formatRulesForPrompt(null, demographics);
 
       const thermalDesc = styleProfile.thermalPreference === 'coldSensitive'
         ? 'Fázósabb alkat (szereti a meleg rétegeket és a védő textúrákat hűvösben)'
         : styleProfile.thermalPreference === 'warmSensitive'
         ? 'Melegkedvelő alkat (a szellős pamut/len anyagokat és könnyed rétegeket részesíti előnyben)'
         : 'Kiegyensúlyozott / Normál hőérzet';
-
-      const demographics = getProfileDemographics(styleProfile);
-      const demographicRules = getDemographicSartorialInstructions(demographics, styleProfile);
 
       const prompt = `Te egy világklasszis személyi stylist, divatelemző és kapszula ruhatár döntéstámogató vagy.
 ELEMEZD A MEGADOTT RUHADARABOT KIZÁRÓLAG A WEBSHOPBAN / FOTÓN TALÁLT VALÓS ADATOK ALAPJÁN!
@@ -724,7 +735,7 @@ SZIGORÚ VALÓS ADAT ELV ÉS ANTI-HALLUCINÁCIÓS SZABÁLYOK:
 1. 👔 KOMBINÁLHATÓSÁG & 3 KOMPLETT OUTFIT:
    - Készíts 3 különböző komplett, hordható outfitet a kiszemelt darab és a meglévő ruhatár elemeiből, szigorúan betartva a korosztálynak és stílusnak megfelelő rétegezési szabályokat!
    - KÖTELEZŐ ELEMEK:
-     * 👔 Bázis felső ('tops' - ing vagy minőségi pamut póló közvetlenül a bőrön; ha a céltermék garbó vagy kötött felső, az maga a bázis).
+     * 👔 Bázis felső ('tops' - ${demographics.isChild ? 'puha pamut póló, pamut body vagy kényelmes hosszú ujjú felső közvetlenül a bőrön' : 'ing vagy minőségi pamut póló közvetlenül a bőrön; ha a céltermék garbó vagy kötött felső, az maga a bázis'}).
      * 👖 Alsó ('bottoms' - nadrág vagy szoknya a ruhatárból).
      * 👞 Lábbeli ('shoes' - cipő / csizma / loafer / sneaker a ruhatárból).
      * 🎗️ Öv ('accessories' - elegáns/smart nadrágoknál öv a ruhatárból; gyermeknél vagy gumis derekú/szoknya viseletnél elhagyható).
@@ -1011,7 +1022,10 @@ export async function generateEventOutfits({ eventName, weather, anchorItemIds =
       const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
         ? styleProfile.customStylingRules
         : [];
-      const dynamicSartorialRules = formatRulesForPrompt();
+
+      const demographics = getProfileDemographics(styleProfile);
+      const demographicRules = getDemographicSartorialInstructions(demographics, styleProfile);
+      const dynamicSartorialRules = formatRulesForPrompt(null, demographics);
 
       // Fisher-Yates shuffle to eliminate LLM Primacy Bias
       const shuffledWardrobe = [...availableWardrobe];
@@ -1019,9 +1033,6 @@ export async function generateEventOutfits({ eventName, weather, anchorItemIds =
         const j = Math.floor(Math.random() * (i + 1));
         [shuffledWardrobe[i], shuffledWardrobe[j]] = [shuffledWardrobe[j], shuffledWardrobe[i]];
       }
-
-      const demographics = getProfileDemographics(styleProfile);
-      const demographicRules = getDemographicSartorialInstructions(demographics, styleProfile);
 
       const prompt = `Te egy világklasszis mester személyi stylist és adaptív ruhatár-tervezési szakértő vagy.
 
@@ -1305,20 +1316,33 @@ export async function analyzeWardrobeGaps(wardrobe = [], profile = {}) {
         ? profile.customStylingRules
         : [];
 
+      const demographics = getProfileDemographics(profile);
+      const demographicRules = getDemographicSartorialInstructions(demographics, profile);
+      const dynamicSartorialRules = formatRulesForPrompt(null, demographics);
+
       // Check seasonal footwear status in existing wardrobe
       const hasAutumnWinterShoes = wardrobe.some(w =>
         w.category === 'shoes' &&
         Array.isArray(w.season) &&
         (w.season.includes('osz') || w.season.includes('tel')) &&
-        (w.subCategory === 'boots' || w.subCategory === 'chelsea_boots' || w.name.toLowerCase().includes('csizma') || w.name.toLowerCase().includes('bakancs'))
+        (w.subCategory === 'boots' || w.subCategory === 'chelsea_boots' || w.name.toLowerCase().includes('csizma') || w.name.toLowerCase().includes('bakancs') || w.name.toLowerCase().includes('cipő'))
       );
 
-      const prompt = `Te egy mester kapszula ruhatár-tervező és sartorial stylist vagy.
-Elemezd a felhasználó gardróbját (${wardrobe.length} elem), testalkatát és stílusprofilját, és KÉSZÍTS EGY ÁTFOGÓ, 6–8 STRATÉGIAI KULCSDARABBÓL ÁLLÓ HIÁNYLISTÁT!
+      const prompt = `Te egy mester kapszula ruhatár-tervező és személyi stylist vagy.
+Elemezd a felhasználó gardróbját (${wardrobe.length} elem), életkorát, nemét, testalkatát és stílusprofilját, és KÉSZÍTS EGY ÁTFOGÓ, 6–8 STRATÉGIAI KULCSDARABBÓL ÁLLÓ HIÁNYLISTÁT!
+
+DEMOGRÁFIAI PROFIL:
+Név: ${profile.name || 'Felhasználó'}
+Nem & Életkor: ${demographics.gender}, ${demographics.age} éves (${demographics.bracketDescription})
 Stílusprofil: ${JSON.stringify({ height: profile.height, weight: profile.weight, body: profile.bodyType, preferredStyles: profile.preferredStyles, philosophy: profile.stylePhilosophy })}
+
+${demographicRules}
 
 🚫 FELHASZNÁLÓ EGYÉNI STÍLUSSZABÁLYAI & TILTÁSAI:
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
+
+👔 AKTÍV SARTORIAL HARMÓNIA- ÉS RÉTEGEZÉSI SZABÁLYZAT:
+${dynamicSartorialRules}
 
 MEGLÉVŐ RUHATÁR KATALÓGUS (${wardrobe.length} db darab):
 ${formatWardrobeToCompactCatalog(wardrobe)}
@@ -1326,22 +1350,21 @@ ${replacementCandidates.length > 0 ? `Elhasználódott / játszós darabok a sze
 
 KAPSZULA HIÁNYELEMZÉS & PRIORITÁSI IRÁNYELVEK:
 
-1. 🎯 ÁTFOGÓ 6-8 DARABOS HIÁNYLISTA (Különböző szintek és rétegek lefedése):
-   - 🔴 **Kritikus Hiány (Priority Score: 90–100):** Olyan funkcionális alapdarabok, amikből 0 db van, és nélkülük egész szezonok vagy szettek esnek ki (pl. őszi/téli bőr Chelsea csizma vagy harmonizáló bőröv).
-   - 🟡 **Fontos Kapszula Bázis (Priority Score: 80–89):** Nélkülözhetetlen rétegzési alapok (pl. prémium nehézsúlyú törtfehér pamut póló zakók és pulóverek alá, vagy meleg szürke gyapjú flanelnadrág).
-   - 🟢 **Nagy Varianciát Adó Kulcsdarabok (Priority Score: 70–79):** Olyan karakteres, sokoldalú új darabok, amik +8–15 új hordható szettet nyitnak meg a meglévő ruhákkal (pl. földszínű merinó/kasmír garbó, strukturálatlan teveszínű zakó, olívazöld chino).
-   - ⚪ **Stílusgazdagító / Nice to Have (Priority Score: 50–69):** Extra kifinomultságot adó kiegészítők (pl. 100% kasmír sál a télikabáthoz, hernyóselyem díszzsebkendő).
+1. 🎯 ÁTFOGÓ 6-8 DARABOS HIÁNYLISTA (Kifejezetten a felhasználó neméhez [${demographics.gender}] és életkorához [${demographics.age} éves, ${demographics.bracketDescription}] igazítva):
+   - 🔴 **Kritikus Hiány (Priority Score: 90–100):** Olyan funkcionális alapdarabok, amikből 0 db van, és nélkülük egész szezonok vagy szettek esnek ki ${demographics.isChild ? '(pl. vízálló és szélálló őszi gyerekdzseki, kényelmes tépőzáras vagy puha bőr lábbeli)' : (demographics.isFemale ? '(pl. őszi/téli női bőr bokacsizma, nőies szövetkabát)' : '(pl. őszi/téli bőr Chelsea csizma vagy harmonizáló bőröv)')}.
+   - 🟡 **Fontos Kapszula Bázis (Priority Score: 80–89):** Nélkülözhetetlen rétegzési alapok ${demographics.isChild ? '(pl. 100% pamut strapabíró gumis derekú nadrág, puha pamut pulóver)' : (demographics.isFemale ? '(pl. prémium pamut felső blézerek alá, elegáns női nadrág vagy midi ruha)' : '(pl. prémium pamut póló zakók és pulóverek alá, vagy gyapjú flanelnadrág)')}.
+   - 🟢 **Nagy Varianciát Adó Kulcsdarabok (Priority Score: 70–79):** Olyan karakteres, sokoldalú új darabok, amik +8–15 új hordható szettet nyitnak meg a meglévő ruhákkal.
+   - ⚪ **Stílusgazdagító / Nice to Have (Priority Score: 50–69):** Extra kényelmet vagy kifinomultságot adó kiegészítők.
 
 2. 👞 SZEZONÁLIS LÁBBELI GAP:
-   - ${!hasAutumnWinterShoes ? 'KÖTELEZŐ legalább egy prémium őszi/téli bőrlábbelit ajánlani (pl. Barna Full-Grain Bőr Chelsea Csizma)!' : 'A lábbeli kategória rendelkezik őszi/téli darabbal.'}
+   - ${!hasAutumnWinterShoes ? `KÖTELEZŐ legalább egy ${demographics.isChild ? 'strapabíró, kényelmes és vízálló gyerek őszi/téli lábbelit' : (demographics.isFemale ? 'női elegáns őszi/téli bőrcsizmát vagy bokacipőt' : 'férfi prémium őszi/téli bőrlábbelit')} ajánlani!` : 'A lábbeli kategória rendelkezik őszi/téli darabbal.'}
 
 3. 📐 SZABÁS & ANYAG:
-   - Kizárólag 100% természetes anyagokat ajánlj (gyapjú, len, kasmír, pamut, bőr).
+   - Kizárólag 100% természetes és bőrbarát anyagokat ajánlj (gyapjú, len, kasmír, pamut, bőr).
 
 🚫 SZIGORÚ SZABÁLYÉRTELMEZÉS & CSENDES SZABÁLYBETARTÁS:
-1. PONTOS, KATEGÓRIASPECIFIKUS ÉRTELMEZÉS (TILOS A TÚLÁLTALÁNOSÍTÁS!):
-   - Ha egy szabály konkrét darabra/kategóriára vonatkozik (pl. "Nem szeretem a fehér nadrágokat"), az KIZÁRÓLAG a nadrágokra érvényes!
-   - SZIGORÚAN TILOS kiterjeszteni más kategóriákra: a fehér pamut póló, fehér ing és fehér bőr sneaker a klasszikus ruhatár tökéletesen érvényes, engedélyezett alapdarabjai!
+1. PONTOS, KATEGÓRIASPECIFIKUS ÉRTELMEZÉS:
+   - Ha egy szabály konkrét darabra/kategóriára vonatkozik, az KIZÁRÓLAG az adott kategóriára érvényes!
 2. CSENDES SZABÁLYBETARTÁS:
    - A 'reason' mezőben SZIGORÚAN TILOS megemlíteni a felhasználó szabályait (TILOS leírni: "a preferenciáid miatt", "a szabályod szerint", "mivel tiltottad" stb.)!
    - Az indoklás KIZÁRÓLAG a darab minőségére, rétegezhetőségére és kombinációs értékére fókuszáljon!
@@ -1350,17 +1373,17 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT (6-8 darabbal):
 [
   {
     "id": "gap-1",
-    "title": "Pontos terméknév a szabással és anyaggal (pl. 'Sötétbarna Full-Grain Bőr Chelsea Csizma')",
-    "recommendedFit": "pl. Classic last / Slim tailored",
+    "title": "Pontos terméknév a szabással és anyaggal (pl. '${demographics.isChild ? 'Sötétkék Vízálló és Lélegző Gyermek Átmeneti Dzseki' : (demographics.isFemale ? 'Teveszínű Női Gyapjú Szövetkabát' : 'Sötétbarna Full-Grain Bőr Chelsea Csizma')}')",
+    "recommendedFit": "pl. ${demographics.isChild ? 'Kényelmes mozgásbarát szabás' : (demographics.isFemale ? 'Karcsúsított nőies szabás' : 'Slim tailored / Classic last')}",
     "priorityScore": 96,
     "priorityLevel": "Kritikus Alapdarab" | "Fontos Kapszula Bázis" | "Nagy Varianciát Adó Kulcsdarab" | "Stílusgazdagító / Nice to Have",
-    "impact": "+10 Új Őszi/Téli Outfit Variáció",
-    "estimatedPrice": "45 000 - 85 000 Ft",
+    "impact": "+10 Új Outfit Variáció",
+    "estimatedPrice": "${demographics.isChild ? '12 000 - 25 000 Ft' : '45 000 - 85 000 Ft'}",
     "category": "shoes" | "outerwear" | "knitwear" | "tops" | "bottoms" | "accessories",
     "season": "Ősz / Tél" | "Tavasz / Nyár" | "Egész évben",
     "reason": "Részletes szakmai indoklás, miért ez a kulcsdarab hiányzik a ruhatárból és hogyan növeli a kombinálhatóságot",
     "isReplacement": false,
-    "searchKeywords": "konkrét keresési kulcsszavak webshophoz (pl. mens dark brown leather chelsea boots)"
+    "searchKeywords": "konkrét keresési kulcsszavak webshophoz (pl. ${demographics.isChild ? 'kids waterproof breathable autumn jacket' : (demographics.isFemale ? 'womens camel wool coat' : 'mens dark brown leather chelsea boots')})"
   }
 ]`;
 
@@ -1839,9 +1862,9 @@ export async function auditManualOutfit({ items = [], eventName = 'Általános M
       const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
         ? styleProfile.customStylingRules
         : [];
-      const dynamicSartorialRules = formatRulesForPrompt();
       const demographics = getProfileDemographics(styleProfile);
       const demographicInstructions = getDemographicSartorialInstructions(demographics, styleProfile);
+      const dynamicSartorialRules = formatRulesForPrompt(null, demographics);
 
       const prompt = `Te egy mester személyi stylist, szín- és aránytanácsadó, valamint stílusszakértő vagy.
 A felhasználó saját maga állított össze egy szettet a meglévő ruhatárából az alábbi alkalomra és időjárási körülményekre.
@@ -1849,7 +1872,7 @@ A felhasználó saját maga állított össze egy szettet a meglévő ruhatárá
 A FELADATOD: Végezz építő jellegű, professzionális Stílus- és Összhang Auditot a szettre a felhasználó személyes profilja és Stílus DNS-e alapján!
 
 DEMOGRÁFIAI PROFIL ÉS KORCSOPORT SZABÁLYOK:
-- Felhasználó kategóriája: ${demographics.genderLabel} (${demographics.ageDesc || 'Felnőtt'}, korosztály: ${demographics.ageGroupKey})
+- Felhasználó kategóriája: ${demographics.gender} (${demographics.age} éves, ${demographics.bracketDescription})
 ${demographicInstructions}
 
 FELHASZNÁLÓ STÍLUSPROFILJA:
@@ -2022,9 +2045,9 @@ export async function chatWithMasterStylist({ messages = [], wardrobe = [], styl
     const customRules = Array.isArray(styleProfile.customStylingRules) && styleProfile.customStylingRules.length > 0
       ? styleProfile.customStylingRules
       : [];
-    const dynamicSartorialRules = formatRulesForPrompt();
     const demographics = getProfileDemographics(styleProfile);
     const demographicInstructions = getDemographicSartorialInstructions(demographics, styleProfile);
+    const dynamicSartorialRules = formatRulesForPrompt(null, demographics);
 
     const systemInstruction = `Te egy világklasszis, közvetlen, empatikus és rendkívül sokoldalú Mester Személyi Stylist vagy.
 A felhasználóval beszélgetsz, aki tanácsot kérhet tőled szettekről, konkrét ruhadarabjainak viseléséről, stílustrendekről, gardrób-bővítésről vagy esemény-specifikus megjelenésről.
@@ -2033,7 +2056,7 @@ A LEGFONTOSABB SZUPERERŐD:
 Teljes mélységében ismered a felhasználó SAJÁT DIGITÁLIS RUHATÁRÁT, SZEMÉLYES DEMOGRÁFIAI PROFILJÁT ÉS EGYÉNI SZABÁLYAIT!
 
 DEMOGRÁFIAI PROFIL ÉS KORCSOPORT SZABÁLYOK:
-- Felhasználó neme és korcsoportja: ${demographics.genderLabel} (${demographics.ageDesc || 'Felnőtt'}, korosztály: ${demographics.ageGroupKey})
+- Felhasználó neme és korcsoportja: ${demographics.genderLabel} (${demographics.age} éves, ${demographics.bracketDescription})
 ${demographicInstructions}
 
 FELHASZNÁLÓ STÍLUSPROFILJA:

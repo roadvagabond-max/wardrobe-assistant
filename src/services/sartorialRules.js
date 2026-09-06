@@ -2,6 +2,7 @@
 import { callGeminiApi, FAST_MODELS, getGeminiApiKey } from './gemini';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getProfileDemographics, isRuleApplicableToDemographics } from './demographics';
 
 export const SARTORIAL_CATEGORIES = [
   { id: 'all', label: 'Összes Szabály', icon: '✨' },
@@ -286,7 +287,7 @@ export const INITIAL_SARTORIAL_RULES = [
     ruleDescription: 'A díszzsebkendő (Pocket square) sosem készülhet a nyakkendővel megegyező anyagból és mintából (olcsó ajándékszett-hatás). A zsebkendő önálló textúrát képvisel, csupán egy másodlagos színárnyalatot tükröz vissza.',
     dont: 'A nyakkendővel pontosan megegyező mintájú és anyagú poliészter díszzsebkendő viselése',
     do: 'Fehér lenvászon TV-fold díszzsebkendő, vagy a szett valamelyik árnyalatával harmonizáló önálló mintájú kendő',
-    gender: 'universal',
+    gender: 'menswear_specific',
     severity: 'strict',
     source: 'Drake\'s London & Rubinacci Pocket Square Guide',
     enabled: true,
@@ -382,9 +383,12 @@ export function constructPersonalizedMiningTopics(styleProfile = {}, wardrobe = 
     return customFocus.trim();
   }
 
+  const demographics = getProfileDemographics(styleProfile);
+  const { isFemale, isMale, isChild, isBaby, isPreschool, isSchoolChild } = demographics;
+
   const preferredStyles = Array.isArray(styleProfile?.preferredStyles) && styleProfile.preferredStyles.length > 0
     ? styleProfile.preferredStyles
-    : ['Klasszikus & Időtlen', 'Olasz Sprezzatura'];
+    : (isFemale ? ['Klasszikus & Nőies Chic', 'Smart Casual'] : ['Klasszikus & Időtlen', 'Olasz Sprezzatura']);
 
   const customRules = Array.isArray(styleProfile?.customStylingRules)
     ? styleProfile.customStylingRules
@@ -413,8 +417,17 @@ export function constructPersonalizedMiningTopics(styleProfile = {}, wardrobe = 
 
   const topics = [];
 
-  // 1. Classic Menswear / Sprezzatura / Old Money
-  if (allActiveStyles.some(s => s.includes('Klasszikus') || s.includes('Sprezzatura') || s.includes('Old Money') || s.includes('Quiet Luxury'))) {
+  // 0. Children & Baby Specific Topics
+  if (isChild || isBaby || isPreschool || isSchoolChild) {
+    topics.push(`- Children & Baby clothing comfort, skin-safety and practical layering:
+  * 100% breathable organic cotton and natural soft fibers next to sensitive skin (OEKO-TEX standard)
+  * Elastic waistband and easy-on pullover / snap button layering ergonomics
+  * Waterproof and windproof outerwear with lightweight thermal insulation
+  * Flat seam construction, no-scratch labels, and flexible non-restricting footwear`);
+  }
+
+  // 1. Classic Menswear / Sprezzatura / Old Money (Only for Male / Non-child)
+  if (!isFemale && !isChild && allActiveStyles.some(s => s.includes('Klasszikus') || s.includes('Sprezzatura') || s.includes('Old Money') || s.includes('Quiet Luxury'))) {
     topics.push(`- Classic Menswear, Italian Sprezzatura & Quiet Luxury tailoring etiquette:
   * Pocket square independence rules (Drake's London, Simon Crompton: pocket square must never match tie pattern/fabric directly)
   * Suit jacket sleeve length, shirt cuff exposure (1.0 - 1.5 cm cuff rule) and double breasted vs single breasted buttoning
@@ -424,7 +437,7 @@ export function constructPersonalizedMiningTopics(styleProfile = {}, wardrobe = 
   }
 
   // 2. Smart Urban / Minimalist
-  if (allActiveStyles.some(s => s.includes('Smart Urban') || s.includes('Minimalista'))) {
+  if (!isChild && allActiveStyles.some(s => s.includes('Smart Urban') || s.includes('Minimalista'))) {
     topics.push(`- Smart Urban & Minimalist contemporary tailoring & casual smart layering:
   * Shacket / Overshirt layering rules (crewneck t-shirt or merino turtleneck base vs collar clash prevention - Die Workwear)
   * Monochromatic tonal layering and contrast ratio (Alan Flusser & Scandinavian minimalist tailoring)
@@ -441,19 +454,22 @@ export function constructPersonalizedMiningTopics(styleProfile = {}, wardrobe = 
   }
 
   // 4. Womenswear (Dresses, Skirts, or Female profile)
-  const hasWomenswear = (categoryCounts.dresses > 0 || categoryCounts.skirts > 0 || (styleProfile?.title || '').toLowerCase().includes('női') || (styleProfile?.name || '').toLowerCase().includes('nő'));
+  const hasWomenswear = isFemale || categoryCounts.dresses > 0 || categoryCounts.skirts > 0 || (styleProfile?.title || '').toLowerCase().includes('női') || (styleProfile?.name || '').toLowerCase().includes('nő');
   if (hasWomenswear || allActiveStyles.some(s => s.toLowerCase().includes('női') || s.toLowerCase().includes('chic') || s.toLowerCase().includes('french'))) {
     topics.push(`- Womenswear proportions, neckline and silhouette balance (Vogue Styling Masterclass, Harper's Bazaar):
   * Midi/maxi dress layering with cropped structured blazers and waist belt positioning
   * Boatneck, asymmetric neckline and pussy-bow blouse layering without bunched collars
-  * Shoe vamp depth, pointed vs rounded toe proportions with wide-leg vs tapered trousers`);
+  * Shoe vamp depth, pointed vs rounded toe proportions with wide-leg vs tapered trousers
+  * French chic effortless tailoring, monochrome layers and delicate knitwear`);
   }
 
-  // 5. Universal Leather & Metal and Fabric Synergy
-  topics.push(`- Universal fabric synergy & hardware coordination:
+  // 5. Universal Leather & Metal and Fabric Synergy (Adult / Teen)
+  if (!isChild) {
+    topics.push(`- Universal fabric synergy & hardware coordination:
   * Leather tone matching (shoe and belt color harmony: cognac with cognac, black with black, espresso with dark brown)
   * Metal hardware harmony (watch case, belt buckle, metal buttons: silver/steel with silver, brass/gold with warm tones)
   * Worsted wool vs denim/linen texture compatibility (Loro Piana fabric synergy code: avoid high-shine Super 130s jackets with rough denim)`);
+  }
 
   // 6. User's specific negative constraints / prohibitions
   if (customRules.length > 0) {
@@ -464,11 +480,19 @@ export function constructPersonalizedMiningTopics(styleProfile = {}, wardrobe = 
 }
 
 /**
- * Get formatted rules for Gemini prompts
+ * Get formatted rules for Gemini prompts filtered by category, gender and age demographics
  */
-export function formatRulesForPrompt(category = null) {
+export function formatRulesForPrompt(category = null, demographicsOrProfile = null) {
+  const demographics = demographicsOrProfile?.bracketCode
+    ? demographicsOrProfile
+    : (demographicsOrProfile ? getProfileDemographics(demographicsOrProfile) : null);
+
   const allRules = getStoredSartorialRules().filter(r => r.enabled !== false);
-  const filtered = category ? allRules.filter(r => r.category === category) : allRules;
+  let filtered = category ? allRules.filter(r => r.category === category) : allRules;
+
+  if (demographics) {
+    filtered = filtered.filter(r => isRuleApplicableToDemographics(r, demographics));
+  }
 
   return filtered.map((r, idx) => {
     const styleTag = r.targetStyles && r.targetStyles.length > 0 ? ` [${r.targetStyles.join(', ')}]` : '';

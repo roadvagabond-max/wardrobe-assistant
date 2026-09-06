@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { SARTORIAL_CATEGORIES } from '../../../services/sartorialRules';
 import { runSartorialGoldenEvalSuite } from '../../../services/sartorialEval';
+import { getProfileDemographics, isRuleApplicableToDemographics } from '../../../services/demographics';
 import confetti from 'canvas-confetti';
 
 export default function SartorialKnowledgeHub({ 
@@ -19,6 +20,9 @@ export default function SartorialKnowledgeHub({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [customMiningTopic, setCustomMiningTopic] = useState('');
   const [miningSuccessMsg, setMiningSuccessMsg] = useState(null);
+
+  const demographics = getProfileDemographics(profile);
+  const applicableRules = sartorialRules.filter(r => isRuleApplicableToDemographics(r, demographics));
 
   // Golden Eval Suite state
   const [evalSuiteResults, setEvalSuiteResults] = useState(null);
@@ -79,7 +83,7 @@ export default function SartorialKnowledgeHub({
               </span>
               <span className="badge badge-emerald text-[9px]">7 napos auto-sync aktív</span>
               <span className="badge badge-subtle text-[9px] text-white">
-                {sartorialRules.length} szabály betanítva
+                {applicableRules.length} érvényes szabály ({demographics.genderLabel})
               </span>
             </div>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
@@ -108,7 +112,7 @@ export default function SartorialKnowledgeHub({
                 Élő Szabálykezelő & Webes Kutató Hub
               </h4>
               <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                Itt böngészheted és egyenként konfigurálhatod a betanított divatszabályokat, vagy indíthatsz új internetes kutatást.
+                Itt böngészheted és egyenként konfigurálhatod a profilodhoz ({demographics.gender}, {demographics.bracketDescription}) illeszkedő stílusszabályokat.
               </p>
             </div>
 
@@ -230,13 +234,13 @@ export default function SartorialKnowledgeHub({
             <div className="flex flex-wrap gap-1.5 pt-0.5">
               {(profile?.preferredStyles && profile.preferredStyles.length > 0
                 ? profile.preferredStyles 
-                : ['Klasszikus & Időtlen', 'Olasz Sprezzatura', 'Smart Urban']
+                : (demographics.isFemale ? ['Klasszikus & Nőies Chic', 'Smart Casual', 'Minimalista'] : ['Klasszikus & Időtlen', 'Olasz Sprezzatura', 'Smart Urban'])
               ).map((st, sIdx) => (
                 <button
                   key={sIdx}
                   type="button"
                   onClick={() => {
-                    setCustomMiningTopic(`${st} szabászati és rétegezési szabályok`);
+                    setCustomMiningTopic(`${st} ${demographics.isFemale ? 'női' : 'férfi'} szabászati és rétegezési szabályok`);
                   }}
                   className="text-[11px] py-1 px-2.5 rounded-lg bg-[var(--accent-gold)]/10 hover:bg-[var(--accent-gold)]/25 border border-[var(--border-gold)]/40 text-[var(--accent-gold-light)] hover:text-white transition-all flex items-center gap-1.5 group"
                   title={`Kattints a kereséshez: ${st}`}
@@ -257,7 +261,7 @@ export default function SartorialKnowledgeHub({
               aria-label="Célzott kutatási téma megadása"
               value={customMiningTopic}
               onChange={(e) => setCustomMiningTopic(e.target.value)}
-              placeholder="Opcionális fókusz: pl. Női blézer és maxiruha arányok VAGY Ingdzseki rétegezési szabályok..."
+              placeholder={demographics.isFemale ? "Opcionális fókusz: pl. Női blézer és maxiruha arányok VAGY Csónaknyakú rétegezés..." : "Opcionális fókusz: pl. Ingdzseki rétegezési szabályok VAGY Zakó mandzsetta arány..."}
               className="custom-input text-xs flex-1"
               disabled={isMiningRules}
             />
@@ -289,36 +293,41 @@ export default function SartorialKnowledgeHub({
 
           {/* Category Filter Tabs */}
           <div className="flex flex-wrap gap-1.5">
-            {SARTORIAL_CATEGORIES.map(cat => {
-              const count = cat.id === 'all' 
-                ? sartorialRules.length 
-                : sartorialRules.filter(r => r.category === cat.id).length;
-              const isSelected = selectedCategory === cat.id;
+            {SARTORIAL_CATEGORIES
+              .filter(cat => {
+                if (cat.id === 'womenswear_specific' && demographics.isMale) return false;
+                return true;
+              })
+              .map(cat => {
+                const count = cat.id === 'all' 
+                  ? applicableRules.length 
+                  : applicableRules.filter(r => r.category === cat.id).length;
+                const isSelected = selectedCategory === cat.id;
 
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`py-1 px-2.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                    isSelected
-                      ? 'bg-[var(--accent-gold)] text-black font-bold shadow'
-                      : 'bg-white/5 border border-white/10 text-[var(--text-secondary)] hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <span>{cat.icon}</span>
-                  <span>{cat.label}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-black/20 text-black' : 'bg-white/10 text-[var(--text-muted)]'}`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`py-1 px-2.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-[var(--accent-gold)] text-black font-bold shadow'
+                        : 'bg-white/5 border border-white/10 text-[var(--text-secondary)] hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-black/20 text-black' : 'bg-white/10 text-[var(--text-muted)]'}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
           </div>
 
           {/* Rules Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {sartorialRules
+            {applicableRules
               .filter(r => selectedCategory === 'all' || r.category === selectedCategory)
               .map((rule) => {
                 const isEnabled = rule.enabled !== false;

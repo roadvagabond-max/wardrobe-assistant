@@ -5,6 +5,7 @@ import { extractWebshopData } from '../../services/webshop';
 import { ensureBase64Image, getSmartGarmentImage } from '../../services/imageOptimizer';
 import ColorPalettePicker from '../common/ColorPalettePicker';
 import { useAuth } from '../../context/AuthContext';
+import { getProfileDemographics, getDemographicTags, getDemographicArchetypes } from '../../services/demographics';
 
 const FORMALITY_LEVELS = [
   'Casual (Laza)',
@@ -49,6 +50,9 @@ const STYLE_TAG_SUGGESTIONS = [
 
 export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
   const { profile } = useAuth();
+  const demographics = getProfileDemographics(profile);
+  const demographicArchetypes = getDemographicArchetypes(demographics);
+  const demographicTags = getDemographicTags(demographics);
 
   const [activeMode, setActiveMode] = useState('camera'); // 'camera', 'upload', 'link', 'clipboard'
   const [selectedFile, setSelectedFile] = useState(null);
@@ -1079,7 +1083,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 onChange={(e) => setFormData({ ...formData, styleArchetype: e.target.value })}
                 className="custom-input text-xs"
               >
-                {STYLE_ARCHETYPES.map(s => (
+                {demographicArchetypes.map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -1092,7 +1096,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               </label>
               
               <div className="flex flex-wrap gap-1.5">
-                {STYLE_TAG_SUGGESTIONS.map(tag => {
+                {demographicTags.map(tag => {
                   const isSelected = formData.tags.includes(tag);
                   return (
                     <button
