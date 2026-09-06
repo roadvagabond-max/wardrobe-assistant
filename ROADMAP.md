@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.6.1` (Production)
+- **Aktuális Verzió:** `v1.7.0` (Production)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,14 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.6.1)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.0)
+- [x] **Demográfiai Intelligencia, 5 Hivatalos Korosztály & Rugalmas Adaptív Stylist (v1.7.0):**
+  - Központi demográfiai modul (`src/services/demographics.js`), dinamikus életkorszámítás születési év (`birthYear`) alapján.
+  - Szigorúan két nemi kategória (`👔 Férfi` és `👗 Női`), nyers életkori címkék („kisiskolás”, „kamasz”) elrejtése a felhasználói felületről.
+  - 5 hivatalos korosztály támogatása (Csecsemő/baba 0–2 év, Bölcsődés/óvodás 3–6 év, Kisiskolás 7–12 év, Kiskamasz/tini 13–18 év, Felnőtt 19+ év).
+  - Felnőtteknél rugalmas & tanuló stílusmotor merev zakókényszer nélkül, laza/streetwear szetteknél sneaker + pamutfelső + nadrág teljes értékű kezelése.
+  - Dinamikus stylist gyorsgombok és korosztály-függő esemény presetek a Stylist és Outfit modulokban.
+  - Gemini AI motor (`gemini.js`) átfogó felkészítése a demográfiai szabályokra a Chat, Outfit Generátor, Manuális Audit, Gap Elemző és Vásárlási Tanácsadó rétegekben.
 - [x] **Kanonizált Színintelligencia & 3-Szintű Színkezelési Logika (v1.6.1):**
   - Tiszta lap az új felhasználóknak (`favoriteColors: []` alapértelmezés).
   - Kanonizált szín-normalizáló és deduplikáló motor (`normalizeColorName`, `areColorsMatching`, `deduplicateColors`), amely megszünteti a zárójeles és magyar nevek álduplikációit (pl. `'Sötétkék (Navy)'` vs. `'Sötétkék'`).

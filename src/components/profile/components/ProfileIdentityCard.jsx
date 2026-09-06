@@ -7,11 +7,11 @@ export default function ProfileIdentityCard({
   onPhotoFileSelect, 
   photoInputRef 
 }) {
-  const genderLabel = profile.gender === 'Női' 
-    ? '👗 Női' 
-    : profile.gender === 'Unisex' 
-      ? '✨ Unisex' 
-      : '👔 Férfi';
+  const genderLabel = profile.gender === 'Női' ? '👗 Női' : '👔 Férfi';
+  const currentYear = new Date().getFullYear();
+  const birthYearDisplay = profile.birthYear 
+    ? `${profile.birthYear} (${currentYear - parseInt(profile.birthYear, 10)} év)`
+    : (profile.age ? `${profile.age} év` : null);
 
   const thermalInfo = profile.thermalPreference === 'coldSensitive'
     ? { label: 'Fázósabb alkat', icon: <ThermometerSnowflake className="w-3.5 h-3.5 text-cyan-300" />, desc: 'Hűvösben melegebb rétegek és kötöttek' }
@@ -58,10 +58,11 @@ export default function ProfileIdentityCard({
               </span>
             </div>
             <p className="text-xs text-[var(--accent-gold-light)] font-medium mt-0.5">
-              {profile.title || 'Klasszikus Stílusprofil'}
+              {profile.title || 'Személyes Stílusprofil'}
             </p>
             <div className="flex items-center gap-2 mt-1 text-[11px] text-[var(--text-muted)] flex-wrap">
-              {profile.height && profile.height !== '—' && <span>{profile.height}</span>}
+              {birthYearDisplay && <span>{birthYearDisplay}</span>}
+              {profile.height && profile.height !== '—' && <span>• {profile.height}</span>}
               {profile.weight && profile.weight !== '—' && <span>• {profile.weight}</span>}
               {profile.bodyType && <span>• {profile.bodyType}</span>}
               {profile.skinTone && <span>• {profile.skinTone}</span>}

@@ -10,9 +10,15 @@ const BODY_TYPE_PRESETS = [
 ];
 
 export default function StepIdentity({ formData, setFormData, onNext }) {
+  const currentYear = new Date().getFullYear();
   const isNameValid = Boolean(formData.name && formData.name.trim().length > 0);
-  const isGenderValid = Boolean(formData.gender && ['Férfi', 'Női', 'Unisex'].includes(formData.gender));
-  const canProceed = isNameValid && isGenderValid;
+  const isGenderValid = Boolean(formData.gender && ['Férfi', 'Női'].includes(formData.gender));
+  
+  const parsedBirthYear = parseInt(formData.birthYear, 10);
+  const isBirthYearValid = Boolean(!isNaN(parsedBirthYear) && parsedBirthYear >= 1910 && parsedBirthYear <= currentYear);
+  const calculatedAge = isBirthYearValid ? currentYear - parsedBirthYear : null;
+
+  const canProceed = isNameValid && isGenderValid && isBirthYearValid;
 
   return (
     <div className="space-y-5 animate-slide-up">
@@ -25,16 +31,16 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
           Kezdjük az alapokkal!
         </h3>
         <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-          Add meg a nevedet és válassz nemet, hogy az AI személyre szabott szabásokkal és stílustanácsokkal segíthessen.
+          Add meg a nevedet, válassz nemet és add meg a születési évedet, hogy az AI pontosan a korosztályodhoz és adottságaidhoz illő stílustanácsokat adhasson.
         </p>
       </div>
 
-      {/* Row 1: Name & Gender (Mandatory) */}
+      {/* Row 1: Name, Gender & Birth Year (Mandatory) */}
       <div className="p-4 rounded-2xl bg-black/40 border border-[var(--border-gold)]/50 space-y-4 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
           
           {/* Name input */}
-          <div className="sm:col-span-2 space-y-1.5">
+          <div className="sm:col-span-5 space-y-1.5">
             <label htmlFor="onboarding-name" className="block text-xs font-bold text-white flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <span>Név / Megszólítás</span>
@@ -60,8 +66,8 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
             </div>
           </div>
 
-          {/* Gender selector */}
-          <div className="space-y-1.5">
+          {/* Gender selector (Strictly Male/Female) */}
+          <div className="sm:col-span-4 space-y-1.5">
             <label className="block text-xs font-bold text-white flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <span>Nem</span>
@@ -69,11 +75,10 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
               </span>
               <span className="text-[10px] text-amber-300 font-normal uppercase tracking-wider">Kötelező</span>
             </label>
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-2 gap-1.5">
               {[
                 { key: 'Férfi', label: '👔 Férfi' },
-                { key: 'Női', label: '👗 Női' },
-                { key: 'Unisex', label: '✨ Uni' }
+                { key: 'Női', label: '👗 Női' }
               ].map(g => {
                 const isSel = formData.gender === g.key;
                 return (
@@ -81,7 +86,7 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
                     key={g.key}
                     type="button"
                     onClick={() => setFormData({ ...formData, gender: g.key })}
-                    className={`py-2 px-1 text-center rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                    className={`py-2 px-2 text-center rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                       isSel
                         ? 'bg-[var(--accent-gold)] text-black border-[var(--accent-gold)] shadow-md'
                         : 'bg-white/5 text-[var(--text-secondary)] border-white/10 hover:bg-white/10 hover:text-white'
@@ -91,6 +96,38 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Birth Year input (Mandatory) */}
+          <div className="sm:col-span-3 space-y-1.5">
+            <label htmlFor="onboarding-birthyear" className="block text-xs font-bold text-white flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <span>Születési év</span>
+                <span className="text-amber-400">*</span>
+              </span>
+              {calculatedAge !== null && (
+                <span className="text-[10px] text-[var(--accent-gold)] font-bold">
+                  {calculatedAge} éves
+                </span>
+              )}
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                id="onboarding-birthyear"
+                name="birthYear"
+                min="1910"
+                max={currentYear}
+                value={formData.birthYear || ''}
+                onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                placeholder="pl. 1992"
+                className={`w-full px-3.5 py-2.5 rounded-xl bg-[#090d14] border text-white placeholder-white/30 text-xs sm:text-sm focus:outline-none transition-all ${
+                  !isBirthYearValid && formData.birthYear !== undefined
+                    ? 'border-amber-500/60 focus:border-amber-400'
+                    : 'border-white/10 focus:border-[var(--accent-gold)]'
+                }`}
+              />
             </div>
           </div>
 
@@ -229,7 +266,7 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
           {!canProceed && (
             <span className="text-amber-400/90 flex items-center gap-1">
               <span>⚠️</span>
-              <span>A folytatáshoz kérlek add meg a nevedet és válassz nemet!</span>
+              <span>A folytatáshoz kérlek add meg a nevedet, válassz nemet és add meg a születési évedet!</span>
             </span>
           )}
         </div>

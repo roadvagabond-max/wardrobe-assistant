@@ -16,6 +16,7 @@ export default function OnboardingModal({ isOpen, onClose, onFinish }) {
   const [formData, setFormData] = useState(() => ({
     name: profile?.name || '',
     gender: profile?.gender || 'Férfi',
+    birthYear: profile?.birthYear || '',
     height: profile?.height || '',
     weight: profile?.weight || '',
     bodyType: profile?.bodyType || 'Normál / Átlagos',
@@ -34,6 +35,7 @@ export default function OnboardingModal({ isOpen, onClose, onFinish }) {
         ...prev,
         name: prev.name || profile.name || '',
         gender: prev.gender || profile.gender || 'Férfi',
+        birthYear: prev.birthYear || profile.birthYear || '',
         height: prev.height || profile.height || '',
         weight: prev.weight || profile.weight || '',
         bodyType: prev.bodyType || profile.bodyType || 'Normál / Átlagos',

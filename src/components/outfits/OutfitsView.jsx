@@ -7,26 +7,18 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { generateEventOutfits, swapOutfitItem, enforceAnatomicalOutfitLayers } from '../../services/gemini';
 import { fetchCurrentWeather, CITIES } from '../../services/weather';
+import { getDynamicEventPresets } from '../../services/demographics';
 import confetti from 'canvas-confetti';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
 import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 
-const DEFAULT_EVENT_PRESETS = [
-  '☕ Kávérandi & Séta',
-  '💼 Smart Iroda & Tárgyalás',
-  '🍽️ Elegáns Vacsora',
-  '🍸 Esti Koktél / Bár',
-  '🎵 Klub & Koncert (Lezser)',
-  '🍂 Hétvégi Városi Kiruccanás',
-  '💍 Esküvő & Ünnepi Esemény'
-];
-
 export default function OutfitsView({ weather, setWeather, initialAnchorItem = null }) {
   const { wardrobe, profile, saveOutfit, savedOutfits } = useAuth();
+  const eventPresets = getDynamicEventPresets(profile, weather);
 
   // Generator States (Preserved until next explicit request)
   const [selectedEvent, setSelectedEvent] = useState(() => {
-    return localStorage.getItem('sartorial_last_selected_event') || '☕ Kávérandi & Séta';
+    return localStorage.getItem('sartorial_last_selected_event') || eventPresets[0] || '☕ Kávérandi & Séta';
   });
   const [customEvent, setCustomEvent] = useState(() => {
     return localStorage.getItem('sartorial_last_custom_event') || '';
@@ -105,8 +97,17 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
   // Recent Events History
   const [recentEvents, setRecentEvents] = useState(() => {
     const saved = localStorage.getItem('user_event_history');
-    return saved ? JSON.parse(saved) : DEFAULT_EVENT_PRESETS;
+    return saved ? JSON.parse(saved) : eventPresets;
   });
+
+  // Sync event presets when demographics change
+  useEffect(() => {
+    const presets = getDynamicEventPresets(profile, weather);
+    setRecentEvents(prev => {
+      const isCustom = prev && prev.some(p => !presets.includes(p));
+      return isCustom ? prev : presets;
+    });
+  }, [profile?.birthYear, profile?.gender, weather?.temperature]);
 
   // Persist outfits to localStorage whenever updated
   useEffect(() => {
@@ -143,7 +144,7 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
   }, [initialAnchorItem, anchorItems]);
 
   const saveEventToHistory = (evt) => {
-    if (!evt || DEFAULT_EVENT_PRESETS.includes(evt)) return;
+    if (!evt || eventPresets.includes(evt)) return;
     setRecentEvents(prev => {
       const filtered = prev.filter(e => e !== evt);
       const updated = [evt, ...filtered].slice(0, 8);

@@ -97,10 +97,10 @@ export default function ProfileEditModal({
 
             <div>
               <label className="block text-xs text-[var(--text-secondary)] mb-1 font-medium">
-                Nem (Gender):
+                Nem:
               </label>
-              <div className="grid grid-cols-3 gap-1">
-                {['Férfi', 'Női', 'Unisex'].map(g => {
+              <div className="grid grid-cols-2 gap-1">
+                {['Férfi', 'Női'].map(g => {
                   const isSel = (formData.gender || 'Férfi') === g;
                   return (
                     <button
@@ -113,7 +113,7 @@ export default function ProfileEditModal({
                           : 'bg-white/5 text-[var(--text-secondary)] border-white/10 hover:bg-white/10 hover:text-white'
                       }`}
                     >
-                      {g === 'Férfi' ? '👔 Férfi' : g === 'Női' ? '👗 Női' : '✨ Uni'}
+                      {g === 'Férfi' ? '👔 Férfi' : '👗 Női'}
                     </button>
                   );
                 })}
@@ -121,8 +121,30 @@ export default function ProfileEditModal({
             </div>
           </div>
 
-          {/* Row 2: Measurements */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Row 2: Birth Year & Measurements */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label htmlFor="modal-profile-birthyear" className="block text-xs text-[var(--text-secondary)] mb-1 font-medium flex items-center justify-between">
+                <span>Születési év:</span>
+                {formData.birthYear && (
+                  <span className="text-[10px] text-[var(--accent-gold)] font-bold">
+                    {new Date().getFullYear() - parseInt(formData.birthYear, 10)} éves
+                  </span>
+                )}
+              </label>
+              <input
+                type="number"
+                id="modal-profile-birthyear"
+                name="profileBirthYear"
+                min="1910"
+                max={new Date().getFullYear()}
+                value={formData.birthYear || ''}
+                onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                className="custom-input text-xs sm:text-sm"
+                placeholder="pl. 1992"
+              />
+            </div>
+
             <div>
               <label htmlFor="modal-profile-height" className="block text-xs text-[var(--text-secondary)] mb-1 font-medium">
                 Magasság:

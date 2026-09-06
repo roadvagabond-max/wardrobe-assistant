@@ -2,18 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Sparkles, Trash2, Bot, User, RefreshCw, MessageSquare, Loader2, ArrowRight, Layers, Compass, HelpCircle, Plus, Eye, Shirt } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { chatWithMasterStylist, formatStylistJsonToMarkdown, isGeminiConfigured } from '../../services/gemini';
+import { getProfileDemographics, getDynamicQuickPrompts } from '../../services/demographics';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
-
-const QUICK_PROMPTS = [
-  'Mit vegyek fel holnap a meglévő ruháimból?',
-  'Hogyan kombináljam a sötétkék zakómat egy lazább pénteken?',
-  'Milyen cipőt és övet válasszak szürke nadrághoz?',
-  'Milyen kulcsdarab hiányzik leginkább a gardróbomból?',
-  'Stílustanács egy elegáns esti vacsorához'
-];
 
 export default function StylistChatView({ weather }) {
   const { wardrobe, profile, geminiApiKey } = useAuth();
+  const demographics = getProfileDemographics(profile);
+  const dynamicQuickPrompts = getDynamicQuickPrompts(profile, wardrobe, weather);
   
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem('stylist_chat_history');
@@ -22,10 +17,11 @@ export default function StylistChatView({ weather }) {
         return JSON.parse(saved);
       } catch (_) {}
     }
+    const emoji = demographics.isFemale ? '👗✨' : '👔✨';
     return [
       {
         role: 'model',
-        content: `Üdvözöllek! Én vagyok a személyes **Sartorial Mester Stylistod**. 👔✨\n\nIsmerem a teljes digitális gardróbodat (${wardrobe.length} db ruha), a stílus DNS-edet és az egyéni szabályaidat.\n\nKérdezz bármit: szett-kombinációkról, alkalomhoz illő öltözködésről, rétegezésről vagy hiányzó kulcsdarabokról!`,
+        content: `Üdvözöllek! Én vagyok a személyes **AI Stylistod**. ${emoji}\n\nIsmerem a teljes digitális gardróbodat (${wardrobe.length} db ruha), a stíluspreferenciáidat és az egyéni szabályaidat.\n\nKérdezz bármit: szett-kombinációkról, alkalomhoz vagy időjáráshoz illő öltözködésről, rétegezésről vagy hiányzó kulcsdarabokról!`,
         timestamp: new Date().toISOString()
       }
     ];
@@ -289,12 +285,12 @@ export default function StylistChatView({ weather }) {
       {/* Top Bar with Context Pills & Action Buttons */}
       <div className="flex items-center justify-between pb-3 border-b border-white/10 flex-wrap gap-2 shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="badge badge-gold flex items-center gap-1 text-[11px]">
+          <span className="badge badge-gold flex items-center gap-1.5 text-[11px] font-semibold">
             <Sparkles className="w-3 h-3" />
-            <span>Sartorial Master AI</span>
+            <span>{demographics.headerBadge}</span>
           </span>
           <span className="text-xs text-[var(--text-muted)]">
-            Ruhatár kontextus: <strong className="text-white">{wardrobe.length} db ruha</strong>
+            Ruhatár: <strong className="text-white">{wardrobe.length} db ruha</strong>
           </span>
           {weather && (
             <span className="text-xs text-[var(--text-muted)] hidden sm:inline">
@@ -396,7 +392,7 @@ export default function StylistChatView({ weather }) {
             </div>
             <div className="glass-card bg-[#0b0e14]/90 border-white/10 p-3.5 rounded-2xl rounded-tl-none flex items-center gap-2 text-xs text-[var(--text-secondary)]">
               <Loader2 className="w-4 h-4 animate-spin text-[var(--accent-gold)]" />
-              <span>A Mester Stylist elemzi a ruhatáradat és fogalmazza a tanácsot...</span>
+              <span>Az AI Stylist áttekinti a ruhatáradat és fogalmazza a választ...</span>
             </div>
           </div>
         )}
@@ -406,7 +402,7 @@ export default function StylistChatView({ weather }) {
 
       {/* Quick Suggestion Chips */}
       <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 shrink-0 no-scrollbar">
-        {QUICK_PROMPTS.map((prompt, pIdx) => (
+        {dynamicQuickPrompts.map((prompt, pIdx) => (
           <button
             key={pIdx}
             type="button"

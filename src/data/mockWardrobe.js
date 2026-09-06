@@ -300,6 +300,7 @@ export const INITIAL_WARDROBE = SAMPLE_SHOWCASE_WARDROBE;
 export const DEFAULT_GUEST_PROFILE = {
   name: 'Vendég Felhasználó',
   gender: 'Férfi',
+  birthYear: 1992,
   title: 'Klasszikus Kapszula Stílusprofil',
   height: '—',
   weight: '—',
@@ -323,6 +324,7 @@ export const INITIAL_USER_PROFILE = DEFAULT_GUEST_PROFILE;
 export const DEFAULT_NEW_USER_PROFILE = {
   name: '',
   gender: 'Férfi',
+  birthYear: '',
   title: 'Klasszikus & Időtlen Stílusprofil',
   height: '',
   weight: '',
@@ -339,4 +341,5 @@ export const DEFAULT_NEW_USER_PROFILE = {
   customStylingRules: [],
   onboardingCompleted: false
 };
+
 
