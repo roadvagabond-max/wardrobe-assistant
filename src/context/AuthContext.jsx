@@ -14,21 +14,58 @@ import {
   deleteRule as deleteStoredRule 
 } from '../services/sartorialRules';
 
-const AuthContext = createContext(null);
+const SHOWCASE_VERSION_KEY = 'sartorial_showcase_version';
+const CURRENT_SHOWCASE_VERSION = 'v1.5.5_20260906_v1';
+
+const getInitialWardrobe = () => {
+  try {
+    const version = localStorage.getItem(SHOWCASE_VERSION_KEY);
+    const saved = localStorage.getItem('wardrobe_items');
+    
+    // Check if saved items contain legacy brands or mismatched photos
+    if (saved && version === CURRENT_SHOWCASE_VERSION) {
+      const parsed = JSON.parse(saved);
+      const isLegacy = parsed.some(item => 
+        item.brand === 'Sartorial Selection' || 
+        item.brand === 'Tailored Woolens' ||
+        item.brand === 'Smart Casual Collection' ||
+        item.brand === 'Formal Leathercraft' ||
+        (item.imageUrl && item.imageUrl.includes('photo-1594633312681')) ||
+        (item.imageUrl && item.imageUrl.includes('photo-1553062407'))
+      );
+      if (!isLegacy && Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+
+  // Auto-migrate and update cache
+  try {
+    localStorage.setItem(SHOWCASE_VERSION_KEY, CURRENT_SHOWCASE_VERSION);
+    localStorage.setItem('wardrobe_items', JSON.stringify(SAMPLE_SHOWCASE_WARDROBE));
+    localStorage.setItem('user_style_profile', JSON.stringify(DEFAULT_GUEST_PROFILE));
+    localStorage.removeItem('sartorial_last_generated_outfits');
+    localStorage.removeItem('sartorial_last_anchor_items');
+  } catch (_) {}
+  return SAMPLE_SHOWCASE_WARDROBE;
+};
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isDemoMode, setIsDemoMode] = useState(true);
 
-  const [wardrobe, setWardrobe] = useState(() => {
-    const saved = localStorage.getItem('wardrobe_items');
-    return saved ? JSON.parse(saved) : SAMPLE_SHOWCASE_WARDROBE;
-  });
+  const [wardrobe, setWardrobe] = useState(getInitialWardrobe);
 
   const [profile, setProfile] = useState(() => {
-    const saved = localStorage.getItem('user_style_profile');
-    return saved ? JSON.parse(saved) : DEFAULT_GUEST_PROFILE;
+    try {
+      const version = localStorage.getItem(SHOWCASE_VERSION_KEY);
+      if (version === CURRENT_SHOWCASE_VERSION) {
+        const saved = localStorage.getItem('user_style_profile');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (_) {}
+    return DEFAULT_GUEST_PROFILE;
   });
 
   const [savedOutfits, setSavedOutfits] = useState(() => {

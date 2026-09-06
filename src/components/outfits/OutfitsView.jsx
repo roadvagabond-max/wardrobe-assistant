@@ -35,7 +35,26 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
   const [generatedOutfits, setGeneratedOutfits] = useState(() => {
     try {
       const saved = localStorage.getItem('sartorial_last_generated_outfits');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      // If any outfit contains legacy items with old URLs or old brands, invalidate
+      const isLegacy = Array.isArray(parsed) && parsed.some(outfit => 
+        (outfit.items || []).some(item => 
+          item.brand === 'Sartorial Selection' || 
+          item.brand === 'Tailored Woolens' ||
+          item.brand === 'Smart Casual Collection' ||
+          item.brand === 'Formal Leathercraft' ||
+          (item.imageUrl && item.imageUrl.includes('photo-1594633312681')) ||
+          (item.imageUrl && item.imageUrl.includes('photo-1553062407')) ||
+          (item.imageUrl && item.imageUrl.includes('photo-1544923246')) ||
+          (item.imageUrl && item.imageUrl.includes('photo-1551028719'))
+        )
+      );
+      if (isLegacy) {
+        localStorage.removeItem('sartorial_last_generated_outfits');
+        return [];
+      }
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       return [];
     }
