@@ -342,6 +342,7 @@ export function AuthProvider({ children }) {
   const updateProfile = async (newProfile) => {
     setProfile(newProfile);
     try {
+      localStorage.setItem('user_style_profile', JSON.stringify(newProfile));
       localStorage.removeItem('capsule_gaps_cache');
     } catch (_) {}
     if (currentUser && db && isFirebaseConfigured) {

@@ -1,5 +1,6 @@
 import React from 'react';
-import { User, Sparkles, Scale, ThermometerSnowflake, Sun, ArrowRight, ShieldCheck } from 'lucide-react';
+import { User, Sparkles, Scale, ThermometerSnowflake, Sun, ArrowRight, ShieldCheck, Calendar, CheckCircle2 } from 'lucide-react';
+import { getProfileDemographics } from '../../../services/demographics';
 
 const BODY_TYPE_PRESETS = [
   'Atlétikus / Trapéz (V-alak)',
@@ -16,7 +17,7 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
   
   const parsedBirthYear = parseInt(formData.birthYear, 10);
   const isBirthYearValid = Boolean(!isNaN(parsedBirthYear) && parsedBirthYear >= 1910 && parsedBirthYear <= currentYear);
-  const calculatedAge = isBirthYearValid ? currentYear - parsedBirthYear : null;
+  const demographics = isBirthYearValid ? getProfileDemographics({ birthYear: parsedBirthYear, gender: formData.gender }) : null;
 
   const canProceed = isNameValid && isGenderValid && isBirthYearValid;
 
@@ -31,43 +32,44 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
           Kezdjük az alapokkal!
         </h3>
         <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-          Add meg a nevedet, válassz nemet és add meg a születési évedet, hogy az AI pontosan a korosztályodhoz és adottságaidhoz illő stílustanácsokat adhasson.
+          Add meg a nevedet, válassz nemet és add meg a születési évedet, hogy az AI pontosan a korosztályodhoz (és életkorodhoz) illő stílustanácsokat adhasson.
         </p>
       </div>
 
-      {/* Row 1: Name, Gender & Birth Year (Mandatory) */}
-      <div className="p-4 rounded-2xl bg-black/40 border border-[var(--border-gold)]/50 space-y-4 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
+      {/* Mandatory Identifiers Card */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-black/40 border border-[var(--border-gold)]/60 space-y-4 shadow-sm">
+        
+        {/* Row 1: Name and Gender */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           
           {/* Name input */}
-          <div className="sm:col-span-5 space-y-1.5">
+          <div className="space-y-1.5">
             <label htmlFor="onboarding-name" className="block text-xs font-bold text-white flex items-center justify-between">
               <span className="flex items-center gap-1">
+                <User className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
                 <span>Név / Megszólítás</span>
                 <span className="text-amber-400">*</span>
               </span>
               <span className="text-[10px] text-amber-300 font-normal uppercase tracking-wider">Kötelező</span>
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                id="onboarding-name"
-                name="name"
-                value={formData.name || ''}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="pl. Attila vagy Dóra"
-                autoComplete="given-name"
-                className={`w-full px-3.5 py-2.5 rounded-xl bg-[#090d14] border text-white placeholder-white/30 text-xs sm:text-sm focus:outline-none transition-all ${
-                  !isNameValid && formData.name !== undefined
-                    ? 'border-amber-500/60 focus:border-amber-400'
-                    : 'border-white/10 focus:border-[var(--accent-gold)]'
-                }`}
-              />
-            </div>
+            <input
+              type="text"
+              id="onboarding-name"
+              name="name"
+              value={formData.name || ''}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="pl. Attila vagy Dóra"
+              autoComplete="given-name"
+              className={`w-full px-3.5 py-2.5 rounded-xl bg-[#090d14] border text-white placeholder-white/30 text-xs sm:text-sm focus:outline-none transition-all ${
+                !isNameValid && formData.name !== undefined && formData.name !== ''
+                  ? 'border-amber-500/60 focus:border-amber-400'
+                  : 'border-white/10 focus:border-[var(--accent-gold)]'
+              }`}
+            />
           </div>
 
           {/* Gender selector (Strictly Male/Female) */}
-          <div className="sm:col-span-4 space-y-1.5">
+          <div className="space-y-1.5">
             <label className="block text-xs font-bold text-white flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <span>Nem</span>
@@ -75,7 +77,7 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
               </span>
               <span className="text-[10px] text-amber-300 font-normal uppercase tracking-wider">Kötelező</span>
             </label>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { key: 'Férfi', label: '👔 Férfi' },
                 { key: 'Női', label: '👗 Női' }
@@ -86,9 +88,9 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
                     key={g.key}
                     type="button"
                     onClick={() => setFormData({ ...formData, gender: g.key })}
-                    className={`py-2 px-2 text-center rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                    className={`py-2 px-3 text-center rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                       isSel
-                        ? 'bg-[var(--accent-gold)] text-black border-[var(--accent-gold)] shadow-md'
+                        ? 'bg-[var(--accent-gold)] text-black border-[var(--accent-gold)] shadow-md font-bold'
                         : 'bg-white/5 text-[var(--text-secondary)] border-white/10 hover:bg-white/10 hover:text-white'
                     }`}
                   >
@@ -99,20 +101,28 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
             </div>
           </div>
 
-          {/* Birth Year input (Mandatory) */}
-          <div className="sm:col-span-3 space-y-1.5">
-            <label htmlFor="onboarding-birthyear" className="block text-xs font-bold text-white flex items-center justify-between">
-              <span className="flex items-center gap-1">
-                <span>Születési év</span>
-                <span className="text-amber-400">*</span>
-              </span>
-              {calculatedAge !== null && (
-                <span className="text-[10px] text-[var(--accent-gold)] font-bold">
-                  {calculatedAge} éves
-                </span>
-              )}
+        </div>
+
+        {/* Row 2: Birth Year (Mandatory & Prominent) */}
+        <div className="pt-2 border-t border-white/10 space-y-2">
+          <div className="flex items-center justify-between">
+            <label htmlFor="onboarding-birthyear" className="block text-xs font-bold text-white flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+              <span>Születési év</span>
+              <span className="text-amber-400">*</span>
+              <span className="text-[10px] text-amber-300 font-normal uppercase tracking-wider ml-1">(Kötelező)</span>
             </label>
-            <div className="relative">
+
+            {demographics && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{demographics.age} éves ({demographics.bracketDescription.split(' (')[0]})</span>
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+            <div className="sm:col-span-4">
               <input
                 type="number"
                 id="onboarding-birthyear"
@@ -121,17 +131,31 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
                 max={currentYear}
                 value={formData.birthYear || ''}
                 onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
-                placeholder="pl. 1992"
-                className={`w-full px-3.5 py-2.5 rounded-xl bg-[#090d14] border text-white placeholder-white/30 text-xs sm:text-sm focus:outline-none transition-all ${
-                  !isBirthYearValid && formData.birthYear !== undefined
-                    ? 'border-amber-500/60 focus:border-amber-400'
-                    : 'border-white/10 focus:border-[var(--accent-gold)]'
+                placeholder="pl. 1995 vagy 2018"
+                className={`w-full px-3.5 py-2.5 rounded-xl bg-[#090d14] border text-white placeholder-white/30 text-xs sm:text-sm font-mono focus:outline-none transition-all ${
+                  !isBirthYearValid && formData.birthYear
+                    ? 'border-rose-500/80 focus:border-rose-400'
+                    : isBirthYearValid
+                      ? 'border-emerald-500/60 focus:border-emerald-400'
+                      : 'border-amber-500/50 focus:border-[var(--accent-gold)]'
                 }`}
               />
             </div>
+            
+            <div className="sm:col-span-8 text-[11px] text-[var(--text-secondary)]">
+              {isBirthYearValid ? (
+                <span className="text-emerald-300/90">
+                  ✨ Az AI automatikusan a <strong>{demographics.age} éves {demographics.gender.toLowerCase()}</strong> korosztályi igényeihez fogja igazítani a szabásokat, darabokat és ajánlásokat.
+                </span>
+              ) : (
+                <span className="text-amber-300/80">
+                  💡 Add meg a születési évedet (pl. <strong>2018</strong> gyerekeknél, vagy <strong>1995</strong> felnőtteknél), hogy az AI pontosan ismerje az életkort!
+                </span>
+              )}
+            </div>
           </div>
-
         </div>
+
       </div>
 
       {/* Optional Details Header */}

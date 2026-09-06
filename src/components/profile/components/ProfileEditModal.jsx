@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Sparkles, User, ThermometerSnowflake, Sun, Scale } from 'lucide-react';
+import { X, Check, Sparkles, User, ThermometerSnowflake, Sun, Scale, Calendar, CheckCircle2 } from 'lucide-react';
+import { getProfileDemographics } from '../../../services/demographics';
 
 const ALL_STYLE_ARCHETYPES = [
   'Klasszikus & Időtlen',
@@ -26,6 +27,9 @@ export default function ProfileEditModal({
   onSave 
 }) {
   const [formData, setFormData] = useState(initialProfile || {});
+  const parsedBirthYear = parseInt(formData.birthYear, 10);
+  const isBirthYearValid = Boolean(!isNaN(parsedBirthYear) && parsedBirthYear >= 1910 && parsedBirthYear <= new Date().getFullYear());
+  const demographics = isBirthYearValid ? getProfileDemographics({ birthYear: parsedBirthYear, gender: formData.gender }) : null;
 
   useEffect(() => {
     if (initialProfile) {
@@ -125,10 +129,13 @@ export default function ProfileEditModal({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label htmlFor="modal-profile-birthyear" className="block text-xs text-[var(--text-secondary)] mb-1 font-medium flex items-center justify-between">
-                <span>Születési év:</span>
-                {formData.birthYear && (
-                  <span className="text-[10px] text-[var(--accent-gold)] font-bold">
-                    {new Date().getFullYear() - parseInt(formData.birthYear, 10)} éves
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-[var(--accent-gold)]" />
+                  <span>Születési év:</span>
+                </span>
+                {demographics && (
+                  <span className="text-[10px] text-emerald-400 font-bold">
+                    {demographics.age} éves ({demographics.bracketDescription.split(' (')[0]})
                   </span>
                 )}
               </label>
@@ -140,8 +147,8 @@ export default function ProfileEditModal({
                 max={new Date().getFullYear()}
                 value={formData.birthYear || ''}
                 onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
-                className="custom-input text-xs sm:text-sm"
-                placeholder="pl. 1992"
+                className="custom-input text-xs sm:text-sm font-mono"
+                placeholder="pl. 1995 vagy 2018"
               />
             </div>
 

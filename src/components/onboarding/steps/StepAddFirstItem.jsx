@@ -29,10 +29,11 @@ export default function StepAddFirstItem({ formData, onAddItem, onNext, onBack, 
       setProcessStatus('A Gemini Vision elemzi a darab kategóriáját, színét és anyagát...');
       
       const aiResult = await analyzeClothingImage(base64, {}, formData);
+      const garmentData = (aiResult && aiResult.item) ? aiResult.item : aiResult;
       
-      if (aiResult && aiResult.item) {
+      if (garmentData && (garmentData.name || garmentData.category)) {
         const itemToSave = {
-          ...aiResult.item,
+          ...garmentData,
           id: `item-${Date.now()}`,
           imageUrl: base64,
           createdAt: new Date().toISOString()
@@ -40,7 +41,7 @@ export default function StepAddFirstItem({ formData, onAddItem, onNext, onBack, 
         const saved = await onAddItem(itemToSave);
         setAddedItem(saved || itemToSave);
       } else {
-        throw new Error('Nem sikerült azonosítani a ruhadarabot.');
+        throw new Error('Nem sikerült azonosítani a ruhadarabot. Kérlek próbáld újra egy élesebb fotóval!');
       }
     } catch (err) {
       console.error('Ruhafelvitel hiba:', err);
@@ -74,15 +75,16 @@ export default function StepAddFirstItem({ formData, onAddItem, onNext, onBack, 
 
       setProcessStatus('AI szabás- és anyagelemzés futtatása...');
       const aiResult = await analyzeClothingImage(imageUrl || null, parsed, formData);
+      const garmentData = (aiResult && aiResult.item) ? aiResult.item : aiResult;
 
-      if (aiResult && aiResult.item) {
+      if (garmentData && (garmentData.name || garmentData.category)) {
         const itemToSave = {
-          ...aiResult.item,
+          ...garmentData,
           id: `item-${Date.now()}`,
-          imageUrl: imageUrl || aiResult.item.imageUrl || '',
+          imageUrl: imageUrl || garmentData.imageUrl || '',
           productUrl: parsed.url || '',
           productCode: parsed.productCode || '',
-          brand: parsed.brand || aiResult.item.brand || '',
+          brand: parsed.brand || garmentData.brand || '',
           createdAt: new Date().toISOString()
         };
         const saved = await onAddItem(itemToSave);

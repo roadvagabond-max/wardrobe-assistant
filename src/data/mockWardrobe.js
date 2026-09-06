@@ -300,7 +300,7 @@ export const INITIAL_WARDROBE = SAMPLE_SHOWCASE_WARDROBE;
 export const DEFAULT_GUEST_PROFILE = {
   name: 'Vendég Felhasználó',
   gender: 'Férfi',
-  birthYear: 1992,
+  birthYear: '',
   title: 'Klasszikus Kapszula Stílusprofil',
   height: '—',
   weight: '—',
@@ -315,7 +315,7 @@ export const DEFAULT_GUEST_PROFILE = {
   avoidColors: [],
   stylePhilosophy: 'Időtlen, letisztult kapszula ruhatár minőségi, sokoldalú alapdarabokkal.',
   customStylingRules: [],
-  onboardingCompleted: true
+  onboardingCompleted: false
 };
 
 // Alias for backward compatibility
