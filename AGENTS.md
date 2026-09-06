@@ -6,6 +6,14 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** alkalmazás agent archite
 
 ## 🛑 KÖTELEZŐ ÉRVÉNYŰ SZABÁLYOK AZ EGÉSZ PROJEKTRE (GOLDEN RULES)
 
+0. **🛑 Szigorúan Tilos Bármilyen Kódmódosítás Előzetes Tervezés és Kifejezett Felhasználói Jóváhagyás Nélkül:**
+   - **SEMMILYEN forráskódot, konfigurációt vagy logikát NEM SZABAD módosítani, amíg a felhasználó kifejezetten jóvá nem hagyta a tervezetet!**
+   - Minden feladatnál, hibajavításnál vagy módosítási kérésnél kötelező:
+     1. Feltárni a pontos okot és a szükséges változtatásokat.
+     2. Részletes `implementation_plan.md` akciótervet készíteni.
+     3. **Megállni és megvárni a felhasználó kifejezett jóváhagyását (`proceed`, `ok`, `jóváhagyom`).**
+   - Szigorúan tilos "önállóan megjavítani" vagy jóváhagyás előtt kódot szerkeszteni!
+
 1. **Szigorúan Tilos Önhatalmú Funkció- és Logika-Módosítás:**
    - **Kifejezett felhasználói utasítás nélkül TILOS bármilyen meglévő funkciót átalakítani, lecserélni vagy megváltoztatni!**
    - **Szigorúan TILOS heurisztikus, mock, szimulált vagy nem-AI alapú "fallback" megoldásokat építeni az alkalmazásba.**

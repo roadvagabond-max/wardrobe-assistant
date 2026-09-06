@@ -4,6 +4,16 @@ Ez a dokumentum kötelező érvényű szabályokat tartalmaz az egész projektre
 
 ---
 
+## 0. 🛑 Szigorúan Tilos Bármilyen Kódmódosítás Előzetes Tervezés és Kifejezett Felhasználói Jóváhagyás Nélkül
+- **SEMMILYEN forráskódot, komponenst vagy konfigurációt NEM SZABAD módosítani a felhasználó előzetes jóváhagyása nélkül!**
+- Minden feladatnál kötelező a tervezési folyamat:
+  1. Hiba vagy feladat okának és összefüggéseinek alapos feltárása.
+  2. Részletes `implementation_plan.md` készítése a tervezett változtatásokkal.
+  3. **Megállás és a felhasználó kifejezett jóváhagyásának megvárása (`proceed`, `ok`, `jóváhagyom`).**
+- Tilos a jóváhagyási lépést megkerülni, önhatalmúan fájlokat módosítani vagy "előre megjavítani" a kódot.
+
+---
+
 ## 1. 🛑 Szigorúan Tilos Önhatalmú Funkció- és Logika-Módosítás
 - **Kifejezett felhasználói kérés nélkül tilos bármilyen funkciót átalakítani, lecserélni vagy megváltoztatni!**
 - **Tilos önhatalmúan heurisztikus, mock, szimulált vagy nem-AI alapú "fallback" megoldásokat építeni az alkalmazásba.**
