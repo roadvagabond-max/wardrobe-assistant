@@ -77,10 +77,6 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Email & Jelszó Autentikáció (Firebase Email/Password Auth):** Standard Email + Jelszavas bejelentkezés, új fiók regisztráció (névvel és minimum 6 karakteres jelszóval), jelszó-visszaállító link küldése (`sendPasswordResetEmail`), valamint magyar nyelvű hibakezelés integrálva a Google OAuth alternatívájaként az `AuthModal.jsx`, `AuthContext.jsx` és `firebase.js` rétegekbe.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
-- [ ] **Az 5 lépéses kezdő segítség (Onboarding & Onboarding Guide) felülvizsgálata:**
-  - Az interaktív varázsló (`OnboardingModal.jsx` és alkomponensei: `StepIdentity.jsx`, `StepColorSeason.jsx`, `StepStyles.jsx`, `StepAddFirstItem.jsx`, `StepSummaryLaunch.jsx`) és a felületi teendőlista (`OnboardingGuide.jsx`) átfogó auditja és felülvizsgálata.
-  - A lépések egyszerűsítése, születési év (`birthYear`) és demográfiai harmónia ellenőrzése, redundanciák megszüntetése, valamint az első ruha felvitel folyamatának további optimalizálása.
-- [ ] **GCP Service Account Jogosultság (Firebase Rules Deploy):** A `roles/firebaserules.admin` hozzárendelése a CI/CD service accounthoz a Google Cloud konzolon, ha a jövőben a Firestore szabályok deployját is a CI/CD-re bíznánk.
 - [ ] **Nagy Ruhatárak Megjelenítési Optimalizálása (Virtual List):** 300–500+ darabos ruhatárak esetén `react-window` vagy CSS optimalizáció.
 - [ ] **PWA Service Worker & Offline Kép Gyorsítótár:** Statikus assetek és teljes offline élmény biztosítása.
 
