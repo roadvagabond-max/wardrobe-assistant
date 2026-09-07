@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.6` (Production Build)
+- **Aktuális Verzió:** `v1.7.7` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,16 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.6)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.7)
+- [x] **Mix & Match Anatómiai Sziluett Vászon & Minimalista Galéria (v1.7.7):**
+  - **Obszidián & Titán-Ezüst Paletta:** Az arany színek teljes kivezetése a modulból, mélyfekete és pala háttérrel, platina és titán élfénnyel.
+  - **Anatómiai Sziluett Vászon:** Vertikális testzónák (Felsőtest $\rightarrow$ Alsótest $\rightarrow$ Lábbeli) és horizontális rétegek (max. 4 felső réteg `[+ Réteg]` gombbal; Férfi vs Női sziluettek).
+  - **Intelligens Egyberuha Integráció:** Női sziluettnél egyberuha kiválasztásakor automatikus felső- és alsótest integráció külön gombváltás nélkül.
+  - **Kiegészítők & Zoknik Anatómiai Helye:** Karóra a felsőnél, Deréköv a deréknál, Táska az alsónál, Zokni/Harisnya a lábbeli mellett.
+  - **`createPortal` Alapú Tiszta Fotóválasztó:** 2-oszlopos tiszta képrács közvetlenül a `document.body`-ra csatolva, véglegesen felszámolva a mobilos fejléc-levágási és görgetési hibákat.
+  - **Opcionális Esemény & 1-Kattintásos Törlés:** `(×)` törlés és gyors chipek; ha üres, az AI a személyes Stílus DNS és az időjárás belső harmóniáját elemzi merev dress code nélkül.
+  - **Dinamikus Élfénnyel Rendelkező Értékelő Sáv & Felcsúszó Fiók:** Smaragd zöld ($\ge 85\%$), borostyánsárga ($70-84\%$), korall-piros ($< 70\%$) sávos glow és felcsúszó Bottom Sheet a teljes szöveges indoklással és mentéssel.
+  - **Nulla Natív Alert UX:** Böngészős felugrók helyett elegáns lebegő titán toast validáció előtagok nélkül.
 - [x] **Felugró Ablakok Viewport Pozicionálása & Fejléc Levágás Megszüntetése (v1.7.6):**
   - Mobilon az összes felugró ablak (`ProfileEditModal`, `HelpGuideModal`, `AddClothingModal`, `OnboardingModal`, `ItemDetailModal`, `GarmentLightboxModal`, `OutfitsView` és `StylistView` modalok) külső wrapperén `items-start sm:items-center` és felső margó (`pt-4 sm:pt-6`), valamint `overflow-y-auto overscroll-contain` került bevezetésre.
   - A modal kártyák dinamikus `max-h-[calc(100dvh-2rem)] sm:max-h-[88vh]` magasságot kaptak fix, látható fejléccel (`shrink-0`) és önállóan gördülő belső tartalommal (`flex-1 overflow-y-auto overscroll-contain`).

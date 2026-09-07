@@ -1897,7 +1897,7 @@ export function generateDynamicWardrobeFallbackGaps(wardrobe = [], profile = {})
 /**
  * 5. Saját Szett Összeállítása & Sartorial AI Audit (Manual Outfit Auditor)
  */
-export async function auditManualOutfit({ items = [], eventName = 'Általános Megjelenés', weather = null, styleProfile = {} }) {
+export async function auditManualOutfit({ items = [], eventName = '', weather = null, styleProfile = {} }) {
   const apiKey = getGeminiApiKey();
 
   if (apiKey && items.length > 0) {
@@ -1909,16 +1909,23 @@ export async function auditManualOutfit({ items = [], eventName = 'Általános M
       const demographicInstructions = getDemographicSartorialInstructions(demographics, styleProfile);
       const dynamicSartorialRules = formatRulesForPrompt(null, demographics);
 
-      const prompt = `Te egy mester személyi stylist, szín- és aránytanácsadó, valamint stílusszakértő vagy.
-A felhasználó saját maga állított össze egy szettet a meglévő ruhatárából az alábbi alkalomra és időjárási körülményekre.
+      const isSpecificEvent = Boolean(eventName && eventName.trim() && eventName !== 'Általános Megjelenés');
+      const eventPromptContext = isSpecificEvent
+        ? `ESEMÉNY / ALKALOM: "${eventName.trim()}"
+Vizsgáld meg a szett formai szintjét, dress code normáit és kulturális alkalmasságát ehhez a megadott eseményhez!`
+        : `ESEMÉNY / ALKALOM: Nincs rögzítve konkrét esemény (önálló, mindennapi / stílusos megjelenés).
+FONTOS: Ne erőltess rá semmilyen merev alkalmi dress code-ot vagy protokollt! A vizsgálat fókusza a választott darabok belső esztétikai harmóniája, a színek és textúrák egymásra hatása, az anatómiai rétegrend, valamint a felhasználó személyes Stílus DNS-éhez és az aktuális időjárási hőmérséklethez való illeszkedése.`;
 
-A FELADATOD: Végezz építő jellegű, professzionális Stílus- és Összhang Auditot a szettre a felhasználó személyes profilja és Stílus DNS-e alapján!
+      const prompt = `Te egy mester személyi stylist, szín- és aránytanácsadó, valamint sartorial szakértő vagy.
+A felhasználó saját maga állított össze egy szettet a meglévő ruhatárából.
+
+A FELADATOD: Végezz professzionális, építő jellegű Stílus- és Összhang Auditot a szettre a felhasználó személyes profilja, Stílus DNS-e és az alábbi paraméterek alapján!
 
 DEMOGRÁFIAI PROFIL ÉS KORCSOPORT SZABÁLYOK:
 - Felhasználó kategóriája: ${demographics.gender} (${demographics.age} éves, ${demographics.bracketDescription})
 ${demographicInstructions}
 
-FELHASZNÁLÓ STÍLUSPROFILJA:
+FELHASZNÁLÓ STÍLUSPROFILJA (100%-ban érvényesítendő):
 - Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || (demographics.isFemale ? ['Klasszikus & Nőies', 'Smart Casual'] : ['Klasszikus & Időtlen', 'Smart Casual']))}
 - Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult harmónia, prémium kényelmes anyagok és stílusos megjelenés'}"
 - Kedvenc Színpaletta: ${styleProfile.favoriteColors && styleProfile.favoriteColors.length > 0 ? JSON.stringify(styleProfile.favoriteColors) : 'Nincs rögzítve (Alkalmazz természetes harmóniát)'}
@@ -1931,32 +1938,39 @@ ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincse
 👔 AKTÍV SARTORIAL HARMÓNIA- ÉS RÉTEGEZÉSI SZABÁLYZAT:
 ${dynamicSartorialRules}
 
-ESEMÉNY / ALKALOM: "${eventName}"
-HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${weather?.temperature}°C, ${weather?.condition || 'Kellemes'}
+${eventPromptContext}
+HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${weather?.temperature ?? 21}°C, ${weather?.condition || 'Kellemes'}
 
 A FELHASZNÁLÓ ÁLTAL ÖSSZEVÁLOGATOTT DARABOK (${items.length} db):
 ${formatWardrobeToCompactCatalog(items)}
 
 SZEMPONTOK AZ AUDITHOZ:
-1. 🎯 Esemény & Dress Code összhang: Illik-e a választott szett az esemény formai elvárásaihoz és a profil stílusához?
-   - LAZA / CASUAL / STREETWEAR ÉS GYERMEK SZETTEK: Egy póló + kényelmes nadrág + sneaker összeállítás 100%-ban teljes értékű szett! TILOS kötelezően zakót, blézert vagy övet erőltetni, ha a szett laza mindennapi jellegű!
-2. 👔 Sartorial Gallér- és Ujj-Harmónia (Felnőtt formális/smart szetteknél):
-   - Állógalléros ing (Mandarin / Band collar / Grandad) + zárt kötött pulóver (Crewneck/V-neck) vagy klasszikus hajtókás zakó: DISSZONÁNS RÉTEGEZÉS!
-   - Rövid ujjú kötött pulóver + alatta rövid ujjú póló: KETTŐS UJJVÉG / GYŰRŐDÉS HIBA!
-   - Garbó + alatta galléros ing: DISSZONÁNS! (A garbó önmagában a bázis).
-3. 🎨 Színharmónia & Kontraszt: Hogyan illeszkednek egymáshoz a színek? Érvényesül-e a harmónia?
-4. 🧵 Anyagok & Textúrák szinergiája: Természetes, puha, kényelmes és minőségi anyagok találkozása.
-5. 🧥 Anatómiai rétegezés & Időjárási alkalmasság: Van-e megfelelő bázisréteg? Megfelelő-e a ${weather?.temperature || 20}°C-os hőmérséklethez?
-6. ⚖️ Szabások & Arányok összhangja.
+1. 🎯 Stílus- & Esemény összhang: ${isSpecificEvent ? 'Illik-e az esemény dress code-jához?' : 'Harmonikus-e a szett általános stílusvilága és önazonossága?'}
+   - LAZA / CASUAL / STREETWEAR SZETTEKNÉL: Egy minőségi póló + nadrág + sneaker összeállítás 100%-ban teljes értékű szett! TILOS kötelezően zakót, blézert vagy nyakkendőt erőltetni, ha a szett laza jellegű!
+2. 👔 Sartorial Gallér- és Ujj-Harmónia:
+   - Állógalléros ing + zárt kötött pulóver vagy klasszikus hajtókás zakó: DISSZONÁNS!
+   - Rövid ujjú kötött pulóver + alatta rövid ujjú póló: KETTŐS UJJVÉG HIBA!
+   - Garbó + alatta galléros ing: DISSZONÁNS! (A garbó önmagában bázis).
+   - Ingdzseki (Shacket) + alatta klasszikus galléros ing: DISSZONÁNS! (Kettős gallér és gombsor).
+3. 🧦 Lábbeli, Zokni & Harisnya Harmónia:
+   - Ha van zokni vagy harisnya, illeszkedik-e a cipőhöz és az alsórészhez (hossz, szín, textúra, denier)?
+   - Melegben (>= 19°C) kerülendők a vastag téli csizmák és bélelt bakancsok; hűvösben szellős vászon helyett zártabb lábbeli ajánlott.
+4. 🎗️ Kiegészítők & Részletek (Öv, Karóra, Táska, Ékszer):
+   - Az öv színe és textúrája harmonizál-e a cipővel? A karóra fém- vagy bőrszíja támogatja-e az összképet?
+5. 👗 Egyberuha / Sziluett Arányok (ha szerepel):
+   - Egyberuha esetén a sziluett arányai és a kiegészítők (cipő, táska, öv, kabát) egyensúlya.
+6. 🎨 Színharmónia & Kontraszt: Hideg/meleg tónusok, 3-szín szabály érvényesülése.
+7. 🧵 Anyagok & Textúrák szinergiája: Természetes szálak és textúrák találkozása.
+8. 🧥 Anatómiai rétegezés & Időjárási alkalmasság a megadott ${weather?.temperature ?? 21}°C-hoz.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
   "score": 88,
   "verdict": "Kifejezetten Kifinomult / Apró Korrekciót Igénylő Összeállítás / Harmonikus Szett",
-  "eventAlignment": "Részletes, szabatos indoklás arról, hogy az eseményhez hogyan passzol ez a szett",
-  "colorHarmony": "A színek és tónusok kölcsönhatásának értékelése",
+  "eventAlignment": "Részletes, szabatos összefoglaló a stílusösszhangról és az alkalmasságról",
+  "colorHarmony": "A színek és árnyalatok kölcsönhatásának értékelése",
   "fabricSynergy": "Az anyagok és textúrák találkozásának értékelése",
-  "layeringEvaluation": "A rétegezés, bázisréteg és hőmérsékleti komfort elemzése a megadott időjáráshoz",
+  "layeringEvaluation": "A rétegezés és a hőmérsékleti komfort elemzése",
   "bodyFitVerdict": "Hogyan támogatja a szett a testalkatot és a személyes arányokat",
   "strengths": [
     "Az összeállítás elemei jól kiegészítik egymást és kényelmes mozgást biztosítanak"
