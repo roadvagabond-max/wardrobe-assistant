@@ -386,14 +386,14 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="badge badge-gold">Gemini 3.7 Flash</span>
-            <span className="badge badge-emerald">Sartorial Blueprint</span>
+            <span className="badge badge-gold">AI Stylist</span>
+            <span className="badge badge-emerald">Rétegrend & Stílus</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
             Napi & Esemény Szettkérő
           </h2>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
-            Önazonos, anatómiailag és kulturálisan harmonikus összeállítások a fizikai gardróbodból.
+            Önazonos, az időjárásnak és az alkalomnak megfelelő harmonikus összeállítások a ruhatáradból.
           </p>
         </div>
 
@@ -421,7 +421,7 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
         moduleId="outfits"
         title="Hogyan működik a Szettkérő?"
         subtitle="Személyre szabott esemény- és időjárás-hangolt szettek kizárólag a meglévő ruháidból"
-        description="A Sartorial Assistant nem talál ki fantomruhákat: az AI kizárólag a saját fizikai ruhatárad darabjaiból állít össze anatómiailag és kulturálisan harmonikus szetteket."
+        description="Az AI Wardrobe Assistant nem talál ki fantomruhákat: kizárólag a saját fizikai ruhatárad darabjaiból állít össze harmonikus, stílusos szetteket."
         points={[
           "A szettkészítéshez legalább 1 db Felső (ing/póló), 1 db Nadrág és 1 db Lábbeli szükséges a gardróbodban.",
           "Az AI szigorúan betartja a gallérharmóniát, az ujjhosszt és az időjárási rétegrendet.",
@@ -927,12 +927,12 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
               {isAiSwapping ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Gemini Keresi a Legjobb Alternatívát...</span>
+                  <span>Az AI Keresi a Legjobb Alternatívát...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 text-black" />
-                  <span>🤖 AI Automatikus Okos Csere (Gemini 3.7)</span>
+                  <span>🤖 AI Automatikus Okos Csere</span>
                 </>
               )}
             </button>

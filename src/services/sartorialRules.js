@@ -644,7 +644,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
       const newDiscoveredRules = parsed.map((item, idx) => ({
         id: item.id || `mined-rule-${Date.now()}-${idx}`,
         category: item.category || 'silhouette_balance',
-        title: item.title || 'Új Sartorial Szabály',
+        title: item.title || 'Új Stílusszabály',
         ruleDescription: item.ruleDescription || '',
         dont: item.dont || '',
         do: item.do || '',

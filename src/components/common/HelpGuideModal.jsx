@@ -16,7 +16,7 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
     { id: 'upload', label: '⚡ Ruhafelvitel', icon: '⚡' },
     { id: 'stylist', label: '👔 AI Stylist', icon: '👔' },
     { id: 'advisor', label: '🛍️ Próbafülke / Vásárlás', icon: '🛍️' },
-    { id: 'capsule', label: '🧩 Kapszula Audit', icon: '🧩' }
+    { id: 'capsule', label: '🧩 Kapszula Elemzés', icon: '🧩' }
   ];
 
   return (
@@ -37,9 +37,9 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
             <div>
               <div className="flex items-center gap-2">
                 <span className="badge badge-gold text-[10px] uppercase font-bold tracking-wider">
-                  Sartorial Tudásbázis • v1.0 Build
+                  Stílustanácsadó Tudásbázis • v1.0 Build
                 </span>
-                <span className="text-[10px] text-[var(--text-muted)]">Gemini 3.7 Flash AI</span>
+                <span className="text-[10px] text-[var(--text-muted)]">AI Stílustanácsadó</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-0.5">
                 Használati Útmutató & Stílus Kódex
@@ -134,7 +134,7 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
                   </h4>
                 </div>
                 <p className="leading-relaxed">
-                  Készíts egy szelfit természetes ablakfényben (lehetőleg smink és erős napszemüveg nélkül). A <strong>Gemini 3.7 Flash</strong> multimodális neurális modell elemzi a bőröd alaptónusát (hideg/meleg), a szemed és hajad kontrasztját, és besorol a 12 évszakos színelméletbe (pl. <em>Meleg Ősz</em>, <em>Lágy Nyár</em>, <em>Sötét Tél</em>).
+                  Készíts egy szelfit természetes ablakfényben (lehetőleg smink és erős napszemüveg nélkül). A <strong>fejlett multimodális látás- és színelemző AI</strong> elemzi a bőröd alaptónusát (hideg/meleg), a szemed és hajad kontrasztját, és besorol a 12 évszakos színelméletbe (pl. <em>Meleg Ősz</em>, <em>Lágy Nyár</em>, <em>Sötét Tél</em>).
                 </p>
                 <div className="p-3 rounded-lg bg-white/5 border border-white/10 text-[11px] text-amber-200">
                   ✦ <strong>Automatikus integráció:</strong> A meghatározott ragyogó színpaletta automatikusan frissíti a kedvenc színeidet, és az AI Stylist előnyben részesíti ezeket a szettek összeállításakor!
@@ -164,7 +164,7 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
                   </div>
                 </div>
                 <p className="text-[11px] text-[var(--text-muted)] pt-1">
-                  Az AI minden szettgenerálásnál, kapszula auditnál és vásárlási ellenőrzésnél azonnal érvényesíti ezeket a szabályokat!
+                  Az AI minden szettgenerálásnál, kapszula elemzésnél és vásárlási ellenőrzésnél azonnal érvényesíti ezeket a szabályokat!
                 </p>
               </div>
             </div>
@@ -236,7 +236,7 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
 
             <div className="space-y-3">
               <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
-                <h5 className="font-bold text-white text-xs">👔 Sartorial Rétegezési Anatómia:</h5>
+                <h5 className="font-bold text-white text-xs">👔 Rétegezési Szabályok & Felépítés:</h5>
                 <p className="text-[11px] leading-relaxed">
                   Minden szett kötelezően tartalmaz egy bőrön hordható bázisréteget (ing vagy pamut póló), amelyre a pulóver (köztes réteg), zakó és hideg időben a téli szövetkabát épül.
                 </p>
@@ -252,7 +252,7 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
               </div>
 
               <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
-                <h5 className="font-bold text-white text-xs">💬 Master Stylist Chat & Kézi Audit:</h5>
+                <h5 className="font-bold text-white text-xs">💬 Master Stylist Chat & Kézi Összeállítás:</h5>
                 <p className="text-[11px] leading-relaxed">
                   Közvetlenül beszélgethetsz az AI-val, aki ismeri az összes ruhádat, vagy a <em>Saját Szett</em> fülön összeválogatott szettedre kérhetsz 0-100%-os harmónia pontszámot és stílustuningot.
                 </p>
@@ -281,7 +281,7 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
               </div>
 
               <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-1">
-                <strong className="text-white">2. Pillér: Duplikáció Audit</strong>
+                <strong className="text-white">2. Pillér: Duplikáció Szűrés</strong>
                 <p className="text-[var(--text-secondary)]">Figyelmeztet, ha már van nagyon hasonló darabod (pl. másik sötétbarna loafer), és hiánypótló alternatívát javasol.</p>
               </div>
 
@@ -302,19 +302,19 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
                 <span>Mobil Web Share & Facebook böngésző megosztás:</span>
               </h5>
               <p className="text-[11px] leading-relaxed">
-                Mobilon egy webshopban vagy Facebook böngészőben járva egyszerűen nyomj a <strong>"Megosztás"</strong> gombra, és válaszd a <strong>Sartorial Assistantot</strong>. Az app automatikusan megnyílik a Tanácsadó nézetben, és azonnal futtatja a 4-pilléres tesztet!
+                Mobilon egy webshopban vagy Facebook böngészőben járva egyszerűen nyomj a <strong>"Megosztás"</strong> gombra, és válaszd a <strong>Wardrobe Assistantot</strong>. Az app automatikusan megnyílik a Tanácsadó nézetben, és azonnal futtatja a 4-pilléres tesztet!
               </p>
             </div>
           </div>
         )}
 
-        {/* Tab 6: Kapszula Ruhatár Audit */}
+        {/* Tab 6: Kapszula Ruhatár Elemzés */}
         {activeTab === 'capsule' && (
           <div className="space-y-4 text-xs text-[var(--text-secondary)] animate-fade-in">
             <div className="p-4 rounded-xl bg-black/40 border border-[var(--border-gold)]/60 space-y-2">
               <h4 className="font-serif font-bold text-white text-sm flex items-center gap-2">
                 <span>🧩</span>
-                <span>Kapszula Ruhatár Index & Gap Elemzés</span>
+                <span>Kapszula Ruhatár Index & Hiányelemzés</span>
               </h4>
               <p className="leading-relaxed">
                 A kapszula ruhatár lényege: minimális számú, egymással maximálisan kombinálható, minőségi alapdarab birtoklása.
@@ -348,7 +348,7 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-white/10 text-xs text-[var(--text-muted)]">
-          <span>Sartorial Wardrobe Assistant • Gemini 3.7 Flash AI</span>
+          <span>AI Wardrobe Assistant • Személyes Stílustanácsadó</span>
           <button
             onClick={onClose}
             className="btn-gold py-1.5 px-4 text-xs font-semibold"

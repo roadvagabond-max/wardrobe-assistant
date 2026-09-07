@@ -165,7 +165,7 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
                       : 'Bejelentkezés & Fiók'}
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
-                {currentUser ? 'Személyes ruhatár & felhő szinkronizáció' : 'Sartorial Wardrobe Assistant'}
+                {currentUser ? 'Személyes ruhatár & felhő szinkronizáció' : 'AI Wardrobe Assistant'}
               </p>
             </div>
           </div>

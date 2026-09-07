@@ -132,8 +132,8 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         } catch (_) {}
       }
     } catch (err) {
-      console.error('AI Audit hiba:', err);
-      alert(`Hiba történt az auditálás során: ${err.message}`);
+      console.error('AI Elemzési hiba:', err);
+      alert(`Hiba történt az elemzés során: ${err.message}`);
     } finally {
       setIsAuditing(false);
     }
@@ -152,7 +152,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       stylingNotes: manualAuditResult.colorHarmony || 'Harmonikus saját szett.',
       layeringAdvice: manualAuditResult.layeringEvaluation || '',
       culturalFitReasoning: manualAuditResult.eventAlignment || '',
-      weatherSuitability: `Auditálva a(z) ${weather?.city || 'Budapest'} (${weather?.temperature || 21}°C) időjárásra.`,
+      weatherSuitability: `Kiértékelve a(z) ${weather?.city || 'Budapest'} (${weather?.temperature || 21}°C) időjárásra.`,
       items: selectedItems,
       isManual: true
     };
@@ -182,14 +182,14 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="badge badge-gold">Gemini 3.7 Flash</span>
+            <span className="badge badge-gold">AI Stylist</span>
             <span className="badge badge-emerald">Master Stylist</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
-            Sartorial Stylist Hub
+            AI Stylist & Személyes Tanácsadó
           </h2>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
-            Interaktív stíluskonzultáció csevegésben és 6-slotos manuális szettépítő audit.
+            Interaktív stíluskonzultáció csevegésben és 6-slotos manuális szettépítő elemzés.
           </p>
         </div>
 
@@ -232,7 +232,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         points={[
           "Már ruhatár nélkül is tudsz kérdezni: az AI a testalkatodhoz, színtípusodhoz és a kívánt eseményhez ad profi tanácsot.",
           "A gardróbod feltöltése után a beszélgetésben a konkrét meglévő ruháidból ajánl szetteket, amikre kattintva megnyílik a fotós kártya.",
-          "A '6-Slotos Szettépítő' fülön te magad is összeállíthatsz egy szettet a kategória-slotokból, amit az AI azonnal leauditál."
+          "A '6-Slotos Szettépítő' fülön te magad is összeállíthatsz egy szettet a kategória-slotokból, amit az AI azonnal kiértékel."
         ]}
         actionLabel="Irány a Gardrób"
         onAction={() => { window.location.hash = '#wardrobe'; }}
@@ -247,7 +247,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       )}
 
       {/* ========================================================================= */}
-      {/* MODE 2: 6-SLOT MANUAL OUTFIT BUILDER & SARTORIAL AUDIT */}
+      {/* MODE 2: 6-SLOT MANUAL OUTFIT BUILDER & SARTORIAL EVALUATION */}
       {/* ========================================================================= */}
       {activeMode === 'manual-builder' && (
         <div className="space-y-6">
@@ -257,10 +257,10 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
             <div className="space-y-1">
               <h3 className="text-lg font-serif font-bold text-white flex items-center gap-2">
                 <Sliders className="w-5 h-5 text-[var(--accent-gold)]" />
-                <span>Saját Szett Összeállítása & AI Audit</span>
+                <span>Saját Szett Összeállítása & Szakértői Vélemény</span>
               </h3>
               <p className="text-xs text-[var(--text-secondary)]">
-                Válogasd össze a szetted darabjait kategóriánként, és kérj azonnali szakmai stílusauditot a Gemini 3.7 modelltől.
+                Válogasd össze a szetted darabjait kategóriánként, és kérj azonnali szakmai stíluselemzést és összhang-vizsgálatot az AI-tól.
               </p>
             </div>
 
@@ -371,7 +371,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               </div>
             </div>
 
-            {/* Run Audit Button */}
+            {/* Run Evaluation Button */}
             <button
               type="button"
               onClick={handleRunManualAudit}
@@ -381,7 +381,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               {isAuditing ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Gemini 3.7 Flash auditálja a szettedet...</span>
+                  <span>Az AI elemzi a szettedet és vizsgálja az összhangot...</span>
                 </>
               ) : (
                 <>
@@ -393,7 +393,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
           </div>
 
-          {/* Audit Results Presentation Card */}
+          {/* Evaluation Results Presentation Card */}
           {manualAuditResult && (
             <div className="glass-card p-6 sm:p-7 border-[var(--border-gold)] space-y-6 animate-scale-up">
               
@@ -413,7 +413,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
                   <div>
                     <span className="badge badge-gold text-[10px]">
-                      Sartorial Szakvélemény
+                      Szakértői Vélemény
                     </span>
                     <h3 className="text-xl font-serif font-bold text-white mt-1">
                       {manualAuditResult.verdict}

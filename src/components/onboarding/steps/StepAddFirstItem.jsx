@@ -26,7 +26,7 @@ export default function StepAddFirstItem({ formData, onAddItem, onNext, onBack, 
 
     try {
       const base64 = await ensureBase64Image(file, 640, 640, 0.75);
-      setProcessStatus('A Gemini Vision elemzi a darab kategóriáját, színét és anyagát...');
+      setProcessStatus('Az AI felismeri a kategóriát, színt és anyagot...');
       
       const aiResult = await analyzeClothingImage(base64, {}, formData);
       const garmentData = (aiResult && aiResult.item) ? aiResult.item : aiResult;

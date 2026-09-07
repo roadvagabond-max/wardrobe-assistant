@@ -98,7 +98,7 @@ export default function StepColorSeason({ formData, setFormData, onNext, onBack,
           Ismerd meg a legragyogóbb színeidet!
         </h3>
         <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-          Készíts egy szelfit természetes nappali fényben! A Google Gemini 3.x AI meghatározza a 12 évszakos színtípusodat és a hozzád legjobban passzoló színpalettát.
+          Készíts egy szelfit természetes nappali fényben! Az AI meghatározza a 12 évszakos színtípusodat és a hozzád legjobban passzoló színpalettát.
         </p>
       </div>
 
@@ -122,46 +122,57 @@ export default function StepColorSeason({ formData, setFormData, onNext, onBack,
           className="hidden" 
         />
 
-        {/* Upload Buttons Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-white flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[var(--accent-gold)]" />
-              <span>Portré fotó készítése természetes fényben</span>
-            </span>
-            <p className="text-[11px] text-[var(--text-muted)]">
-              💡 Tipp: Fordulj ablak felé, smink és napszemüveg nélkül fotózz a legpontosabb eredményért!
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="w-24 h-24 rounded-2xl bg-black/40 border border-white/10 overflow-hidden flex items-center justify-center shrink-0 shadow-inner relative group">
+            {portraitPreview ? (
+              <img src={portraitPreview} alt="Portré" className="w-full h-full object-cover" />
+            ) : (
+              <div className="text-center p-2 text-[var(--text-muted)] flex flex-col items-center gap-1">
+                <Sparkles className="w-6 h-6 text-[var(--accent-gold)]/60" />
+                <span className="text-[10px]">Nincs fotó</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2 flex-1 text-center sm:text-left">
+            <div className="flex items-center gap-2 justify-center sm:justify-start">
+              <span className="badge badge-gold text-[10px]">✨ 100% Automatikus</span>
+              <span className="badge badge-emerald text-[10px]">Privát & Helyi</span>
+            </div>
+            <p className="text-xs text-white font-medium">
+              Fotózd le magad ablak felé fordulva vagy válassz egy jó szelfit a galériádból!
             </p>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              disabled={isAnalyzing}
-              className="btn-gold text-xs py-2.5 px-3.5 flex items-center gap-1.5 shadow cursor-pointer"
-            >
-              <Camera className="w-4 h-4" />
-              <span>Fotózás</span>
-            </button>
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={isAnalyzing}
+            className="btn-gold py-2.5 px-4 text-xs font-bold flex items-center justify-center gap-2 shadow-lg"
+          >
+            <Camera className="w-4 h-4" />
+            <span>Szelfi Készítése</span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isAnalyzing}
-              className="btn-secondary text-xs py-2.5 px-3.5 flex items-center gap-1.5 cursor-pointer"
-            >
-              <Upload className="w-4 h-4" />
-              <span>Kép Feltöltése</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isAnalyzing}
+            className="btn-secondary py-2.5 px-4 text-xs font-semibold flex items-center justify-center gap-2"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Kép Feltöltése</span>
+          </button>
         </div>
 
         {/* Loader state */}
         {isAnalyzing && (
           <div className="p-4 rounded-xl bg-black/60 border border-[var(--border-gold)] text-center text-xs text-amber-200 flex items-center justify-center gap-2.5 animate-pulse">
             <Loader2 className="w-4 h-4 text-[var(--accent-gold)] animate-spin" />
-            <span>A Gemini AI elemzi a bőrtónust, szemszínt és a 12 évszakos típust...</span>
+            <span>Az AI elemzi a bőrtónust, szemszínt és a 12 évszakos típust...</span>
           </div>
         )}
 

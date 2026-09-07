@@ -594,7 +594,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   <span className="font-bold text-white text-xs">{wardrobe.length} db elem</span>
                 </div>
                 <div className="p-2 rounded-lg bg-white/5">
-                  <span className="block text-[9px] uppercase tracking-wider">Sartorial Szabályok</span>
+                  <span className="block text-[9px] uppercase tracking-wider">Stílusszabályok</span>
                   <span className="font-bold text-white text-xs">{sartorialRules.length} db aktív</span>
                 </div>
               </div>
@@ -635,7 +635,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
         {/* Footer */}
         <div className="pt-2 text-center text-[10px] text-[var(--text-muted)] font-mono tracking-wider border-t border-white/5">
-          Sartorial Wardrobe Assistant • {APP_BUILD_NAME} (v{APP_VERSION})
+          AI Wardrobe Assistant • {APP_BUILD_NAME} (v{APP_VERSION})
         </div>
 
       </div>

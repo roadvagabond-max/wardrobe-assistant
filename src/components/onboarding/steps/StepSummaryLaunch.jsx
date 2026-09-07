@@ -1,7 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Sparkles, CheckCircle2, Shirt, User, ArrowRight, Compass, ShieldCheck } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { getProfileDemographics } from '../../../services/demographics';
 
 export default function StepSummaryLaunch({ formData, wardrobeCount, onComplete }) {
+  useEffect(() => {
+    try {
+      confetti({
+        particleCount: 70,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#d4af37', '#f59e0b', '#10b981', '#ffffff']
+      });
+    } catch (_) {}
+  }, []);
+
+  const demographics = formData.birthYear 
+    ? getProfileDemographics({ birthYear: parseInt(formData.birthYear, 10), gender: formData.gender }) 
+    : null;
+
   return (
     <div className="space-y-6 animate-slide-up text-center sm:text-left">
       
@@ -30,11 +47,16 @@ export default function StepSummaryLaunch({ formData, wardrobeCount, onComplete 
             <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">
               Felhasználó & Testalkat
             </span>
-            <div className="text-sm font-bold text-white flex items-center gap-1.5">
+            <div className="text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
               <span>{formData.name || 'Felhasználó'}</span>
               <span className="text-xs font-normal text-amber-300">
                 ({formData.gender === 'Női' ? '👗 Női' : formData.gender === 'Unisex' ? '✨ Unisex' : '👔 Férfi'})
               </span>
+              {demographics && (
+                <span className="text-[11px] text-emerald-400 font-medium">
+                  • {demographics.age} éves
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-[var(--text-secondary)]">
               {formData.bodyType || 'Arányos sziluett'}

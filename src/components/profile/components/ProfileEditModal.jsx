@@ -257,7 +257,7 @@ export default function ProfileEditModal({
                   key: 'balanced', 
                   label: 'Kiegyensúlyozott', 
                   icon: <Scale className="w-4 h-4 text-emerald-300" />,
-                  desc: 'Standard anatómiai rétegezés' 
+                  desc: 'Kiegyensúlyozott rétegrend' 
                 },
                 { 
                   key: 'warmSensitive', 

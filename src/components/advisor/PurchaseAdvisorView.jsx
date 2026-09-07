@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard, Feather, ShieldAlert, Layers, Compass, Maximize2 } from 'lucide-react';
+import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard, Feather, ShieldAlert, Layers, Compass, Maximize2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { optimizeImageForUpload, getSmartGarmentImage, ensureBase64Image } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
-import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 
 export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
   const { wardrobe, profile, addItem } = useAuth();
@@ -21,6 +20,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
   const [analysisError, setAnalysisError] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [addedToWardrobe, setAddedToWardrobe] = useState(false);
+  const [showPillarsGuide, setShowPillarsGuide] = useState(false);
 
   // Lightbox Modal State
   const [lightboxData, setLightboxData] = useState({
@@ -290,63 +290,49 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           <span className="badge badge-emerald">4 Döntési Pillér</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
-          Vásárlási Döntésteszt
+          Megvegyem?
         </h2>
         <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
-          Fotózd le a próbafülkében vagy illeszd be a webshop linket a kombinálhatósági és minőségi auditáláshoz.
-        </p>
-        {profile.customStylingRules && profile.customStylingRules.length > 0 && (
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            <span className="text-[10px] text-[var(--accent-gold-light)] bg-[var(--accent-gold-glow)] px-2.5 py-1 rounded-lg border border-[var(--border-gold)]/40 flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3 text-[var(--accent-gold)] shrink-0" />
-              <span className="truncate max-w-xl">
-                <strong>Egyéni stílusszabály-ellenőrzés aktív ({profile.customStylingRules.length}):</strong> {profile.customStylingRules.join(' • ')}
-              </span>
-            </span>
+          Nézzük meg, mennyire érdemes megvenned a kiszemelt darabot! Fotózd le a próbafülkében vagy illeszd be a webshop linket a minőségi és kombinálhatósági elemzéshez.
+      {/* Collapsible 4-Pillar Guidance Accordion */}
+      <div className="rounded-xl border border-amber-500/25 bg-gradient-to-r from-amber-500/10 via-black/40 to-transparent overflow-hidden text-xs transition-all">
+        <button
+          type="button"
+          onClick={() => setShowPillarsGuide(!showPillarsGuide)}
+          className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-2 text-left text-amber-200 font-serif font-bold text-xs hover:bg-white/5 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
+            <span>Hogyan segít az AI megelőzni a rossz vásárlási döntéseket?</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--accent-gold-light)] font-sans font-normal shrink-0">
+            <span>{showPillarsGuide ? 'Kevesebb' : 'Részletek'}</span>
+            {showPillarsGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </div>
+        </button>
+
+        {showPillarsGuide && (
+          <div className="px-3.5 pb-3.5 sm:px-4 sm:pb-4 pt-1 border-t border-amber-500/15 animate-fade-in">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-[11px] text-[var(--text-secondary)]">
+              <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 space-y-0.5">
+                <strong className="text-white block font-medium">1. 3 komplett szett:</strong>
+                <span>Megmutatja, hogyan tudod viselni a már meglévő darabjaiddal.</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 space-y-0.5">
+                <strong className="text-white block font-medium">2. Duplikáció szűrés:</strong>
+                <span>Figyelmeztet, ha már van hasonló darabod a ruhatáradban.</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 space-y-0.5">
+                <strong className="text-white block font-medium">3. Szabás & Méret:</strong>
+                <span>Ellenőrzi a méretet és szabást (pl. Slim vs Regular).</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 space-y-0.5">
+                <strong className="text-white block font-medium">4. Anyagminőség:</strong>
+                <span>Kiszűri a rossz műszálakat (100% poliészter, PU műbőr).</span>
+              </div>
+            </div>
           </div>
         )}
-      </div>
-
-      {/* First-time module guidance */}
-      <ModuleFirstTimeGuide 
-        moduleId="advisor"
-        title="Hogyan működik a Vásárlási Tanácsadó?"
-        subtitle="4-pilléres minőségi, szabásbeli és kombinálhatósági döntésteszt még a vásárlás előtt"
-        description="Bármilyen kiszemelt új ruhát lefotózhatsz a próbafülkében vagy beillesztheted a webshop linkjét/termékkódját. Az AI azonnal elemzi az anyagminőséget, műszáltartalmat, szabást és a színtípusodhoz való illeszkedést."
-        points={[
-          "Már ruhatár nélkül is azonnal működik: ellenőrzi az anyagösszetételt, minőséget, szabást és színeket a profilod alapján.",
-          "A gardróbod feltöltése után a meglévő darabjaidból 3 teszt szettet is épít, és figyelmeztet, ha már van hasonló ruhád.",
-          "Ha a darab elnyeri a tetszésedet, 1 kattintással átemelheted a ruhatáradba."
-        ]}
-        actionLabel="Gardrób megtekintése"
-        onAction={() => { window.location.hash = '#wardrobe'; }}
-        wardrobeCount={wardrobe?.length || 0}
-      />
-
-      {/* Helpful 4-Pillar Guidance Banner */}
-      <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-black/40 to-transparent border border-amber-500/30 text-xs space-y-2">
-        <div className="flex items-center gap-2 text-amber-200 font-serif font-bold text-xs">
-          <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-          <span>Hogyan segít az AI megelőzni a rossz vásárlási döntéseket?</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-[11px] text-[var(--text-secondary)]">
-          <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-            <strong className="text-white block">1. 3 komplett szett:</strong>
-            <span>Megmutatja, hogyan tudod viselni a már meglévő darabjaiddal.</span>
-          </div>
-          <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-            <strong className="text-white block">2. Duplikáció szűrés:</strong>
-            <span>Figyelmeztet, ha már van hasonló darabod a ruhatáradban.</span>
-          </div>
-          <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-            <strong className="text-white block">3. Szabás & Méret:</strong>
-            <span>Ellenőrzi a méretet és szabást (pl. Slim vs Regular).</span>
-          </div>
-          <div className="p-2 rounded-lg bg-black/40 border border-white/5">
-            <strong className="text-white block">4. Anyagminőség:</strong>
-            <span>Kiszűri a rossz műszálakat (100% poliészter, PU műbőr).</span>
-          </div>
-        </div>
       </div>
 
       {/* Input Stage */}
@@ -641,12 +627,12 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                 {isAnalyzing ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Gemini 3.7 Flash elemzi a 3 Döntési Pillért és szetteket épít...</span>
+                    <span>Az AI elemzi a 4 Döntési Pillért és szetteket épít...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span>3 Döntési Pillér & Outfit Teszt Futtatása</span>
+                    <span>Megvegyem? Elemzés és Szett-ötletek Indítása</span>
                   </>
                 )}
               </button>

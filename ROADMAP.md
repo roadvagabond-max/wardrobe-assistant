@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.1` (Production)
+- **Aktuális Verzió:** `v1.7.3` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,23 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.1)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.3)
+- [x] **5-Lépéses Onboarding Varázsló & Kezdő Segítség Átfogó Felülvizsgálata (v1.7.3):**
+  - Életkor alapú intelligens demográfiai profilozás, dinamikus korosztály-jelvény, gyermekeknél ($<13$ év) a felnőtt sziluettek elrejtése.
+  - Varázsló sikeres befejezésekor arany-zöld konfetti animáció (`canvas-confetti`) és részletes összegzés.
+  - Stílusprofil hivatkozás javítása a főoldali teendőlistában (`OnboardingGuide.jsx`).
+- [x] **Súgó Redundanciák Megszüntetése (v1.7.3):**
+  - A `PurchaseAdvisorView.jsx`-ből a duplikált modul-súgó kivezetve, helyette csak a lenyitható 4-pilléres harmonika maradt.
+- [x] **Szigorú Szóhasználati Tisztítás (UI Terminology Sunset v1.7.3):**
+  - A „Sartorial”, „Hub” és „Anatómiai” kifejezések teljes körű kivezetése a felhasználói felületről; helyettük tiszta és természetes magyar kifejezések: *AI Stílustanácsadó, AI Wardrobe Assistant, Szakértői Vélemény, Stílusszabályok, Kiegyensúlyozott rétegrend, Központ*.
+- [x] **„Megvegyem?” Átnevezés, „Audit” Szó Kivezetése & UI Letisztítás (v1.7.2):**
+  - A korábbi technikai „Vásárlási Döntésteszt / Audit” helyett emberközeli, világos megnevezés: **„Megvegyem? (Nézzük meg, mennyire érdemes megvenned a kiszemelt darabot!)”** és **„Megvegyem? Elemzés és Szett-ötletek Indítása”**.
+  - Az „Audit” szó (Stílus Audit, Szabás Audit, Minőségi Audit stb.) teljes kivezetése a felhasználói felületről, a navigációs sávokról (`BottomNav.jsx`, `DesktopTabs.jsx`), a 6-slotos szettépítőről és a tudástárból; helyette természetes kifejezések: *Elemzés, Stílus-ellenőrzés, Szakértői vélemény, Összhang-vizsgálat, Kiértékelés*.
+  - A belső technikai AI modellnevek („Gemini 3.7 Flash”, „Gemini 3.5 Flash”) elrejtése a felületi címkékből, helyettük tiszta *„Sartorial AI”*, *„AI Stylist”* és *„AI”* megnevezések.
+- [x] **Felesleges Technikai Állapotjelzők és Címkék Eltávolítása (v1.7.2):**
+  - A felhasználói felület letisztítása a felesleges, zavaró technikai badge-ektől (pl. `PurchaseAdvisorView.jsx`-ben az *„Egyéni stílusszabály-ellenőrzés aktív (X)”* nyers tömbdoboz törlése, a navigációs „Audit” badge-ek megszüntetése).
+- [x] **Magyarázó Blokkok Lenyithatóvá Tétele (Collapsible Accordion v1.7.2):**
+  - A `PurchaseAdvisorView.jsx`-ben lévő 4-pilléres edukációs kártya (*„Hogyan segít az AI megelőzni a rossz vásárlási döntéseket?”*) átalakítása modern, helytakarékos lenyitható harmonika (accordion) dobozzá, felszabadítva a mobilos képernyőterületet a közvetlen fotózáshoz és képbeillesztéshez.
 - [x] **Stílusprofil Fekete Képernyő Javítása & Globális Error Boundary (v1.7.1):**
   - A `src/services/capsuleAnalytics.js` cipő szezonalitás vizsgálatában a tömb típusú `season` mező `.toLowerCase()` hibájának javítása (`Array.isArray(shoe.season) ? shoe.season.join(' ') : String(shoe.season || '')`).
   - Teljes null-safety és típusvédelem a `WardrobeAnalyticsCard`, `ProfileIdentityCard`, `StyleDNAView` és `SartorialKnowledgeHub` komponensekben.
@@ -64,13 +80,6 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [ ] **Az 5 lépéses kezdő segítség (Onboarding & Onboarding Guide) felülvizsgálata:**
   - Az interaktív varázsló (`OnboardingModal.jsx` és alkomponensei: `StepIdentity.jsx`, `StepColorSeason.jsx`, `StepStyles.jsx`, `StepAddFirstItem.jsx`, `StepSummaryLaunch.jsx`) és a felületi teendőlista (`OnboardingGuide.jsx`) átfogó auditja és felülvizsgálata.
   - A lépések egyszerűsítése, születési év (`birthYear`) és demográfiai harmónia ellenőrzése, redundanciák megszüntetése, valamint az első ruha felvitel folyamatának további optimalizálása.
-- [ ] **„Megvegyem?” Átnevezés & „Audit” Szó Kivezetése a UI-ból:**
-  - A korábbi „Vásárlási Döntésteszt / Audit” helyett emberközeli, világos megnevezés: **„Megvegyem? (Nézzük meg, mennyire érdemes megvenned a kiszemelt darabot!)”**.
-  - Az „Audit” szó (Stílus Audit, Szabás Audit, Minőségi Audit stb.) teljes kivezetése a felhasználói felületről és gombokról; helyette természetes kifejezések: *Elemzés, Stílus-ellenőrzés, Szakértői vélemény, Összhang-vizsgálat*.
-- [ ] **Felesleges Technikai Állapotjelzők és Címkék Eltávolítása:**
-  - A felhasználói felület letisztítása a felesleges, zavaró technikai badge-ektől (pl. `PurchaseAdvisorView.jsx`-ben az *„Egyéni stílusszabály-ellenőrzés aktív (X)”* doboz, felesleges debug/státusz jelölők).
-- [ ] **Magyarázó Blokkok Háttérbe Helyezése („Hogyan segít az AI...”, Edukációs Panelek):**
-  - A nézeteken (Vásárlási Tanácsadó, Stylist, Kapszula Gap) közvetlenül helyet foglaló nagy magyarázó kártyák (pl. *„Hogyan segít az AI megelőzni a rossz vásárlási döntéseket?”*) átalakítása diszkrét, lenyitható („Tudj meg többet” / collapsible accordion vagy súgó modál) formátumba.
 - [ ] **GCP Service Account Jogosultság (Firebase Rules Deploy):** A `roles/firebaserules.admin` hozzárendelése a CI/CD service accounthoz a Google Cloud konzolon, ha a jövőben a Firestore szabályok deployját is a CI/CD-re bíznánk.
 - [ ] **Nagy Ruhatárak Megjelenítési Optimalizálása (Virtual List):** 300–500+ darabos ruhatárak esetén `react-window` vagy CSS optimalizáció.
 - [ ] **PWA Service Worker & Offline Kép Gyorsítótár:** Statikus assetek és teljes offline élmény biztosítása.

@@ -5,8 +5,8 @@ export default function DesktopTabs({ activeTab, setActiveTab }) {
   const tabs = [
     { id: 'outfits', label: '👔 Szettek', icon: Sparkles },
     { id: 'wardrobe', label: '🚪 Gardróbom', icon: Layers },
-    { id: 'advisor', label: '🛍️ Megvegyem?', icon: ShoppingBag, badge: 'Audit' },
-    { id: 'stylist', label: '💬 Stylist & Audit', icon: MessageSquare },
+    { id: 'advisor', label: '🛍️ Megvegyem?', icon: ShoppingBag },
+    { id: 'stylist', label: '💬 AI Stylist', icon: MessageSquare },
     { id: 'profile', label: '👤 Stílusprofil', icon: UserCheck }
   ];
 

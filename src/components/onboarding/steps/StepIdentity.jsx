@@ -203,31 +203,33 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
         </div>
       </div>
 
-      {/* Row 3: Body Shape Presets (Optional) */}
-      <div className="space-y-1.5">
-        <label className="block text-xs text-[var(--text-secondary)] font-medium">
-          Testalkati Sziluett: <span className="text-[10px] text-[var(--text-muted)]">(opcionális)</span>
-        </label>
-        <div className="flex flex-wrap gap-1.5">
-          {BODY_TYPE_PRESETS.map(preset => {
-            const isSel = formData.bodyType === preset;
-            return (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setFormData({ ...formData, bodyType: isSel ? '' : preset })}
-                className={`py-1.5 px-3 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
-                  isSel
-                    ? 'bg-[var(--accent-gold)]/20 text-[var(--accent-gold-light)] border-[var(--border-gold)] font-bold shadow-sm'
-                    : 'bg-white/5 text-[var(--text-secondary)] border-white/5 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                {preset}
-              </button>
-            );
-          })}
+      {/* Row 3: Body Shape Presets (Optional, adapt to age) */}
+      {(!demographics || demographics.age >= 13) && (
+        <div className="space-y-1.5">
+          <label className="block text-xs text-[var(--text-secondary)] font-medium">
+            Testalkati Sziluett: <span className="text-[10px] text-[var(--text-muted)]">(opcionális)</span>
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {BODY_TYPE_PRESETS.map(preset => {
+              const isSel = formData.bodyType === preset;
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, bodyType: isSel ? '' : preset })}
+                  className={`py-1.5 px-3 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
+                    isSel
+                      ? 'bg-[var(--accent-gold)]/20 text-[var(--accent-gold-light)] border-[var(--border-gold)] font-bold shadow-sm'
+                      : 'bg-white/5 text-[var(--text-secondary)] border-white/5 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {preset}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Row 4: Thermal Comfort (Optional) */}
       <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/5 border border-white/10">
@@ -252,7 +254,7 @@ export default function StepIdentity({ formData, setFormData, onNext }) {
               key: 'balanced', 
               label: 'Kiegyensúlyozott', 
               icon: <Scale className="w-3.5 h-3.5 text-emerald-300" />,
-              desc: 'Standard anatómiai rétegrend' 
+              desc: 'Kiegyensúlyozott rétegrend' 
             },
             { 
               key: 'warmSensitive', 

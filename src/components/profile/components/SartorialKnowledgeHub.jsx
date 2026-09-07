@@ -110,7 +110,7 @@ export default function SartorialKnowledgeHub({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h4 className="text-base font-serif font-bold text-white">
-                Élő Szabálykezelő & Webes Kutató Hub
+                Élő Szabálykezelő & Webes Kutató Központ
               </h4>
               <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                 Itt böngészheted és egyenként konfigurálhatod a profilodhoz ({demographics.gender}, {demographics.bracketDescription}) illeszkedő stílusszabályokat.

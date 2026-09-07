@@ -275,7 +275,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
             {isLoadingGaps ? (
               <div className="p-6 text-center space-y-2">
                 <Loader2 className="w-6 h-6 text-[var(--accent-gold)] animate-spin mx-auto" />
-                <p className="text-xs text-[var(--text-secondary)]">Gemini 3.7 Flash elemzi a hiányzó kulcsdarabokat...</p>
+                <p className="text-xs text-[var(--text-secondary)]">Az AI elemzi a hiányzó kulcsdarabokat...</p>
               </div>
             ) : gaps.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">

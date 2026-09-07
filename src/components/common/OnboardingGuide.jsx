@@ -63,8 +63,8 @@ export default function OnboardingGuide({ onNavigateTab, onOpenAddModal }) {
       done: isStep1Done,
       badge: '1. Lépés',
       title: 'Portré / Szelfi fotó a Színtípushoz',
-      desc: 'Tölts fel egy természetes fényű képet magadról a Stílus DNS fülön! A Gemini 3.7 Flash AI meghatározza a 12 évszakos színtípusodat és a hozzád legjobban passzoló színpalettát.',
-      actionText: 'Irány a Stílus DNS',
+      desc: 'Tölts fel egy természetes fényű képet magadról a Stílusprofil fülön! Az AI meghatározza a 12 évszakos színtípusodat és a hozzád legjobban passzoló színpalettát.',
+      actionText: 'Irány a Stílusprofil',
       action: () => onNavigateTab('profile')
     },
     {
@@ -90,7 +90,7 @@ export default function OnboardingGuide({ onNavigateTab, onOpenAddModal }) {
       done: isStep4Done,
       badge: '4. Lépés',
       title: 'Egyéni stílusszabályok rögzítése',
-      desc: 'Add meg saját tiltásaidat és elveidet szabad szöveggel a Stílus DNS-ben (pl. "Nem szeretem a műszálat", "Kerülöm a skinny szabást"). Az AI minden szettnél szigorúan betartja!',
+      desc: 'Add meg saját tiltásaidat és elveidet szabad szöveggel a Stílusprofilban (pl. "Nem szeretem a műszálat", "Kerülöm a skinny szabást"). Az AI minden szettnél szigorúan betartja!',
       actionText: 'Szabályok Megadása',
       action: () => onNavigateTab('profile')
     },

@@ -5,7 +5,7 @@ export default function BottomNav({ activeTab, setActiveTab }) {
   const tabs = [
     { id: 'outfits', label: 'Szettek', icon: Sparkles },
     { id: 'wardrobe', label: 'Gardrób', icon: Layers },
-    { id: 'advisor', label: 'Megvegyem?', icon: ShoppingBag, badge: 'Audit' },
+    { id: 'advisor', label: 'Megvegyem?', icon: ShoppingBag },
     { id: 'stylist', label: 'Stylist', icon: MessageSquare },
     { id: 'profile', label: 'Stílusprofil', icon: UserCheck }
   ];

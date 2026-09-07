@@ -162,7 +162,7 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
       {isLoading && (
         <div className="glass-card p-12 text-center space-y-3">
           <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin mx-auto" />
-          <p className="text-sm text-white font-medium">Gemini 3.7 Flash elemzi a kapszula ruhatáradat és rangsorolja a hiányzó darabokat...</p>
+          <p className="text-sm text-white font-medium">Az AI elemzi a kapszula ruhatáradat és rangsorolja a hiányzó darabokat...</p>
         </div>
       )}
 
