@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.5` (Production Build)
+- **Aktuális Verzió:** `v1.7.6` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,11 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.5)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.6)
+- [x] **Felugró Ablakok Viewport Pozicionálása & Fejléc Levágás Megszüntetése (v1.7.6):**
+  - Mobilon az összes felugró ablak (`ProfileEditModal`, `HelpGuideModal`, `AddClothingModal`, `OnboardingModal`, `ItemDetailModal`, `GarmentLightboxModal`, `OutfitsView` és `StylistView` modalok) külső wrapperén `items-start sm:items-center` és felső margó (`pt-4 sm:pt-6`), valamint `overflow-y-auto overscroll-contain` került bevezetésre.
+  - A modal kártyák dinamikus `max-h-[calc(100dvh-2rem)] sm:max-h-[88vh]` magasságot kaptak fix, látható fejléccel (`shrink-0`) és önállóan gördülő belső tartalommal (`flex-1 overflow-y-auto overscroll-contain`).
+  - Megszűnt a Flexbox Centering Scroll Trap jelenség: a fejléc, a cím és a bezáró `(X)` gomb bármilyen mobil kijelzőn és dinamikusan változó böngészős címsor mellett is azonnal, görgetés nélkül látható és kattintható.
 - [x] **Tab 4 Átpozicionálás: 🧩 Mix & Match (Főképernyő) & Másodlagos Chat (v1.7.5):**
   - A 4. tab neve „Mix & Match” (`BottomNav.jsx` és `DesktopTabs.jsx`, ikon: `SlidersHorizontal`).
   - Alapértelmezett nézet a 6-slotos manuális szettépítő és valós idejű audit.
@@ -100,13 +104,6 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
-- [ ] 🚨 **Felugró Ablakok Tetejének Levágása Mobilon (Flex Centering Scroll Trap):**
-  - **Hiba:** Mobilon a felugró ablakok (pl. `ProfileEditModal`, `HelpGuideModal`, `AddClothingModal`, `OnboardingModal`, `ItemDetailModal`, `GarmentLightboxModal`) teteje lecsúszik a képernyő teteje fölé (negatív Y koordinátatérbe), így a fejléc, a cím és a bezáró `(X)` gomb nem látható és nem elérhető.
-  - **Gyökérok:** A flexbox `items-center` igazítás miatt, ha a modal kártya magassága (`max-h-[90vh]` / `max-h-[92vh]` + margók `my-6`/`my-8`) meghaladja a mobil böngésző látható viewport magasságát (címsor + alsó vezérlősávok levonása után), a flexbox mindkét irányban kifelé tolja a tartalmat, így a teteje a képernyő fölé lóg ki, ahová felfelé már nem lehet görgetni.
-  - **Javítási terv:**
-    1. A modal külső wrapperén `items-center` helyett `items-start sm:items-center` és `overflow-y-auto` használata, vagy `my-auto` nélküli felső margó / `100dvh` alapú rugalmas magasság.
-    2. A belső kártya magasságának igazítása: `max-h-[calc(100dvh-2rem)]` vagy `max-h-[85vh]` fix fejléccel (`shrink-0`), hogy a fejléc garantáltan mindig a látható képernyőterület tetején maradjon.
-    3. Valamennyi modal (`ProfileEditModal`, `HelpGuideModal`, `AddClothingModal`, `OnboardingModal`, `ItemDetailModal`, `GarmentLightboxModal`, `OutfitsView` és `StylistView` modalok) egységes felülvizsgálata és javítása.
 - [ ] 🎨 **Felugró Ablakok Teljes Minimalista Újratervezése (Minimalist Modal Redesign):**
   - **Cél:** Az alkalmazás összes felugró ablakának (profil szerkesztés, súgó, ruha hozzáadása, onboarding, szettrészletek, képnézegető) átfogó letisztítása: minimális vizuális zaj, szellős és prémium tipográfia, egyszerűsített kártyák és űrlapok.
   - **Irányelvek:** Felesleges vizuális elemek, túldíszített keretek és háttéreffektek tompítása; átláthatóbb mező-csoportosítás; egységes, kompakt és fix fejléc/lábléc struktúra; zavartalan fókusz a lényegi műveleteken és adatokon.

@@ -24,55 +24,63 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-4 sm:pt-6 bg-black/80 backdrop-blur-md overflow-y-auto overscroll-contain animate-fade-in"
     >
-      <div className="relative w-full max-w-3xl bg-[#0b0e14] border border-[var(--border-gold)] rounded-2xl shadow-2xl p-5 sm:p-7 space-y-6 my-auto animate-scale-up max-h-[90vh] overflow-y-auto">
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-3xl bg-[#0b0e14] border border-[var(--border-gold)] rounded-2xl shadow-2xl flex flex-col my-auto animate-scale-up max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] overflow-hidden"
+      >
         
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#8a6b18] flex items-center justify-center text-black font-bold shadow-md shrink-0">
-              <BookOpen className="w-5 h-5 text-[#07090e]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="badge badge-gold text-[10px] uppercase font-bold tracking-wider">
-                  Stílustanácsadó Tudásbázis • v1.0 Build
-                </span>
-                <span className="text-[10px] text-[var(--text-muted)]">AI Stílustanácsadó</span>
+        {/* Sticky Header & Tabs */}
+        <div className="shrink-0 p-4 sm:p-6 pb-2 border-b border-white/10 bg-[#0b0e14] space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#8a6b18] flex items-center justify-center text-black font-bold shadow-md shrink-0">
+                <BookOpen className="w-5 h-5 text-[#07090e]" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-0.5">
-                Használati Útmutató & Stílus Kódex
-              </h3>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="badge badge-gold text-[10px] uppercase font-bold tracking-wider">
+                    Stílustanácsadó Tudásbázis • v1.0 Build
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">AI Stílustanácsadó</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-0.5">
+                  Használati Útmutató & Stílus Kódex
+                </h3>
+              </div>
             </div>
+
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-full text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors"
+              title="Bezárás"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <button 
-            onClick={onClose}
-            className="p-2 rounded-full text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors"
-            title="Bezárás"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {/* Tab Navigation */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+            {tabs.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  activeTab === t.id
+                    ? 'bg-[var(--accent-gold)] text-black font-bold shadow-md'
+                    : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 hover:text-white border border-white/5'
+                }`}
+              >
+                <span>{t.icon}</span>
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin border-b border-white/5">
-          {tabs.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                activeTab === t.id
-                  ? 'bg-[var(--accent-gold)] text-black font-bold shadow-md'
-                  : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 hover:text-white border border-white/5'
-              }`}
-            >
-              <span>{t.icon}</span>
-              <span>{t.label}</span>
-            </button>
-          ))}
-        </div>
+        {/* Scrollable Tab Content Body */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
 
         {/* Tab 1: Ruhatárépítés Aranyszabályai */}
         {activeTab === 'rules' && (
@@ -345,9 +353,10 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
             </div>
           </div>
         )}
+        </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-white/10 text-xs text-[var(--text-muted)]">
+        {/* Sticky Footer */}
+        <div className="shrink-0 p-4 sm:p-6 pt-3 border-t border-white/10 bg-[#0b0e14] flex items-center justify-between text-xs text-[var(--text-muted)]">
           <span>AI Wardrobe Assistant • Személyes Stílustanácsadó</span>
           <button
             onClick={onClose}

@@ -836,11 +836,11 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
       {showAnchorModal && (
         <div 
           onClick={(e) => { if (e.target === e.currentTarget) setShowAnchorModal(false); }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overscroll-contain animate-fade-in"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-4 sm:pt-6 bg-black/70 backdrop-blur-md overflow-y-auto overscroll-contain animate-fade-in"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="glass-card max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[85vh] my-auto flex flex-col border-[var(--border-gold)] shadow-2xl overflow-hidden"
+            className="glass-card max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] my-auto flex flex-col border-[var(--border-gold)] shadow-2xl overflow-hidden"
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
               <div className="flex items-center gap-2">
@@ -911,11 +911,11 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
       {itemSwapModal && (
         <div 
           onClick={(e) => { if (e.target === e.currentTarget) setItemSwapModal(null); }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overscroll-contain animate-fade-in"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-4 sm:pt-6 bg-black/70 backdrop-blur-md overflow-y-auto overscroll-contain animate-fade-in"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="glass-card max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[85vh] my-auto flex flex-col border-[var(--border-gold)] shadow-2xl overflow-hidden"
+            className="glass-card max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] my-auto flex flex-col border-[var(--border-gold)] shadow-2xl overflow-hidden"
           >
             <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
               <div className="flex items-center gap-2">

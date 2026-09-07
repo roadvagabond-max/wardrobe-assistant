@@ -442,12 +442,15 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-4 sm:pt-6 bg-black/80 backdrop-blur-md overflow-y-auto overscroll-contain animate-fade-in"
     >
-      <div className="relative w-full max-w-2xl bg-[#0b0e14] border border-[var(--border-gold)] rounded-2xl shadow-2xl p-5 sm:p-7 space-y-6 my-auto animate-scale-up max-h-[90vh] overflow-y-auto">
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-2xl bg-[#0b0e14] border border-[var(--border-gold)] rounded-2xl shadow-2xl flex flex-col my-auto animate-scale-up max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] overflow-hidden"
+      >
         
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        {/* Sticky Header */}
+        <div className="shrink-0 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-white/10 bg-[#0b0e14] flex items-center justify-between">
           <div>
             <span className="badge badge-gold">Digitális Ruhatár Bővítés</span>
             <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
@@ -464,7 +467,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
         {/* Input Method Selector / Form */}
         {!isFormReady ? (
-          <div className="space-y-5">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
             
             {/* Helpful Onboarding & Best Practices Tip Card */}
             <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 text-xs space-y-2">
@@ -687,7 +690,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
           </div>
         ) : (
           /* Preview and AI Result Form */
-          <form onSubmit={handleSave} className="space-y-5">
+          <form onSubmit={handleSave} className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
             <input 
               type="file" 
               accept="image/*" 

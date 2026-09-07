@@ -221,11 +221,11 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overscroll-contain animate-fade-in"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-4 sm:pt-6 bg-black/70 backdrop-blur-md overflow-y-auto overscroll-contain animate-fade-in"
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-lg bg-[#0e121a] border border-[var(--border-gold)] rounded-2xl shadow-2xl my-auto max-h-[88vh] flex flex-col overflow-hidden animate-scale-up"
+        className="relative w-full max-w-lg bg-[#0e121a] border border-[var(--border-gold)] rounded-2xl shadow-2xl my-auto max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] flex flex-col overflow-hidden animate-scale-up"
       >
         
         {/* Header (Sticky) */}

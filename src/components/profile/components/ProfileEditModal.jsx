@@ -57,13 +57,14 @@ export default function ProfileEditModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-fade-in">
-      <div 
-        className="relative w-full max-w-2xl bg-[#12161f] border border-[var(--border-gold)] rounded-2xl shadow-2xl p-5 sm:p-7 space-y-5 my-8 max-h-[92vh] overflow-y-auto"
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-4 sm:pt-6 bg-black/80 backdrop-blur-md overflow-y-auto overscroll-contain animate-fade-in">
+      <form 
+        onSubmit={handleSubmit}
+        className="relative w-full max-w-2xl bg-[#12161f] border border-[var(--border-gold)] rounded-2xl shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] overflow-hidden animate-scale-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        <div className="shrink-0 p-4 sm:p-5 border-b border-white/10 bg-[#12161f] flex items-center justify-between">
           <div>
             <span className="badge badge-gold text-[10px]">Profil Beállítások</span>
             <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
@@ -79,8 +80,8 @@ export default function ProfileEditModal({
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs sm:text-sm">
+        {/* Scrollable Form Body */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 text-xs sm:text-sm">
           
           {/* Row 1: Name & Gender */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -330,27 +331,27 @@ export default function ProfileEditModal({
               placeholder="pl. Időtlen, letisztult kapszula ruhatár minőségi alapdarabokkal, slim szabással."
             />
           </div>
+        </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary py-2 px-4 text-xs"
-            >
-              Mégse
-            </button>
-            <button
-              type="submit"
-              className="btn-gold py-2 px-5 text-xs flex items-center gap-1.5 shadow"
-            >
-              <Check className="w-4 h-4" />
-              <span>Módosítások Mentése</span>
-            </button>
-          </div>
+        {/* Sticky Actions Footer */}
+        <div className="shrink-0 p-4 sm:p-5 border-t border-white/10 bg-[#12161f] flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary py-2 px-4 text-xs"
+          >
+            Mégse
+          </button>
+          <button
+            type="submit"
+            className="btn-gold py-2 px-5 text-xs flex items-center gap-1.5 shadow"
+          >
+            <Check className="w-4 h-4" />
+            <span>Módosítások Mentése</span>
+          </button>
+        </div>
 
-        </form>
-      </div>
+      </form>
     </div>
   );
 }

@@ -106,73 +106,75 @@ export default function OnboardingModal({ isOpen, onClose, onFinish }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-4 sm:pt-6 bg-black/85 backdrop-blur-md overflow-y-auto overscroll-contain animate-fade-in">
       <div 
-        className="relative w-full max-w-2xl bg-[#0e131d] border border-[var(--border-gold)] rounded-2xl shadow-2xl p-5 sm:p-7 space-y-5 my-6 max-h-[92vh] overflow-y-auto"
+        className="relative w-full max-w-2xl bg-[#0e131d] border border-[var(--border-gold)] rounded-2xl shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header & Close */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#f59e0b] to-[#b45309] flex items-center justify-center text-black font-bold shadow-md shrink-0">
-              <Sparkles className="w-4 h-4 text-[#080e1a]" />
+        {/* Sticky Top Header & Stepper */}
+        <div className="shrink-0 p-4 sm:p-6 pb-3 border-b border-white/10 bg-[#0e131d] space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#f59e0b] to-[#b45309] flex items-center justify-center text-black font-bold shadow-md shrink-0">
+                <Sparkles className="w-4 h-4 text-[#080e1a]" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-base sm:text-lg text-white">
+                  Stílusprofil Varázsló
+                </h3>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  {currentStep}. lépés az 5-ből • Személyre szabott öltözködési tanácsadás
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-serif font-bold text-base sm:text-lg text-white">
-                Stílusprofil Varázsló
-              </h3>
-              <p className="text-[11px] text-[var(--text-muted)]">
-                {currentStep}. lépés az 5-ből • Személyre szabott öltözködési tanácsadás
-              </p>
-            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors"
+              title="Bezárás / Később folytatom"
+              aria-label="Bezárás"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors"
-            title="Bezárás / Később folytatom"
-            aria-label="Bezárás"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {/* Step Progress Bar & Indicator Pills */}
+          <div className="space-y-2">
+            <div className="w-full bg-black/60 h-1.5 rounded-full overflow-hidden border border-white/10">
+              <div 
+                className="h-full bg-gradient-to-r from-[#d4af37] via-[#f59e0b] to-[#10b981] transition-all duration-500 ease-out"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-1 text-[10px] text-[var(--text-muted)] pt-0.5">
+              {stepIcons.map(({ num, label, icon: StepIcon }) => {
+                const isDone = currentStep > num;
+                const isCurrent = currentStep === num;
+                return (
+                  <div 
+                    key={num}
+                    className={`flex items-center gap-1 font-medium transition-colors ${
+                      isCurrent 
+                        ? 'text-[var(--accent-gold)] font-bold' 
+                        : isDone 
+                          ? 'text-emerald-400' 
+                          : 'text-zinc-500'
+                    }`}
+                  >
+                    <StepIcon className="w-3 h-3" />
+                    <span className="hidden sm:inline">{label}</span>
+                    <span className="sm:hidden">{num}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* Step Progress Bar & Indicator Pills */}
-        <div className="space-y-2">
-          <div className="w-full bg-black/60 h-1.5 rounded-full overflow-hidden border border-white/10">
-            <div 
-              className="h-full bg-gradient-to-r from-[#d4af37] via-[#f59e0b] to-[#10b981] transition-all duration-500 ease-out"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-1 text-[10px] text-[var(--text-muted)] pt-0.5">
-            {stepIcons.map(({ num, label, icon: StepIcon }) => {
-              const isDone = currentStep > num;
-              const isCurrent = currentStep === num;
-              return (
-                <div 
-                  key={num} 
-                  className={`flex items-center gap-1 font-medium transition-colors ${
-                    isCurrent 
-                      ? 'text-[var(--accent-gold)] font-bold' 
-                      : isDone 
-                        ? 'text-emerald-400' 
-                        : 'text-zinc-500'
-                  }`}
-                >
-                  <StepIcon className="w-3 h-3" />
-                  <span className="hidden sm:inline">{label}</span>
-                  <span className="sm:hidden">{num}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* STEP CONTENT CONTAINER */}
-        <div className="pt-2">
+        {/* STEP CONTENT CONTAINER (Scrollable Body) */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
           {currentStep === 1 && (
             <StepIdentity 
               formData={formData} 
