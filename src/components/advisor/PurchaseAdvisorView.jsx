@@ -294,6 +294,9 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
         </h2>
         <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
           Nézzük meg, mennyire érdemes megvenned a kiszemelt darabot! Fotózd le a próbafülkében vagy illeszd be a webshop linket a minőségi és kombinálhatósági elemzéshez.
+        </p>
+      </div>
+
       {/* Collapsible 4-Pillar Guidance Accordion */}
       <div className="rounded-xl border border-amber-500/25 bg-gradient-to-r from-amber-500/10 via-black/40 to-transparent overflow-hidden text-xs transition-all">
         <button
