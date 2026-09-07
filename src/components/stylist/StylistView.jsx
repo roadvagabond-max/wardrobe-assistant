@@ -3,10 +3,11 @@ import { createPortal } from 'react-dom';
 import { 
   Sparkles, MessageSquare, SlidersHorizontal as Sliders, Plus, X, Bookmark, Check, 
   Loader2, Compass, Feather, CloudSun, Maximize2, RefreshCw, AlertCircle, ChevronUp,
-  Layers, Trash2, ShieldAlert
+  Layers, Trash2, ShieldAlert, Info
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { auditManualOutfit } from '../../services/gemini';
+import { getSmartGarmentImage } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
 import StylistChatView from './StylistChatView';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
@@ -19,6 +20,17 @@ const EVENT_PRESETS = [
   'Hétvégi Kiruccanás',
   'Elegáns Rendezvény'
 ];
+
+function cleanSartorialText(text) {
+  if (!text || typeof text !== 'string') return text;
+  return text
+    .replace(/\bsartorial\s+szempontb[oó]l\b/gi, 'stílusszempontból')
+    .replace(/\bsartorial\s+eleganci[aá][t]?\b/gi, 'klasszikus eleganciát')
+    .replace(/\bsartorialis\b/gi, 'stílusos')
+    .replace(/\bsartoriális\b/gi, 'stílusos')
+    .replace(/\bsartorial\b/gi, 'stílusos')
+    .replace(/\bSartorial\b/gi, 'Stílus');
+}
 
 export default function StylistView({ weather, setWeather, initialAnchorItem = null }) {
   const { wardrobe, profile, saveOutfit } = useAuth();
@@ -50,8 +62,9 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
   const [manualAuditResult, setManualAuditResult] = useState(null);
   const [isManualSaved, setIsManualSaved] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
-  // Validation Toast State: { visible: boolean, message: string }
+  // Validation Toast State
   const [toastMessage, setToastMessage] = useState(null);
 
   // Lightbox Modal State
@@ -442,7 +455,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
   }, [manualAuditResult]);
 
   return (
-    <div className="space-y-6 pb-32">
+    <div className="space-y-4 pb-32">
 
       {/* Floating Minimalist Validation Toast */}
       {toastMessage && (
@@ -459,95 +472,78 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         </div>
       )}
 
-      {/* Top Header with Mode Toggle (Quiet Luxury: Obsidian & Titanium) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-white/10 text-slate-200 border border-white/15">
-              {activeMode === 'manual-builder' ? '🧩 Mix & Match' : '💬 AI Stylist'}
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
-              {activeMode === 'manual-builder' ? 'Anatómiai Sziluett' : 'Master Stylist Csevegés'}
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-bold font-serif text-slate-100 tracking-tight mt-1">
-            {activeMode === 'manual-builder' ? 'Mix & Match Szettépítő' : 'AI Stylist Csevegés'}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            {activeMode === 'manual-builder' 
-              ? 'Állítsd össze a rétegeket a fejtetőtől a lábbeliig, és kérj rá mélyreható szakértői auditot.' 
-              : 'Konzultálj a ruhatárad darabjairól, a dress code-okról és a stílusirányzatokról.'}
-          </p>
+      {/* ========================================================================= */}
+      {/* CLEAN TOP HEADER: STABLE TOGGLE (LEFT) & WEATHER + HELP (RIGHT) */}
+      {/* ========================================================================= */}
+      <div className="flex items-center justify-between gap-3 pt-1 pb-1">
+        {/* Stable 2-Segmented Toggle: Left Mix & Match, Right AI Stylist (Never jumping) */}
+        <div className="flex items-center bg-[#0d121c] p-1 rounded-xl border border-slate-800 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveMode('manual-builder')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              activeMode === 'manual-builder'
+                ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>🧩 Mix & Match</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMode('chat')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              activeMode === 'chat'
+                ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>💬 AI Stylist</span>
+          </button>
         </div>
 
-        {/* Mode Selector Toggle */}
-        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-          {activeMode === 'manual-builder' ? (
-            <button
-              type="button"
-              onClick={() => setActiveMode('chat')}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700 transition-all shadow-md"
-              title="Váltás a csevegéshez"
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-slate-300" />
-              <span>💬 Stylist Csevegés</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setActiveMode('manual-builder')}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 bg-slate-200 text-slate-900 font-bold shadow-md hover:bg-white transition-all"
-              title="Vissza a szettépítőhöz"
-            >
-              <Sliders className="w-3.5 h-3.5 text-slate-900" />
-              <span>🧩 Szettépítő</span>
-            </button>
-          )}
-
-          <div className="flex items-center bg-[#0d121c] p-1 rounded-xl border border-white/10">
-            <button
-              type="button"
-              onClick={() => setActiveMode('manual-builder')}
-              className={`p-1.5 rounded-lg text-xs transition-all ${
-                activeMode === 'manual-builder'
-                  ? 'bg-slate-200 text-slate-900 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Mix & Match Szettépítő"
-            >
-              <Sliders className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveMode('chat')}
-              className={`p-1.5 rounded-lg text-xs transition-all ${
-                activeMode === 'chat'
-                  ? 'bg-slate-200 text-slate-900 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Master Stylist Csevegés"
-            >
-              <MessageSquare className="w-4 h-4" />
-            </button>
+        {/* Right: Weather & Help info toggle */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="px-3 py-1.5 rounded-xl bg-[#0d121c] border border-slate-800 text-xs flex items-center gap-1.5 text-slate-300">
+            <CloudSun className="w-4 h-4 text-slate-300 shrink-0" />
+            <span className="font-semibold text-slate-200">{weather?.city || 'Budapest'}, {weather?.temperature ?? 21}°C</span>
+            <span className="text-[11px] text-slate-500 hidden sm:inline">({weather?.condition || 'Kellemes'})</span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowGuide(prev => !prev)}
+            className={`p-2 rounded-xl border transition-colors ${
+              showGuide 
+                ? 'bg-slate-200 text-slate-900 border-white' 
+                : 'bg-[#0d121c] text-slate-400 hover:text-white border-slate-800'
+            }`}
+            title="Súgó ki/bekapcsolása"
+          >
+            <Info className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* Guidance */}
-      <ModuleFirstTimeGuide 
-        moduleId="stylist"
-        title="Hogyan működik a Stylist Modul?"
-        subtitle="Személyes mester stylist konzultáció és anatómiai szettépítő"
-        description="A Stylist közvetlen beszélgetésben áll veled, és teljes mélységében ismeri a testalkatodat, színtípusodat és egyéni szabályaidat."
-        points={[
-          "A Szettépítő felületén anatómiai sorrendben válogathatod össze a rétegeket.",
-          "Az AI a belső stílusharmóniát, színeket, textúrákat és a helyi időjárást auditálja.",
-          "Az esemény megadása opcionális: ha üres, a szett önálló esztétikáját értékeli."
-        ]}
-        actionLabel="Irány a Gardrób"
-        onAction={() => { window.location.hash = '#wardrobe'; }}
-        wardrobeCount={wardrobe?.length || 0}
-      />
+      {/* Collapsible First-time Guidance (Only visible on toggle or first view) */}
+      {showGuide && (
+        <ModuleFirstTimeGuide 
+          moduleId="stylist"
+          title="Hogyan működik a Stylist Modul?"
+          subtitle="Személyes mester stylist konzultáció és anatómiai szettépítő"
+          description="A Stylist közvetlen kapcsolatban áll veled, és teljes mélységében ismeri a ruhatáradat, stílusodat és szabályaidat."
+          points={[
+            "A Szettépítő felületén anatómiai sorrendben válogathatod össze a darabokat.",
+            "Az AI az esztétikai összhangot, a színeket, textúrákat és a helyi időjárást értékeli.",
+            "Az esemény megadása opcionális: ha üres, a szett önálló stílusát vizsgálja."
+          ]}
+          actionLabel="Irány a Gardrób"
+          onAction={() => { window.location.hash = '#wardrobe'; }}
+          wardrobeCount={wardrobe?.length || 0}
+        />
+      )}
 
       {/* ========================================================================= */}
       {/* MODE 1: MASTER STYLIST CHAT */}
@@ -557,21 +553,21 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       )}
 
       {/* ========================================================================= */}
-      {/* MODE 2: ANATOMICAL SILHOUETTE CANVAS (OBSIDIAN & TITANIUM) */}
+      {/* MODE 2: PURE LOOKBOOK FLATLAY CANVAS */}
       {/* ========================================================================= */}
       {activeMode === 'manual-builder' && (
-        <div className="space-y-6">
+        <div className="space-y-3">
 
-          {/* Compact Optional Event & Weather Bar */}
-          <div className="p-4 rounded-2xl bg-[#0f1420]/80 border border-slate-700/60 backdrop-blur-md shadow-lg space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Slim Event Bar with Quick Chips & Reset */}
+          <div className="p-3 rounded-2xl bg-[#0f1420]/70 border border-slate-800 space-y-2">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex-1 relative">
                 <input
                   type="text"
-                  placeholder="Esemény megadása (opcionális, pl. Toszkán esküvő, Laza péntek)..."
+                  placeholder="Esemény megadása (opcionális, pl. Toszkánai esküvő, Laza péntek)..."
                   value={manualEvent}
                   onChange={(e) => setManualEvent(e.target.value)}
-                  className="w-full bg-[#0a0e17] border border-slate-700/70 rounded-xl px-3.5 py-2.5 pr-8 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400 transition-colors"
+                  className="w-full bg-[#0a0e17] border border-slate-700/70 rounded-xl px-3.5 py-2 pr-8 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400 transition-colors"
                 />
                 {manualEvent && (
                   <button
@@ -585,17 +581,21 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 )}
               </div>
 
-              {/* Weather Chip */}
-              <div className="px-3 py-2 rounded-xl bg-[#0a0e17] border border-slate-700/70 text-xs flex items-center gap-2 shrink-0 text-slate-300">
-                <CloudSun className="w-4 h-4 text-slate-300" />
-                <span className="font-semibold text-slate-200">{weather?.city || 'Budapest'}, {weather?.temperature ?? 21}°C</span>
-                <span className="text-[11px] text-slate-500">({weather?.condition || 'Kellemes'})</span>
-              </div>
+              {selectedItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleResetEnsemble}
+                  className="text-xs text-slate-400 hover:text-rose-400 flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 transition-colors shrink-0"
+                  title="Szett ürítése"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Kiürítés</span>
+                </button>
+              )}
             </div>
 
-            {/* Quick Event Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mr-1 shrink-0">Gyors alkalom:</span>
+            {/* Quick Event Preset Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
               {EVENT_PRESETS.map((preset) => (
                 <button
                   key={preset}
@@ -613,389 +613,340 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
             </div>
           </div>
 
-          {/* Reset Action */}
-          {selectedItems.length > 0 && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleResetEnsemble}
-                className="text-xs text-slate-400 hover:text-rose-400 flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-rose-500/10 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Szett kiürítése</span>
-              </button>
-            </div>
-          )}
-
           {/* ========================================================================= */}
-          {/* THE ANATOMICAL SILHOUETTE CANVAS */}
+          {/* THE SEAMLESS VISUAL LOOKBOOK FLATLAY (TEXTLESS, TIGHTLY SPACED) */}
           {/* ========================================================================= */}
-          <div className="space-y-4">
+          <div className="p-3 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-2.5 shadow-2xl">
 
-            {/* 1. FELSŐTEST ZÓNA (Upper Body Zone) */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#0d121c] border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                  <span>👔</span>
-                  <span>Felsőtest Rétegek</span>
-                  <span className="text-[10px] text-slate-500 font-normal">
-                    {ensemble.dress ? '(Egyberuhával átfogva)' : `(${ensemble.upperLayers.length}/4 réteg)`}
-                  </span>
-                </span>
+            {/* 1. FELSŐTEST ZÓNA (Upper Body: Single large initial card OR horizontal flow + compact [+]) */}
+            {ensemble.dress ? (
+              /* Dress active: One large lookbook card */
+              <div className="relative w-full aspect-[4/3] max-h-72 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group">
+                <img 
+                  src={ensemble.dress.imageUrl || getSmartGarmentImage('dresses', ensemble.dress.color, 'dress')} 
+                  alt={ensemble.dress.name}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = getSmartGarmentImage('dresses', ensemble.dress.color, 'dress');
+                  }}
+                  onClick={() => openLightbox([ensemble.dress], 0, ensemble.dress.name)}
+                  className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                />
+                {/* Floating Corner Actions directly on the photo */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleRemoveDress(); }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/75 hover:bg-rose-600 text-slate-200 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                  title="Ruha levétele"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleOpenPicker('dress'); }}
+                  className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-black/75 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                  title="Ruha cseréje"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : ensemble.upperLayers.length === 0 ? (
+              /* Empty initial state: Exactly ONE large button */
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenPicker('upper')}
+                  className="flex-1 py-12 border border-dashed border-slate-700 hover:border-slate-400 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/50 group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300">
+                    <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span className="text-xs font-semibold">+ Válassz felsőt (Ing, Póló, Pulóver, Zakó)</span>
+                </button>
 
-                {/* Female Dress Switch Shortcut */}
-                {isFemale && !ensemble.dress && (
+                {isFemale && (
                   <button
                     type="button"
                     onClick={() => handleOpenPicker('dress')}
-                    className="text-[11px] text-slate-300 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 flex items-center gap-1.5 transition-colors"
+                    className="w-24 py-12 border border-dashed border-slate-800 hover:border-slate-600 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/30 shrink-0"
+                    title="Egyberuha választása"
                   >
-                    <span>👗</span>
-                    <span>Egyberuha választása</span>
+                    <span className="text-xl">👗</span>
+                    <span className="text-[11px] font-medium">Ruha</span>
                   </button>
                 )}
               </div>
-
-              {/* If a Dress is active */}
-              {ensemble.dress ? (
-                <div className="p-3.5 rounded-xl bg-[#090d15] border border-slate-700 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div 
-                      onClick={() => openLightbox([ensemble.dress], 0, ensemble.dress.name)}
-                      className="w-16 h-20 rounded-lg overflow-hidden bg-[#05070c] p-1 shrink-0 border border-slate-800 cursor-pointer group"
-                    >
-                      <img src={ensemble.dress.imageUrl} alt={ensemble.dress.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">👗 Egyberuha</span>
-                      <h4 className="text-sm font-semibold text-slate-100 truncate">{ensemble.dress.name}</h4>
-                      <span className="text-xs text-slate-400 truncate block">
-                        {ensemble.dress.brand ? `${ensemble.dress.brand} • ` : ''}{ensemble.dress.color || ''} {ensemble.dress.material ? `(${ensemble.dress.material})` : ''}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPicker('dress')}
-                      className="text-xs text-slate-300 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700"
-                    >
-                      Csere
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRemoveDress}
-                      className="text-xs text-rose-400 hover:text-rose-300 p-1"
-                      title="Ruha levétele"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Standard Upper Body Horizontal Layers Grid */
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {ensemble.upperLayers.map((layer, idx) => (
-                    <div 
-                      key={layer.id || idx}
-                      className="p-3 rounded-xl bg-[#090d15] border border-slate-700 flex flex-col justify-between relative group"
-                    >
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-                        <span className="font-mono">Réteg {idx + 1}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveUpperLayer(idx)}
-                          className="text-slate-500 hover:text-rose-400 p-0.5"
-                          title="Réteg törlése"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      <div 
-                        onClick={() => openLightbox([layer], 0, layer.name)}
-                        className="w-full aspect-square rounded-lg bg-[#05070c] p-1.5 overflow-hidden border border-slate-800 flex items-center justify-center cursor-pointer mb-2 group-hover:border-slate-600 transition-colors"
-                      >
-                        <img src={layer.imageUrl} alt={layer.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
-                      </div>
-
-                      <div className="min-w-0">
-                        <h5 className="text-xs font-semibold text-slate-200 truncate">{layer.name}</h5>
-                        <span className="text-[10px] text-slate-500 truncate block">
-                          {layer.brand ? `${layer.brand} • ` : ''}{layer.color}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenPicker('upper', idx)}
-                        className="mt-2 w-full py-1 text-[11px] text-slate-400 hover:text-slate-100 bg-slate-800/60 hover:bg-slate-800 rounded-lg text-center transition-colors"
-                      >
-                        Csere
-                      </button>
-                    </div>
-                  ))}
-
-                  {/* Add Layer Button (if < 4 layers) */}
-                  {ensemble.upperLayers.length < 4 && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPicker('upper')}
-                      className="p-4 border border-dashed border-slate-700 hover:border-slate-400 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-100 transition-all aspect-square group"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300">
-                        <Plus className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-medium">
-                        {ensemble.upperLayers.length === 0 ? '+ Bázis felső' : '+ Új réteg'}
-                      </span>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 2. ALSÓTEST & DERÉKVONAL ZÓNA (Lower Body Zone) */}
-            {!ensemble.dress && (
-              <div className="p-4 sm:p-5 rounded-2xl bg-[#0d121c] border border-slate-800 space-y-3">
-                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                  <span>👖</span>
-                  <span>Alsótest (Nadrág / Szoknya)</span>
-                </span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Bottoms Slot */}
-                  {ensemble.lower ? (
-                    <div className="p-3.5 rounded-xl bg-[#090d15] border border-slate-700 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div 
-                          onClick={() => openLightbox([ensemble.lower], 0, ensemble.lower.name)}
-                          className="w-14 h-16 rounded-lg bg-[#05070c] p-1 overflow-hidden shrink-0 border border-slate-800 cursor-pointer group"
-                        >
-                          <img src={ensemble.lower.imageUrl} alt={ensemble.lower.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
-                        </div>
-                        <div className="min-w-0">
-                          <h5 className="text-xs font-semibold text-slate-100 truncate">{ensemble.lower.name}</h5>
-                          <span className="text-[10px] text-slate-400 block truncate">
-                            {ensemble.lower.brand ? `${ensemble.lower.brand} • ` : ''}{ensemble.lower.color}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPicker('lower')}
-                          className="text-xs text-slate-300 hover:text-white px-2 py-1 rounded bg-slate-800"
-                        >
-                          Csere
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleRemoveLower}
-                          className="text-slate-500 hover:text-rose-400 p-1"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPicker('lower')}
-                      className="p-4 border border-dashed border-slate-700 hover:border-slate-400 rounded-xl flex items-center justify-center gap-2 text-slate-400 hover:text-slate-100 transition-all group"
-                    >
-                      <Plus className="w-4 h-4 text-slate-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-xs font-medium">Válassz nadrágot vagy szoknyát</span>
-                    </button>
-                  )}
-
-                  {/* Anatomical Waist / Belt Slot */}
-                  {ensemble.accessories.some(a => (a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv'))) ? (
-                    (() => {
-                      const belt = ensemble.accessories.find(a => a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv'));
-                      const beltIdx = ensemble.accessories.indexOf(belt);
-                      return (
-                        <div className="p-3.5 rounded-xl bg-[#090d15] border border-slate-700 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div 
-                              onClick={() => openLightbox([belt], 0, belt.name)}
-                              className="w-12 h-12 rounded-lg bg-[#05070c] p-1 overflow-hidden shrink-0 border border-slate-800 cursor-pointer group"
-                            >
-                              <img src={belt.imageUrl} alt={belt.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
-                            </div>
-                            <div className="min-w-0">
-                              <span className="text-[9px] uppercase font-mono text-slate-500">🎗️ Deréköv</span>
-                              <h5 className="text-xs font-semibold text-slate-200 truncate">{belt.name}</h5>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveAccessory(beltIdx)}
-                            className="text-slate-500 hover:text-rose-400 p-1"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPicker('accessory')}
-                      className="p-3.5 border border-dashed border-slate-800 hover:border-slate-600 rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-slate-300 text-xs transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Opcionális Bőröv</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 3. LÁBBELI & ZOKNI ZÓNA (Footwear Zone) */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#0d121c] border border-slate-800 space-y-3">
-              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                <span>👞</span>
-                <span>Lábbelik & Zokni</span>
-              </span>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Shoes Slot */}
-                {ensemble.shoes ? (
-                  <div className="p-3.5 rounded-xl bg-[#090d15] border border-slate-700 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div 
-                        onClick={() => openLightbox([ensemble.shoes], 0, ensemble.shoes.name)}
-                        className="w-14 h-16 rounded-lg bg-[#05070c] p-1 overflow-hidden shrink-0 border border-slate-800 cursor-pointer group"
-                      >
-                        <img src={ensemble.shoes.imageUrl} alt={ensemble.shoes.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
-                      </div>
-                      <div className="min-w-0">
-                        <h5 className="text-xs font-semibold text-slate-100 truncate">{ensemble.shoes.name}</h5>
-                        <span className="text-[10px] text-slate-400 block truncate">
-                          {ensemble.shoes.brand ? `${ensemble.shoes.brand} • ` : ''}{ensemble.shoes.color}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenPicker('shoes')}
-                        className="text-xs text-slate-300 hover:text-white px-2 py-1 rounded bg-slate-800"
-                      >
-                        Csere
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleRemoveShoes}
-                        className="text-slate-500 hover:text-rose-400 p-1"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenPicker('shoes')}
-                    className="p-4 border border-dashed border-slate-700 hover:border-slate-400 rounded-xl flex items-center justify-center gap-2 text-slate-400 hover:text-slate-100 transition-all group"
-                  >
-                    <Plus className="w-4 h-4 text-slate-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-xs font-medium">Válassz cipőt vagy csizmát</span>
-                  </button>
-                )}
-
-                {/* Socks / Tights Slot */}
-                {ensemble.socks ? (
-                  <div className="p-3.5 rounded-xl bg-[#090d15] border border-slate-700 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div 
-                        onClick={() => openLightbox([ensemble.socks], 0, ensemble.socks.name)}
-                        className="w-12 h-12 rounded-lg bg-[#05070c] p-1 overflow-hidden shrink-0 border border-slate-800 cursor-pointer group"
-                      >
-                        <img src={ensemble.socks.imageUrl} alt={ensemble.socks.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-[9px] uppercase font-mono text-slate-500">🧦 Zokni / Harisnya</span>
-                        <h5 className="text-xs font-semibold text-slate-200 truncate">{ensemble.socks.name}</h5>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemoveSocks}
-                      className="text-slate-500 hover:text-rose-400 p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenPicker('socks')}
-                    className="p-3.5 border border-dashed border-slate-800 hover:border-slate-600 rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-slate-300 text-xs transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ Zokni vagy Harisnya</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 4. EGYÉB KIEGÉSZÍTŐK ZÓNA (Accessories Zone: Watch, Bag, Scarf, Jewelry) */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-[#0d121c] border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                  <span>⌚</span>
-                  <span>Kiegészítők & Ékszerek</span>
-                  <span className="text-[10px] text-slate-500 font-normal">({ensemble.accessories.length}/4 db)</span>
-                </span>
-
-                {ensemble.accessories.length < 4 && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenPicker('accessory')}
-                    className="text-xs text-slate-300 hover:text-white px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center gap-1 transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Hozzáadás</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {ensemble.accessories.map((acc, idx) => (
+            ) : (
+              /* Loaded Upper Layers: Horizontal flow + ONE single compact [+] button */
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                {ensemble.upperLayers.map((layer, idx) => (
                   <div 
-                    key={acc.id || idx}
-                    className="p-2.5 rounded-xl bg-[#090d15] border border-slate-700 flex items-center justify-between gap-2"
+                    key={layer.id || idx}
+                    className="relative w-36 h-44 sm:w-44 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group"
                   >
-                    <div 
-                      onClick={() => openLightbox([acc], 0, acc.name)}
-                      className="w-10 h-10 rounded-lg bg-[#05070c] p-1 overflow-hidden shrink-0 border border-slate-800 cursor-pointer"
-                    >
-                      <img src={acc.imageUrl} alt={acc.name} className="w-full h-full object-contain" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h6 className="text-[11px] font-medium text-slate-200 truncate">{acc.name}</h6>
-                    </div>
+                    <img 
+                      src={layer.imageUrl || getSmartGarmentImage(layer.category, layer.color, layer.subCategory)} 
+                      alt={layer.name}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = getSmartGarmentImage(layer.category, layer.color, layer.subCategory);
+                      }}
+                      onClick={() => openLightbox([layer], 0, layer.name)}
+                      className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                    />
+
+                    {/* Floating Corner Actions directly on the photo */}
                     <button
                       type="button"
-                      onClick={() => handleRemoveAccessory(idx)}
-                      className="text-slate-500 hover:text-rose-400 p-1"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveUpperLayer(idx); }}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                      title="Réteg törlése"
                     >
                       <X className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleOpenPicker('upper', idx); }}
+                      className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                      title="Réteg cseréje"
+                    >
+                      <RefreshCw className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
 
-                {ensemble.accessories.length === 0 && (
-                  <div className="col-span-2 sm:col-span-4 p-4 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                    Nincs hozzáadott kiegészítő (karóra, táska, sál).
-                  </div>
+                {/* Exactly 1 small compact [+] button for additional layers (up to 4) */}
+                {ensemble.upperLayers.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPicker('upper')}
+                    className="w-16 h-44 sm:h-52 rounded-2xl border border-dashed border-slate-700 hover:border-slate-400 bg-[#090d15]/40 hover:bg-[#090d15] flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 shrink-0 transition-all group"
+                    title="További réteg hozzáadása"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 mb-1">
+                      <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <span className="text-[10px] font-mono opacity-80">+ Réteg</span>
+                  </button>
                 )}
               </div>
+            )}
+
+            {/* 2. ALSÓTEST ZÓNA (Lower Body: Trousers/Skirt + Belt tightly beside it) */}
+            {!ensemble.dress && (
+              <div className="flex items-center gap-2">
+                {/* Pants / Skirt Card */}
+                {ensemble.lower ? (
+                  <div className="relative flex-1 h-44 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group">
+                    <img 
+                      src={ensemble.lower.imageUrl || getSmartGarmentImage(ensemble.lower.category, ensemble.lower.color, ensemble.lower.subCategory)} 
+                      alt={ensemble.lower.name}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = getSmartGarmentImage(ensemble.lower.category, ensemble.lower.color, ensemble.lower.subCategory);
+                      }}
+                      onClick={() => openLightbox([ensemble.lower], 0, ensemble.lower.name)}
+                      className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                    />
+                    {/* Floating Corner Actions directly on the photo */}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveLower(); }}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                      title="Nadrág törlése"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleOpenPicker('lower'); }}
+                      className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                      title="Nadrág cseréje"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPicker('lower')}
+                    className="flex-1 h-44 sm:h-52 border border-dashed border-slate-700 hover:border-slate-400 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/50 group"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300">
+                      <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <span className="text-xs font-semibold">+ Nadrág vagy Szoknya</span>
+                  </button>
+                )}
+
+                {/* Waist / Belt Slot */}
+                {ensemble.accessories.some(a => (a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv'))) ? (
+                  (() => {
+                    const belt = ensemble.accessories.find(a => a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv'));
+                    const beltIdx = ensemble.accessories.indexOf(belt);
+                    return (
+                      <div className="relative w-24 sm:w-32 h-44 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group">
+                        <img 
+                          src={belt.imageUrl || getSmartGarmentImage('accessories', belt.color, 'belt')} 
+                          alt={belt.name}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = getSmartGarmentImage('accessories', belt.color, 'belt');
+                          }}
+                          onClick={() => openLightbox([belt], 0, belt.name)}
+                          className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleRemoveAccessory(beltIdx); }}
+                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10"
+                          title="Öv törlése"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPicker('accessory')}
+                    className="w-20 sm:w-24 h-44 sm:h-52 border border-dashed border-slate-800 hover:border-slate-600 bg-[#090d15]/30 hover:bg-[#090d15] rounded-2xl flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 shrink-0 transition-colors group"
+                    title="Öv hozzáadása"
+                  >
+                    <Plus className="w-4 h-4 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-medium">+ Öv</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* 3. LÁBBELI & ZOKNI ZÓNA (Footwear & Socks tightly beside it) */}
+            <div className="flex items-center gap-2">
+              {/* Shoes Card */}
+              {ensemble.shoes ? (
+                <div className="relative flex-1 h-36 sm:h-44 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group">
+                  <img 
+                    src={ensemble.shoes.imageUrl || getSmartGarmentImage('shoes', ensemble.shoes.color, ensemble.shoes.subCategory)} 
+                    alt={ensemble.shoes.name}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = getSmartGarmentImage('shoes', ensemble.shoes.color, ensemble.shoes.subCategory);
+                    }}
+                    onClick={() => openLightbox([ensemble.shoes], 0, ensemble.shoes.name)}
+                    className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                  />
+                  {/* Floating Corner Actions directly on the photo */}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleRemoveShoes(); }}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                    title="Cipő törlése"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleOpenPicker('shoes'); }}
+                    className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                    title="Cipő cseréje"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleOpenPicker('shoes')}
+                  className="flex-1 h-36 sm:h-44 border border-dashed border-slate-700 hover:border-slate-400 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/50 group"
+                >
+                  <div className="w-9 h-9 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300">
+                    <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  </div>
+                  <span className="text-xs font-semibold">+ Cipő vagy Csizma</span>
+                </button>
+              )}
+
+              {/* Socks / Tights Slot */}
+              {ensemble.socks ? (
+                <div className="relative w-24 sm:w-32 h-36 sm:h-44 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group">
+                  <img 
+                    src={ensemble.socks.imageUrl || getSmartGarmentImage('accessories', ensemble.socks.color, 'socks')} 
+                    alt={ensemble.socks.name}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = getSmartGarmentImage('accessories', ensemble.socks.color, 'socks');
+                    }}
+                    onClick={() => openLightbox([ensemble.socks], 0, ensemble.socks.name)}
+                    className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleRemoveSocks(); }}
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10"
+                    title="Zokni törlése"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleOpenPicker('socks')}
+                  className="w-20 sm:w-24 h-36 sm:h-44 border border-dashed border-slate-800 hover:border-slate-600 bg-[#090d15]/30 hover:bg-[#090d15] rounded-2xl flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 shrink-0 transition-colors group"
+                  title="Zokni vagy harisnya hozzáadása"
+                >
+                  <Plus className="w-4 h-4 mb-1 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-medium">+ Zokni</span>
+                </button>
+              )}
+            </div>
+
+            {/* 4. KIEGÉSZÍTŐK ZÓNA (Accessories: Watch, Bag, etc.) */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1">
+              {ensemble.accessories
+                .filter(a => !(a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv')))
+                .map((acc, idx) => {
+                  const originalIdx = ensemble.accessories.indexOf(acc);
+                  return (
+                    <div 
+                      key={acc.id || idx}
+                      className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group"
+                    >
+                      <img 
+                        src={acc.imageUrl || getSmartGarmentImage('accessories', acc.color, acc.subCategory)} 
+                        alt={acc.name}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = getSmartGarmentImage('accessories', acc.color, acc.subCategory);
+                        }}
+                        onClick={() => openLightbox([acc], 0, acc.name)}
+                        className="w-full h-full object-contain p-1.5 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveAccessory(originalIdx); }}
+                        className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10"
+                        title="Törlés"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+
+              {/* 1 single compact [+] button for accessories */}
+              {ensemble.accessories.length < 4 && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenPicker('accessory')}
+                  className="w-16 h-20 sm:h-24 rounded-2xl border border-dashed border-slate-800 hover:border-slate-600 bg-[#090d15]/30 hover:bg-[#090d15] flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 shrink-0 transition-colors group"
+                  title="Kiegészítő hozzáadása (óra, táska, sál)"
+                >
+                  <Plus className="w-4 h-4 mb-1 group-hover:scale-110 transition-transform" />
+                  <span className="text-[10px] font-mono opacity-80">+ Ékszer</span>
+                </button>
+              )}
             </div>
 
           </div>
@@ -1013,32 +964,32 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
           {isAuditing && (
             <div className="px-5 py-3.5 rounded-2xl bg-[#0d121c]/95 border border-slate-500 shadow-2xl backdrop-blur-md flex items-center justify-center gap-3 text-slate-100 text-xs font-semibold score-glow-titanium">
               <Loader2 className="w-4 h-4 animate-spin text-slate-300" />
-              <span>Az AI elemzi a szettet és a sartorial harmóniát...</span>
+              <span>Az AI elemzi a szettet és az összhangot...</span>
             </div>
           )}
 
-          {/* STATE B: Already Audited (Click opens Details Drawer) */}
+          {/* STATE B: Already Audited (Click opens Details Drawer - No overflow for 'Részletek') */}
           {!isAuditing && manualAuditResult && scoreBadgeConfig && (
             <div 
               onClick={() => setIsDrawerOpen(true)}
-              className={`px-5 py-3.5 rounded-2xl border backdrop-blur-md flex items-center justify-between cursor-pointer transition-all hover:brightness-110 ${scoreBadgeConfig.glowClass}`}
+              className={`px-4 sm:px-5 py-3 rounded-2xl border backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 cursor-pointer transition-all hover:brightness-110 shadow-2xl ${scoreBadgeConfig.glowClass}`}
             >
-              <div className="flex items-center gap-3">
-                <span className="text-xl">{scoreBadgeConfig.icon}</span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-bold font-serif">{manualAuditResult.score}%</span>
-                    <span className="text-xs font-medium opacity-90">{scoreBadgeConfig.title}</span>
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                <span className="text-lg sm:text-xl shrink-0">{scoreBadgeConfig.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-sm sm:text-base font-bold font-serif shrink-0">{manualAuditResult.score}%</span>
+                    <span className="text-xs font-medium opacity-90 truncate">{scoreBadgeConfig.title}</span>
                   </div>
-                  <span className="text-[10px] opacity-75 block truncate max-w-[220px] sm:max-w-xs">
-                    {manualAuditResult.verdict}
+                  <span className="text-[10px] opacity-75 block truncate">
+                    {cleanSartorialText(manualAuditResult.verdict)}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 text-xs font-semibold pl-2">
+              <div className="flex items-center gap-1 text-xs font-semibold shrink-0 whitespace-nowrap pl-2 border-l border-white/10">
                 <span>Részletek</span>
-                <ChevronUp className="w-4 h-4" />
+                <ChevronUp className="w-3.5 h-3.5" />
               </div>
             </div>
           )}
@@ -1051,7 +1002,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               className="w-full px-5 py-3.5 rounded-2xl bg-slate-200 hover:bg-white text-slate-900 font-serif font-bold text-sm shadow-2xl transition-all flex items-center justify-center gap-2 score-glow-titanium"
             >
               <Sparkles className="w-4 h-4 text-slate-900" />
-              <span>🎯 Összhang Auditálása ({selectedItems.length} darab kiválasztva)</span>
+              <span>🎯 Összhang Elemzése ({selectedItems.length} darab)</span>
             </button>
           )}
 
@@ -1151,8 +1102,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 >
                   <div className="w-full aspect-square p-2 bg-[#05070c] flex items-center justify-center overflow-hidden">
                     <img 
-                      src={item.imageUrl} 
+                      src={item.imageUrl || getSmartGarmentImage(item.category, item.color, item.subCategory)} 
                       alt={item.name} 
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = getSmartGarmentImage(item.category, item.color, item.subCategory);
+                      }}
                       className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
                     />
                   </div>
@@ -1207,7 +1162,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400">Szakértői Elemzés</span>
-                  <h3 className="text-base font-serif font-bold text-slate-100">{manualAuditResult.verdict}</h3>
+                  <h3 className="text-base font-serif font-bold text-slate-100">{cleanSartorialText(manualAuditResult.verdict)}</h3>
                 </div>
               </div>
 
@@ -1231,7 +1186,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     <span>🎯 {manualEvent.trim() ? 'Esemény & Dress Code Összhang:' : 'Stílusösszhang & Önazonosság:'}</span>
                   </div>
                   <p className="text-slate-400 leading-relaxed">
-                    {manualAuditResult.eventAlignment}
+                    {cleanSartorialText(manualAuditResult.eventAlignment)}
                   </p>
                 </div>
               )}
@@ -1244,7 +1199,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     <span>🎨 Színharmónia & Kontraszt:</span>
                   </div>
                   <p className="text-slate-400 leading-relaxed">
-                    {manualAuditResult.colorHarmony}
+                    {cleanSartorialText(manualAuditResult.colorHarmony)}
                   </p>
                 </div>
               )}
@@ -1257,7 +1212,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     <span>🧵 Anyagok & Textúrák Találkozása:</span>
                   </div>
                   <p className="text-slate-400 leading-relaxed">
-                    {manualAuditResult.fabricSynergy}
+                    {cleanSartorialText(manualAuditResult.fabricSynergy)}
                   </p>
                 </div>
               )}
@@ -1270,7 +1225,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     <span>🧥 Rétegezés & Időjárási Komfort ({weather?.temperature ?? 21}°C):</span>
                   </div>
                   <p className="text-slate-400 leading-relaxed">
-                    {manualAuditResult.layeringEvaluation}
+                    {cleanSartorialText(manualAuditResult.layeringEvaluation)}
                   </p>
                 </div>
               )}
@@ -1283,7 +1238,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     <span>⚖️ Testalkati Arányok & Sziluett:</span>
                   </div>
                   <p className="text-slate-400 leading-relaxed">
-                    {manualAuditResult.bodyFitVerdict}
+                    {cleanSartorialText(manualAuditResult.bodyFitVerdict)}
                   </p>
                 </div>
               )}
@@ -1292,7 +1247,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               {manualAuditResult.fitMismatchWarning && (
                 <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-1">
                   <span className="font-bold block">Figyelmeztetés:</span>
-                  <p>{manualAuditResult.fitMismatchWarning}</p>
+                  <p>{cleanSartorialText(manualAuditResult.fitMismatchWarning)}</p>
                 </div>
               )}
 
@@ -1302,7 +1257,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                   <span className="font-bold text-emerald-300 block">✨ Erősségek:</span>
                   <ul className="list-disc list-inside space-y-1 text-emerald-200/90">
                     {manualAuditResult.strengths.map((st, sIdx) => (
-                      <li key={sIdx}>{st}</li>
+                      <li key={sIdx}>{cleanSartorialText(st)}</li>
                     ))}
                   </ul>
                 </div>
@@ -1314,7 +1269,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                   <span className="font-bold text-amber-300 block">💡 Javasolt Finomítások:</span>
                   <ul className="list-disc list-inside space-y-1 text-amber-200/90">
                     {manualAuditResult.suggestions.map((sg, sgIdx) => (
-                      <li key={sgIdx}>{sg}</li>
+                      <li key={sgIdx}>{cleanSartorialText(sg)}</li>
                     ))}
                   </ul>
                 </div>

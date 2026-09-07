@@ -1916,7 +1916,7 @@ Vizsgáld meg a szett formai szintjét, dress code normáit és kulturális alka
         : `ESEMÉNY / ALKALOM: Nincs rögzítve konkrét esemény (önálló, mindennapi / stílusos megjelenés).
 FONTOS: Ne erőltess rá semmilyen merev alkalmi dress code-ot vagy protokollt! A vizsgálat fókusza a választott darabok belső esztétikai harmóniája, a színek és textúrák egymásra hatása, az anatómiai rétegrend, valamint a felhasználó személyes Stílus DNS-éhez és az aktuális időjárási hőmérséklethez való illeszkedése.`;
 
-      const prompt = `Te egy mester személyi stylist, szín- és aránytanácsadó, valamint sartorial szakértő vagy.
+      const prompt = `Te egy mester személyi stylist, szín- és aránytanácsadó, valamint stílusszakértő vagy. Kerüld a "sartorial" kifejezés használatát a válaszaidban, helyette használj természetes magyar kifejezéseket (stílusos, elegáns, kifinomult, harmonikus)!
 A felhasználó saját maga állított össze egy szettet a meglévő ruhatárából.
 
 A FELADATOD: Végezz professzionális, építő jellegű Stílus- és Összhang Auditot a szettre a felhasználó személyes profilja, Stílus DNS-e és az alábbi paraméterek alapján!
@@ -1935,7 +1935,7 @@ FELHASZNÁLÓ STÍLUSPROFILJA (100%-ban érvényesítendő):
 🚫 FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI (Ha a választott szettben ezek bármelyike sérül, jelezd a figyelmeztetésben és a tanácsokban!):
 ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
 
-👔 AKTÍV SARTORIAL HARMÓNIA- ÉS RÉTEGEZÉSI SZABÁLYZAT:
+👔 AKTÍV STÍLUS- ÉS RÉTEGEZÉSI SZABÁLYZAT:
 ${dynamicSartorialRules}
 
 ${eventPromptContext}
@@ -2069,13 +2069,29 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 
       const calculatedScore = Math.max(45, Math.min(100, (typeof parsed?.score === 'number' ? parsed.score : 85) - penalty));
 
+      const cleanText = (txt) => {
+        if (!txt || typeof txt !== 'string') return txt;
+        return txt
+          .replace(/\bsartorial\s+szempontb[oó]l\b/gi, 'stílusszempontból')
+          .replace(/\bsartorial\s+eleganci[aá][t]?\b/gi, 'klasszikus eleganciát')
+          .replace(/\bsartorialis\b/gi, 'stílusos')
+          .replace(/\bsartoriális\b/gi, 'stílusos')
+          .replace(/\bsartorial\b/gi, 'stílusos')
+          .replace(/\bSartorial\b/gi, 'Stílus');
+      };
+
       return {
         ...parsed,
         score: calculatedScore,
-        verdict: penalty > 0 && calculatedScore < 75 ? 'Korrekciót Igénylő Összeállítás' : (parsed?.verdict || 'Harmonikus Összeállítás'),
-        strengths,
-        suggestions,
-        fitMismatchWarning
+        verdict: cleanText(penalty > 0 && calculatedScore < 75 ? 'Korrekciót Igénylő Összeállítás' : (parsed?.verdict || 'Harmonikus Összeállítás')),
+        eventAlignment: cleanText(parsed?.eventAlignment || ''),
+        colorHarmony: cleanText(parsed?.colorHarmony || ''),
+        fabricSynergy: cleanText(parsed?.fabricSynergy || ''),
+        layeringEvaluation: cleanText(parsed?.layeringEvaluation || ''),
+        bodyFitVerdict: cleanText(parsed?.bodyFitVerdict || ''),
+        strengths: strengths.map(cleanText),
+        suggestions: suggestions.map(cleanText),
+        fitMismatchWarning: cleanText(fitMismatchWarning)
       };
     } catch (e) {
       console.error('Hiba a manuális szett auditálásakor:', e);

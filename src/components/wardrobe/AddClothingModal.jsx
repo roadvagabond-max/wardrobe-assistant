@@ -303,6 +303,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       if (chosenImage) {
         setImagePreview(chosenImage);
         setAvailableImages([chosenImage]);
+        // Convert to Base64 in background for permanent local persistence
+        ensureBase64Image(chosenImage).then(b64 => {
+          if (b64 && b64.startsWith('data:')) {
+            setImagePreview(b64);
+            setAvailableImages([b64]);
+          }
+        }).catch(() => {});
       }
 
       // Pre-set extracted metadata immediately
@@ -423,13 +430,25 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     }
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.name) return;
 
+    let finalImageUrl = imagePreview || getSmartGarmentImage(formData.category, formData.color, formData.subCategory);
+
+    // If it's a remote HTTP URL from a webshop, ensure it is downloaded and persisted as Base64 in Firestore
+    if (finalImageUrl && typeof finalImageUrl === 'string' && finalImageUrl.startsWith('http')) {
+      try {
+        const b64 = await ensureBase64Image(finalImageUrl);
+        if (b64 && b64.startsWith('data:')) {
+          finalImageUrl = b64;
+        }
+      } catch (_) {}
+    }
+
     onAddClothing({
       ...formData,
-      imageUrl: imagePreview || getSmartGarmentImage(formData.category, formData.color, formData.subCategory)
+      imageUrl: finalImageUrl
     });
 
     handleClose();

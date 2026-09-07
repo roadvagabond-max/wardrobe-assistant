@@ -71,10 +71,10 @@ export async function ensureBase64Image(fileOrUrl, maxWidth = 520, maxHeight = 5
 
   // 3. If it's a remote HTTP/HTTPS URL
   if (typeof fileOrUrl === 'string' && fileOrUrl.startsWith('http')) {
-    // Only attempt canvas load with timeout
+    // A) Try canvas load with generous 3500ms timeout
     try {
       const base64FromCanvas = await new Promise((resolve) => {
-        const timer = setTimeout(() => resolve(null), 800); // 800ms fast timeout
+        const timer = setTimeout(() => resolve(null), 3500);
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
@@ -100,7 +100,22 @@ export async function ensureBase64Image(fileOrUrl, maxWidth = 520, maxHeight = 5
       if (base64FromCanvas) return base64FromCanvas;
     } catch (_) {}
 
-    return null;
+    // B) Try direct fetch blob conversion if canvas failed
+    try {
+      const controller = new AbortController();
+      const fetchTimer = setTimeout(() => controller.abort(), 3500);
+      const resp = await fetch(fileOrUrl, { mode: 'cors', signal: controller.signal });
+      clearTimeout(fetchTimer);
+      if (resp.ok) {
+        const blob = await resp.blob();
+        const dataUrl = await readFileAsDataUrl(blob);
+        const optimized = await optimizeBase64String(dataUrl, maxWidth, maxHeight, quality);
+        if (optimized) return optimized;
+      }
+    } catch (_) {}
+
+    // Fallback: Return original remote URL if CORS blocks client-side conversion
+    return fileOrUrl;
   }
 
   return fileOrUrl;

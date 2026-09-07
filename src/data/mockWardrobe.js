@@ -44,7 +44,7 @@ export const SAMPLE_SHOWCASE_WARDROBE = [
     pattern: 'Egyszínű',
     brand: 'Eton',
     size: '40 / M',
-    imageUrl: 'https://images.unsplash.com/photo-1620012253295-c15c429fbb41?auto=format&fit=crop&w=800&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80',
     tags: ['cutaway gallér', 'légáteresztő', 'alapdarab'],
     fit: 'Contemporary',
     stylingTip: 'Kombináld sötétkék zakóval vagy viseld önmagában felhajtott ujjakkal és szövetnadrággal.',

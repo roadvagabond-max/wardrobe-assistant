@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.7` (Production Build)
+- **Aktuális Verzió:** `v1.7.8` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,16 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.7)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.8)
+- [x] **Mix & Match Lookbook Flatlay, Belső Webshop Képmentés & Tisztítás (v1.7.8):**
+  - **Tiszta Fejléc & Jobb Felső Időjárás:** Felesleges címkék, nagyméretű cím és leírás törlése. Az időjárás widget a jobb felső sarokba került, mellette diszkrét `(i)` segítség-visszahívó gombbal.
+  - **Stabil Módválasztó (Zero Jumping Toggle):** A `[ 🧩 Mix & Match ]` és `[ 💬 AI Stylist ]` gombok fixen a bal és jobb oldalon rögzítve, sosem ugrálnak át egymás pozíciójára.
+  - **Webshop Képek Belső Base64 Mentése:** Linkes importáláskor a termékfotót a rendszer letölti, letömöríti (520×520 @ 0.72) és Base64-ként menti a Cloud Firestore-ba; megszűnt a külső webshop-link függőség a saját ruhatárban.
+  - **Bemutató Képjavítás:** Az elavult Unsplash fehér ing link javítva aktív fotóra, minden képen univerzális `onError` fallbackkel.
+  - **Kompakt Rétegezés:** Alapból egyetlen nagy kártya, további rétegekhez pedig csupán 1 db kompakt kis `[ + ]` gomb (nincsenek üres nagy mezők).
+  - **Tiszta Lookbook Flatlay Élmény:** Szöveges zóna-fejlécek és képaláírások törölve, szűkített térközök (`gap-2`), a kezelőszervek pedig közvetlenül a fotón lévő lebegő sarok-ikonokká váltak (jobb felső `(×)`, jobb alsó `(🔄)`).
+  - **„Sartorial” Szó Kiszűrése:** Az AI válaszaiból a kifejezés automatikusan törölve / magyarosítva.
+  - **Pontszámsáv Túlcsordulás Javítása:** `shrink-0 whitespace-nowrap` rögzítés a `Részletek ▾` gombon, kizárva a keretből való kicsúszást.
 - [x] **Mix & Match Anatómiai Sziluett Vászon & Minimalista Galéria (v1.7.7):**
   - **Obszidián & Titán-Ezüst Paletta:** Az arany színek teljes kivezetése a modulból, mélyfekete és pala háttérrel, platina és titán élfénnyel.
   - **Anatómiai Sziluett Vászon:** Vertikális testzónák (Felsőtest $\rightarrow$ Alsótest $\rightarrow$ Lábbeli) és horizontális rétegek (max. 4 felső réteg `[+ Réteg]` gombbal; Férfi vs Női sziluettek).
