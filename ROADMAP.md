@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.0` (Production)
+- **Aktuális Verzió:** `v1.7.1` (Production)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,11 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.0)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.1)
+- [x] **Stílusprofil Fekete Képernyő Javítása & Globális Error Boundary (v1.7.1):**
+  - A `src/services/capsuleAnalytics.js` cipő szezonalitás vizsgálatában a tömb típusú `season` mező `.toLowerCase()` hibájának javítása (`Array.isArray(shoe.season) ? shoe.season.join(' ') : String(shoe.season || '')`).
+  - Teljes null-safety és típusvédelem a `WardrobeAnalyticsCard`, `ProfileIdentityCard`, `StyleDNAView` és `SartorialKnowledgeHub` komponensekben.
+  - Új React `ErrorBoundary` komponens (`src/components/common/ErrorBoundary.jsx`) bevezetése az `App.jsx` fő nézetei köré, ami garantálja, hogy egy esetleges renderelési hiba esetén se jelenhessen meg üres fekete képernyő.
 - [x] **Firebase Fióktörlés & Re-autentikáció Javítása (GDPR Auth Sync v1.7.0):**
   - Kötelező jelszó-megerősítés (Re-authentication) vagy Google OAuth újrahitelesítés fióktörlés előtt, kizárva a Firebase `auth/requires-recent-login` hibát.
   - Tiszta műveleti sorrend: a Firestore adatok és az Authentication rekord csak sikeres újrahitelesítés után törlődnek, megszüntetve a későbbi `auth/email-already-in-use` árva fiók hibát.

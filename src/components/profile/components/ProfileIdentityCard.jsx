@@ -2,20 +2,21 @@ import React from 'react';
 import { Camera, Edit3, ThermometerSnowflake, Sun, Scale, Sparkles, User } from 'lucide-react';
 
 export default function ProfileIdentityCard({ 
-  profile, 
+  profile = {}, 
   onEditClick, 
   onPhotoFileSelect, 
   photoInputRef 
 }) {
-  const genderLabel = profile.gender === 'Női' ? '👗 Női' : '👔 Férfi';
+  const safeProfile = profile || {};
+  const genderLabel = safeProfile.gender === 'Női' ? '👗 Női' : '👔 Férfi';
   const currentYear = new Date().getFullYear();
-  const birthYearDisplay = profile.birthYear 
-    ? `${profile.birthYear} (${currentYear - parseInt(profile.birthYear, 10)} év)`
-    : (profile.age ? `${profile.age} év` : null);
+  const birthYearDisplay = safeProfile.birthYear 
+    ? `${safeProfile.birthYear} (${currentYear - parseInt(safeProfile.birthYear, 10)} év)`
+    : (safeProfile.age ? `${safeProfile.age} év` : null);
 
-  const thermalInfo = profile.thermalPreference === 'coldSensitive'
+  const thermalInfo = safeProfile.thermalPreference === 'coldSensitive'
     ? { label: 'Fázósabb alkat', icon: <ThermometerSnowflake className="w-3.5 h-3.5 text-cyan-300" />, desc: 'Hűvösben melegebb rétegek és kötöttek' }
-    : profile.thermalPreference === 'warmSensitive'
+    : safeProfile.thermalPreference === 'warmSensitive'
       ? { label: 'Melegérzékeny alkat', icon: <Sun className="w-3.5 h-3.5 text-amber-400" />, desc: 'Könnyed, szellős pamut és len preferálása' }
       : { label: 'Kiegyensúlyozott', icon: <Scale className="w-3.5 h-3.5 text-emerald-300" />, desc: 'Standard kiegyensúlyozott rétegezés' };
 
@@ -40,10 +41,10 @@ export default function ProfileIdentityCard({
             className="relative w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-[#d4af37] to-[#785908] flex items-center justify-center text-black font-bold text-2xl shadow-xl shadow-[#d4af37]/20 border border-[var(--border-gold)] shrink-0 cursor-pointer group"
             title="Kattints a profilfotó cseréjéhez"
           >
-            {profile.avatarUrl ? (
-              <img src={profile.avatarUrl} alt={profile.name} width="64" height="64" className="w-full h-full object-cover" />
+            {safeProfile.avatarUrl ? (
+              <img src={safeProfile.avatarUrl} alt={safeProfile.name || 'Profil'} width="64" height="64" className="w-full h-full object-cover" />
             ) : (
-              <span>{profile.name?.[0] || 'U'}</span>
+              <span>{safeProfile.name?.[0] || 'U'}</span>
             )}
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
               <Camera className="w-5 h-5" />
@@ -52,20 +53,20 @@ export default function ProfileIdentityCard({
 
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-xl font-serif font-bold text-white">{profile.name || 'Felhasználó'}</h3>
+              <h3 className="text-xl font-serif font-bold text-white">{safeProfile.name || 'Felhasználó'}</h3>
               <span className="badge badge-gold text-[10px] py-0.5 px-2 font-medium">
                 {genderLabel}
               </span>
             </div>
             <p className="text-xs text-[var(--accent-gold-light)] font-medium mt-0.5">
-              {profile.title || 'Személyes Stílusprofil'}
+              {safeProfile.title || 'Személyes Stílusprofil'}
             </p>
             <div className="flex items-center gap-2 mt-1 text-[11px] text-[var(--text-muted)] flex-wrap">
               {birthYearDisplay && <span>{birthYearDisplay}</span>}
-              {profile.height && profile.height !== '—' && <span>• {profile.height}</span>}
-              {profile.weight && profile.weight !== '—' && <span>• {profile.weight}</span>}
-              {profile.bodyType && <span>• {profile.bodyType}</span>}
-              {profile.skinTone && <span>• {profile.skinTone}</span>}
+              {safeProfile.height && safeProfile.height !== '—' && <span>• {safeProfile.height}</span>}
+              {safeProfile.weight && safeProfile.weight !== '—' && <span>• {safeProfile.weight}</span>}
+              {safeProfile.bodyType && <span>• {safeProfile.bodyType}</span>}
+              {safeProfile.skinTone && <span>• {safeProfile.skinTone}</span>}
             </div>
           </div>
         </div>
@@ -114,22 +115,22 @@ export default function ProfileIdentityCard({
               <User className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
               <span>Testalkati Sziluett:</span>
             </span>
-            <span className="font-bold text-white text-xs">{profile.bodyType || 'Normál / Átlagos'}</span>
+            <span className="font-bold text-white text-xs">{safeProfile.bodyType || 'Normál / Átlagos'}</span>
           </div>
           <p className="text-[10px] text-[var(--text-secondary)]">
-            {profile.height && profile.weight ? `${profile.height}, ${profile.weight}` : 'Arányos testalkat'}
+            {safeProfile.height && safeProfile.weight ? `${safeProfile.height}, ${safeProfile.weight}` : 'Arányos testalkat'}
           </p>
         </div>
       </div>
 
       {/* Style Philosophy Box */}
-      {profile.stylePhilosophy && (
+      {safeProfile.stylePhilosophy && (
         <div className="bg-black/30 p-4 rounded-xl border border-white/5 space-y-1.5">
           <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)]">
             Stílusfilozófia & Szabási preferenciák:
           </span>
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed italic">
-            "{profile.stylePhilosophy}"
+            "{safeProfile.stylePhilosophy}"
           </p>
         </div>
       )}
@@ -138,8 +139,8 @@ export default function ProfileIdentityCard({
       <div className="space-y-2">
         <span className="text-xs font-semibold text-white block">Preferált Stílusirányzatok:</span>
         <div className="flex flex-wrap gap-2">
-          {profile.preferredStyles && profile.preferredStyles.length > 0 ? (
-            profile.preferredStyles.map((style, idx) => (
+          {safeProfile.preferredStyles && safeProfile.preferredStyles.length > 0 ? (
+            safeProfile.preferredStyles.map((style, idx) => (
               <span key={idx} className="badge badge-gold py-1 px-3 text-xs">
                 ✦ {style}
               </span>

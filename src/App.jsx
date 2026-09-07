@@ -14,6 +14,7 @@ import AuthModal from './components/auth/AuthModal';
 import SettingsModal from './components/settings/SettingsModal';
 import HelpGuideModal from './components/common/HelpGuideModal';
 import OnboardingModal from './components/onboarding/OnboardingModal';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { fetchCurrentWeather } from './services/weather';
 import { useAuth } from './context/AuthContext';
 
@@ -168,40 +169,42 @@ export default function App() {
 
       {/* Main Content Area with BottomNav clearance padding */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-28 sm:pb-24">
-        {activeTab === 'outfits' && (
-          <OutfitsView
-            weather={weather}
-            setWeather={setWeather}
-            initialAnchorItem={initialAnchorItem}
-          />
-        )}
+        <ErrorBoundary key={activeTab}>
+          {activeTab === 'outfits' && (
+            <OutfitsView
+              weather={weather}
+              setWeather={setWeather}
+              initialAnchorItem={initialAnchorItem}
+            />
+          )}
 
-        {activeTab === 'wardrobe' && (
-          <WardrobeView
-            onAddNewItem={() => setIsAddModalOpen(true)}
-            onSelectItem={(item) => setSelectedItem(item)}
-            onNavigateTab={setActiveTab}
-          />
-        )}
+          {activeTab === 'wardrobe' && (
+            <WardrobeView
+              onAddNewItem={() => setIsAddModalOpen(true)}
+              onSelectItem={(item) => setSelectedItem(item)}
+              onNavigateTab={setActiveTab}
+            />
+          )}
 
-        {activeTab === 'advisor' && (
-          <PurchaseAdvisorView
-            prefillData={advisorPrefill}
-            onClearPrefill={() => setAdvisorPrefill(null)}
-          />
-        )}
+          {activeTab === 'advisor' && (
+            <PurchaseAdvisorView
+              prefillData={advisorPrefill}
+              onClearPrefill={() => setAdvisorPrefill(null)}
+            />
+          )}
 
-        {activeTab === 'stylist' && (
-          <StylistView
-            weather={weather}
-            setWeather={setWeather}
-            initialAnchorItem={initialAnchorItem}
-          />
-        )}
+          {activeTab === 'stylist' && (
+            <StylistView
+              weather={weather}
+              setWeather={setWeather}
+              initialAnchorItem={initialAnchorItem}
+            />
+          )}
 
-        {activeTab === 'profile' && (
-          <StyleDNAView />
-        )}
+          {activeTab === 'profile' && (
+            <StyleDNAView />
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Mobile-First Bottom Navigation Bar */}

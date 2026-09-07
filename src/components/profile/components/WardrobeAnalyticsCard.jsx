@@ -9,7 +9,24 @@ export default function WardrobeAnalyticsCard({ wardrobe = [], profile = {} }) {
     return calculateCapsuleWardrobeIndex(wardrobe, profile);
   }, [wardrobe, profile]);
 
-  const { totalScore, statusTier, averageQuality, replacementCount, breakdown, categoryCounts, insights } = analytics;
+  const {
+    totalScore = 0,
+    statusTier = {
+      label: 'Kezdeti Fázis',
+      color: 'rose',
+      description: 'Alapkategóriák és kulcsdarabok felvitele javasolt.'
+    },
+    averageQuality = '0.0',
+    replacementCount = 0,
+    breakdown = {
+      coreBalance: { score: 0, max: 35, percent: 0, label: 'Alapkategóriák & Arányok' },
+      seasonalFootwear: { score: 0, max: 25, percent: 0, label: 'Szezonalitás & Lábbelik' },
+      conditionIntegrity: { score: 0, max: 20, percent: 0, label: 'Ruhaállapot' },
+      fabricQuality: { score: 0, max: 20, percent: 0, label: 'Anyagminőség' }
+    },
+    categoryCounts = {},
+    insights = []
+  } = (analytics || {});
 
   return (
     <div className="glass-card p-5 sm:p-6 space-y-4 flex flex-col justify-between border-[var(--border-gold)]/40 hover:border-[var(--border-gold)] transition-all">
@@ -25,7 +42,7 @@ export default function WardrobeAnalyticsCard({ wardrobe = [], profile = {} }) {
             totalScore >= 70 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
             'bg-rose-500/20 text-rose-300 border border-rose-500/30'
           }`}>
-            {statusTier.label}
+            {statusTier?.label || 'Kapszula'}
           </span>
         </div>
 

@@ -21,8 +21,9 @@ export default function SartorialKnowledgeHub({
   const [customMiningTopic, setCustomMiningTopic] = useState('');
   const [miningSuccessMsg, setMiningSuccessMsg] = useState(null);
 
-  const demographics = getProfileDemographics(profile);
-  const applicableRules = sartorialRules.filter(r => isRuleApplicableToDemographics(r, demographics));
+  const demographics = getProfileDemographics(profile || {});
+  const safeSartorialRules = Array.isArray(sartorialRules) ? sartorialRules.filter(Boolean) : [];
+  const applicableRules = safeSartorialRules.filter(r => isRuleApplicableToDemographics(r, demographics));
 
   // Golden Eval Suite state
   const [evalSuiteResults, setEvalSuiteResults] = useState(null);
@@ -383,7 +384,7 @@ export default function SartorialKnowledgeHub({
                           >
                             {isEnabled ? 'Aktív' : 'Inaktív'}
                           </button>
-                          {rule.id.startsWith('mined-rule-') && (
+                          {String(rule?.id || '').startsWith('mined-rule-') && (
                             <button
                               type="button"
                               onClick={() => deleteSartorialRule(rule.id)}
@@ -443,7 +444,9 @@ export default function SartorialKnowledgeHub({
                         {rule.source || 'Divatkódex'}
                       </span>
                       <span>
-                        {rule.discoveredAt ? new Date(rule.discoveredAt).toLocaleDateString('hu-HU') : 'Bespoke kódex'}
+                        {rule.discoveredAt && !isNaN(new Date(rule.discoveredAt).getTime())
+                          ? new Date(rule.discoveredAt).toLocaleDateString('hu-HU')
+                          : 'Bespoke kódex'}
                       </span>
                     </div>
                   </div>

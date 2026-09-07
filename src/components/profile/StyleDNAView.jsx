@@ -19,7 +19,7 @@ export default function StyleDNAView() {
   const { 
     profile, 
     updateProfile, 
-    wardrobe, 
+    wardrobe = [], 
     isAdmin,
     sartorialRules = [],
     isMiningRules,
@@ -28,6 +28,9 @@ export default function StyleDNAView() {
     deleteSartorialRule
   } = useAuth();
   
+  const safeProfile = profile || {};
+  const safeWardrobe = Array.isArray(wardrobe) ? wardrobe : [];
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAnalyzingPhoto, setIsAnalyzingPhoto] = useState(false);
   const [colorSeasonResult, setColorSeasonResult] = useState(null);
@@ -53,7 +56,7 @@ export default function StyleDNAView() {
       
       // 1. Immediately save avatarUrl to profile and sync
       const immediateUpdate = {
-        ...profile,
+        ...safeProfile,
         avatarUrl: base64
       };
       await updateProfile(immediateUpdate);
@@ -70,7 +73,7 @@ export default function StyleDNAView() {
           const fullUpdate = {
             ...immediateUpdate,
             skinTone: `${result.seasonName} - ${result.skinTone}`,
-            favoriteColors: cleanPalette.length > 0 ? cleanPalette : (profile.favoriteColors || ['Sötétkék', 'Törtfehér', 'Dohánybarna']),
+            favoriteColors: cleanPalette.length > 0 ? cleanPalette : (safeProfile.favoriteColors || ['Sötétkék', 'Törtfehér', 'Dohánybarna']),
             avoidColors: Array.isArray(result.avoidPalette) ? deduplicateColors(result.avoidPalette) : []
           };
           await updateProfile(fullUpdate);
@@ -158,7 +161,7 @@ export default function StyleDNAView() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <ProfileIdentityCard 
-              profile={profile}
+              profile={safeProfile}
               onEditClick={() => setIsEditModalOpen(true)}
               onPhotoFileSelect={handlePhotoUpload}
               photoInputRef={photoInputRef}
@@ -167,8 +170,8 @@ export default function StyleDNAView() {
 
           <div className="lg:col-span-1">
             <WardrobeAnalyticsCard 
-              wardrobe={wardrobe}
-              profile={profile}
+              wardrobe={safeWardrobe}
+              profile={safeProfile}
             />
           </div>
         </div>
@@ -182,8 +185,8 @@ export default function StyleDNAView() {
 
         {/* Dynamic Auto-Learning Color Palette Card */}
         <DynamicColorPaletteCard 
-          profile={profile}
-          wardrobe={wardrobe}
+          profile={safeProfile}
+          wardrobe={safeWardrobe}
           onUpdateProfile={updateProfile}
         />
 
@@ -194,13 +197,13 @@ export default function StyleDNAView() {
         
         {/* Custom Rules & AI Learning Card */}
         <CustomRulesCard 
-          profile={profile}
+          profile={safeProfile}
           onUpdateProfile={updateProfile}
         />
 
         {/* Autonomous Style Knowledge Hub & Web Grounding */}
         <SartorialKnowledgeHub 
-          profile={profile}
+          profile={safeProfile}
           sartorialRules={sartorialRules}
           isMiningRules={isMiningRules}
           mineNewRules={mineNewRules}
@@ -213,7 +216,7 @@ export default function StyleDNAView() {
       {/* 📌 SZEKCIÓ 3: Gyártmány & Méretprofil Térkép */}
       <section id="sizes-section" className="space-y-6 scroll-mt-20">
         <BrandSizingMatrixCard 
-          wardrobe={wardrobe}
+          wardrobe={safeWardrobe}
         />
       </section>
 
@@ -221,7 +224,7 @@ export default function StyleDNAView() {
       <ProfileEditModal 
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        initialProfile={profile}
+        initialProfile={safeProfile}
         onSave={updateProfile}
       />
 

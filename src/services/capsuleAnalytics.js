@@ -8,7 +8,20 @@
  */
 
 export function calculateCapsuleWardrobeIndex(wardrobe = [], profile = {}) {
-  if (!Array.isArray(wardrobe) || wardrobe.length === 0) {
+  const safeWardrobe = Array.isArray(wardrobe) ? wardrobe.filter(Boolean) : [];
+  const safeProfile = profile || {};
+
+  const emptyCategories = {
+    tops: 0,
+    bottoms: 0,
+    outerwear: 0,
+    shoes: 0,
+    knitwear: 0,
+    dresses: 0,
+    accessories: 0
+  };
+
+  if (safeWardrobe.length === 0) {
     return {
       totalScore: 0,
       statusTier: {
@@ -17,34 +30,28 @@ export function calculateCapsuleWardrobeIndex(wardrobe = [], profile = {}) {
         badgeClass: 'badge-rose',
         description: 'Tölts fel legalább 3–5 alapdarabot a ruhatáradba az elemzéshez!'
       },
+      averageQuality: '0.0',
+      replacementCount: 0,
       breakdown: {
         coreBalance: { score: 0, max: 35, label: 'Alapkategóriák & Arányok', percent: 0 },
         seasonalFootwear: { score: 0, max: 25, label: 'Szezonalitás & Lábbelik', percent: 0 },
         conditionIntegrity: { score: 0, max: 20, label: 'Ruhaállapot', percent: 0 },
         fabricQuality: { score: 0, max: 20, label: 'Anyagminőség', percent: 0 }
       },
-      categoryCounts: {},
+      categoryCounts: emptyCategories,
       insights: ['Még nincsenek rögzített ruhadarabok a gardróbodban.']
     };
   }
 
-  const isFemale = profile?.gender === 'Női' || profile?.gender === 'female';
+  const isFemale = safeProfile.gender === 'Női' || safeProfile.gender === 'female';
   const insights = [];
 
   // Category counts
-  const categoryCounts = wardrobe.reduce((acc, item) => {
-    const cat = item.category || 'tops';
+  const categoryCounts = safeWardrobe.reduce((acc, item) => {
+    const cat = item?.category || 'tops';
     acc[cat] = (acc[cat] || 0) + 1;
     return acc;
-  }, {
-    tops: 0,
-    bottoms: 0,
-    outerwear: 0,
-    shoes: 0,
-    knitwear: 0,
-    dresses: 0,
-    accessories: 0
-  });
+  }, { ...emptyCategories });
 
   // --------------------------------------------------------------------------
   // Pillar 1: Core Category Balance & Depth (Max 35 points)
@@ -82,14 +89,15 @@ export function calculateCapsuleWardrobeIndex(wardrobe = [], profile = {}) {
   // Pillar 2: Seasonal Versatility & Footwear Health (Max 25 points)
   // --------------------------------------------------------------------------
   // Analyze footwear seasonal breadth (up to 15 pts)
-  const shoesList = wardrobe.filter(w => w.category === 'shoes');
+  const shoesList = safeWardrobe.filter(w => w?.category === 'shoes');
   let hasWarmFootwear = false;
   let hasColdFootwear = false;
 
   shoesList.forEach(shoe => {
-    const nameLower = (shoe.name || '').toLowerCase();
-    const subLower = (shoe.subCategory || '').toLowerCase();
-    const seasonLower = (shoe.season || '').toLowerCase();
+    const nameLower = String(shoe?.name || '').toLowerCase();
+    const subLower = String(shoe?.subCategory || '').toLowerCase();
+    const seasonStr = Array.isArray(shoe?.season) ? shoe.season.join(' ') : String(shoe?.season || '');
+    const seasonLower = seasonStr.toLowerCase();
 
     const isCold = subLower.includes('boot') || subLower.includes('chelsea') || 
                    nameLower.includes('csizma') || nameLower.includes('bakancs') || 
@@ -131,12 +139,11 @@ export function calculateCapsuleWardrobeIndex(wardrobe = [], profile = {}) {
   // --------------------------------------------------------------------------
   // Pillar 3: Garment Condition & Integrity (Max 20 points)
   // --------------------------------------------------------------------------
-  const replacementItems = wardrobe.filter(w => 
-    w.condition?.includes('Lecserélendő') || 
-    w.condition?.includes('Javításra') || 
-    w.condition === 'poor'
-  );
-  const goodConditionRatio = (wardrobe.length - replacementItems.length) / wardrobe.length;
+  const replacementItems = safeWardrobe.filter(w => {
+    const cond = String(w?.condition || '');
+    return cond.includes('Lecserélendő') || cond.includes('Javításra') || cond === 'poor';
+  });
+  const goodConditionRatio = (safeWardrobe.length - replacementItems.length) / safeWardrobe.length;
   const conditionIntegrityScore = Math.min(20, Math.round(goodConditionRatio * 20));
 
   if (replacementItems.length > 0) {
@@ -146,20 +153,21 @@ export function calculateCapsuleWardrobeIndex(wardrobe = [], profile = {}) {
   // --------------------------------------------------------------------------
   // Pillar 4: Fabric Quality & Natural Fibers (Max 20 points)
   // --------------------------------------------------------------------------
-  const avgQuality = wardrobe.reduce((acc, item) => acc + (item.qualityScore || 8.0), 0) / wardrobe.length;
+  const totalQuality = safeWardrobe.reduce((acc, item) => acc + (typeof item?.qualityScore === 'number' ? item.qualityScore : 8.0), 0);
+  const avgQuality = totalQuality / safeWardrobe.length;
   
   // Natural fiber analysis
   const naturalKeywords = ['gyapjú', 'wool', 'kasmír', 'cashmere', 'pamut', 'cotton', 'len', 'linen', 'selyem', 'silk', 'bőr', 'leather'];
   const syntheticKeywords = ['100% poliészter', 'polyester', 'akril', 'műbőr', 'pu bőr'];
 
-  const naturalCount = wardrobe.filter(w => {
-    const mat = (w.material || '').toLowerCase();
+  const naturalCount = safeWardrobe.filter(w => {
+    const mat = String(w?.material || '').toLowerCase();
     const isNatural = naturalKeywords.some(kw => mat.includes(kw));
     const isSynthetic = syntheticKeywords.some(kw => mat.includes(kw));
     return isNatural && !isSynthetic;
   }).length;
 
-  const naturalRatio = naturalCount / wardrobe.length;
+  const naturalRatio = naturalCount / safeWardrobe.length;
   const qualityPillar = (avgQuality / 10) * 12; // up to 12 pts
   const naturalPillar = naturalRatio * 8; // up to 8 pts
   const fabricQualityScore = Math.min(20, Math.round(qualityPillar + naturalPillar));
