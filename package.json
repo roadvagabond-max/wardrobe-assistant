@@ -1,13 +1,14 @@
 {
   "name": "wardrobe-assistant",
   "private": true,
-  "version": "1.7.1",
+  "version": "1.7.4",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
     "deploy:firebase": "npx -y firebase-tools deploy --only hosting",
+    "test:eval": "node test_eval.mjs",
     "push": "node push.js",
     "sync": "node push.js"
   },

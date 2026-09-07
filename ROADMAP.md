@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.3` (Production Build)
+- **Aktuális Verzió:** `v1.7.4` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -77,6 +77,15 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Email & Jelszó Autentikáció (Firebase Email/Password Auth):** Standard Email + Jelszavas bejelentkezés, új fiók regisztráció (névvel és minimum 6 karakteres jelszóval), jelszó-visszaállító link küldése (`sendPasswordResetEmail`), valamint magyar nyelvű hibakezelés integrálva a Google OAuth alternatívájaként az `AuthModal.jsx`, `AuthContext.jsx` és `firebase.js` rétegekbe.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
+- [ ] 🚨 **Női Szettkérő Rétegezési & Kombinációs Hiba (Egyberuha + Alsórész tiltása):**
+  - **Hiba:** Női szettkérésnél a generátor egyrészes egyberuhához külön szoknyanadrágot / alsót társított, ami anatómiai és stilisztikai hiba.
+  - **Feladat:** A női rétegezési és kombinációs szabályok átfogó felülvizsgálata a promptban és az anatómiai rétegrend-kényszerítő motorban (`enforceAnatomicalOutfitLayers`, `gemini.js`, `sartorialRules.js`). Egyrészes ruha (dress) esetén szigorúan kizárandó a külön nadrág/szoknya/szoknyanadrág, kizárólag felöltő (blézer, kardigán, kabát) és kiegészítők engedélyezettek.
+- [ ] 🚨 **Stylist Chat Vásárlási & Színválasztási Döntési Protokoll (Zero-Redundancy & Gap Audit):**
+  - **Hiba / Tanulság:** Új darab vásárlásakor vagy színválasztáskor (pl. *"Milyen színű V-nyakú pulóvert vegyek? Bézs, navy vagy szürke?"*) a modell a színtípust és a nadrág-kontrasztot helyezte előtérbe a ruhatári lefedettséggel szemben, így olyan színt (bézs) tett 1. helyre, amiből már volt hasonló merinó kötöttáru a gardróbban, miközben sötétkék/navy kötöttáru egyáltalán nem létezett (0 db).
+  - **Javítás / Feladat a `gemini.js` rendszerutasításban és tanácsadó motorban:**
+    1. **Kategória-szintű Duplikáció Szűrés (Zero-Redundancy Rule):** Új darab ajánlásakor kötelező 1. lépés a `[CATALOG]` kérdéses kategóriájának (`cat`, `sub`) szín- és funkciófedettségének ellenőrzése. Ha egy szín-anyag kombináció már létezik (pl. homokbézs merinó), az nem kerülhet 1. helyre, hacsak a felhasználó kifejezetten a meglévő darab cseréjét nem kéri.
+    2. **Kromatikus Űr Elemzés (Color Gap Analysis):** Azok a színek kapjanak maximális prioritást, amelyek illenek a felhasználó palettájához, DE a célkategóriában teljesen hiányoznak (pl. Navy kötöttáru hiánya).
+    3. **Döntési sorrend szigorítása:** 1. Kategórián belüli Gap/Redundancia audit $\rightarrow$ 2. Színtípus illeszkedés $\rightarrow$ 3. Kombinálhatóság a domináns alsókkal/felsőkkel.
 - [ ] **Nagy Ruhatárak Megjelenítési Optimalizálása (Virtual List):** 300–500+ darabos ruhatárak esetén `react-window` vagy CSS optimalizáció.
 - [ ] **PWA Service Worker & Offline Kép Gyorsítótár:** Statikus assetek és teljes offline élmény biztosítása.
 

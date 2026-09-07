@@ -381,6 +381,33 @@ export function isCollaredShirt(item) {
   );
 }
 
+export function isDress(item) {
+  if (!item) return false;
+  const cat = (item.category || '').toLowerCase();
+  const sub = (item.subCategory || '').toLowerCase();
+  const name = (item.name || '').toLowerCase();
+  if (name.includes('fürdőruha') || name.includes('úszódressz')) return false;
+
+  return (
+    cat === 'dresses' ||
+    cat === 'dress' ||
+    sub === 'dress' ||
+    sub === 'mididress' ||
+    sub === 'maxidress' ||
+    sub === 'cocktail_dress' ||
+    name.includes('egyberuha') ||
+    name.includes('midiruha') ||
+    name.includes('maxiruha') ||
+    name.includes('koktélruha') ||
+    name.includes('ingruha') ||
+    name.includes('estiruha') ||
+    name.includes('mini ruha') ||
+    name.includes('midi ruha') ||
+    name.includes('maxi ruha') ||
+    (name.includes('ruha') && !name.includes('szoknya') && !name.includes('nadrág') && !name.includes('felső'))
+  );
+}
+
 /**
  * Helper to ensure complete anatomical layering and strict sartorial harmony for an outfit across all modules
  */
@@ -398,6 +425,14 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   });
   items = Array.from(itemMap.values());
+
+  // Check for one-piece dress (ruha / egyberuha)
+  const hasDress = items.some(i => isDress(i));
+
+  // If an all-in-one dress is present, strictly eliminate any separate bottom garments (nadrág, szoknyanadrág, szoknya, farmer)
+  if (hasDress) {
+    items = items.filter(i => !isBottom(i));
+  }
 
   // Helper: Is this item a base top wearable directly on the skin (shirt / t-shirt / polo)?
   const isBaseTop = (item) => {
@@ -534,8 +569,8 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   }
 
-  // 2. Check if the outfit has a valid Base Top (ing vagy póló) unless turtleneck is already present
-  const hasBaseTop = items.some(i => isBaseTop(i) || isTurtleneck(i) || hasShortSleeveKnit);
+  // 2. Check if the outfit has a valid Base Top (ing vagy póló) unless dress, turtleneck or short sleeve knit is already present
+  const hasBaseTop = hasDress || items.some(i => isBaseTop(i) || isTurtleneck(i) || hasShortSleeveKnit);
   if (!hasBaseTop) {
     const topCandidates = getCandidateItems(w => isBaseTop(w) && !isStandCollar(w));
     const baseTop = pickSmartFallbackGarment(topCandidates.length > 0 ? topCandidates : getCandidateItems(isBaseTop));
@@ -544,13 +579,15 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   }
 
-  // 3. Check if the outfit has Bottoms (nadrág)
-  const hasBottom = items.some(i => isBottom(i));
-  if (!hasBottom) {
-    const bottomCandidates = getCandidateItems(isBottom);
-    const bottom = pickSmartFallbackGarment(bottomCandidates);
-    if (bottom) {
-      items.push(bottom);
+  // 3. Check if the outfit has Bottoms (nadrág) - ONLY if there is NO one-piece dress!
+  if (!hasDress) {
+    const hasBottom = items.some(i => isBottom(i));
+    if (!hasBottom) {
+      const bottomCandidates = getCandidateItems(isBottom);
+      const bottom = pickSmartFallbackGarment(bottomCandidates);
+      if (bottom) {
+        items.push(bottom);
+      }
     }
   }
 
@@ -1096,6 +1133,10 @@ SARTORIAL BLUEPRINT, ANATÓMIAI RÉTEGEZÉSI & SZILUETTSZABÁLYOK:
 4. 👔 KÖTELEZŐ ALAPELEMEK MINDEN SZETTBEN:
    - 👔 Bázis felső ('tops' - ing vagy minőségi pamut póló közvetlenül a bőrön; ha a szett bázisa garbó vagy rövid ujjú kötött pulóver, az maga a bázis).
    - 👖 Alsó ('bottoms' - pontosan 1 db nadrág / chino / flanelnadrág / farmer / szoknya a ruhatárból).
+   - 👗 NŐI EGYBERUHA (DRESS) KIVÉTEL ÉS SZABÁLY:
+     * Ha a szett alapja egy egyberuha / ruha (pl. midiruha, maxiruha, koktélruha, ingruha), az önálló EGYRÉSZES bázisdarab (egyszerre fedi le a felsőt és az alsót)!
+     * EGYBERUHÁHOZ SZIGORÚAN TILOS KÜLÖN ALSÓT (nadrágot, farmert, szoknyát, szoknyanadrágot / culottes) RENDELNI!
+     * Egyberuhához kizárólag felöltő réteg (blézer, kardigán, szövetkabát), cipő és kiegészítők (öv, táska) társíthatók!
    - 👞 Lábbeli ('shoes' - pontosan 1 pár cipő / loafer / sneaker / félcipő a ruhatárból).
    - 🎗️ Öv ('accessories' - a cipővel harmonizáló bőröv a ruhatárból, kötelező kiegészítő).
 
@@ -1129,6 +1170,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
   {
     "id": "outfit-1",
     "title": "Kifejező szett elnevezés",
+    "decisionBadge": "Tömör, egysoros döntési jelvény (pl. '✓ Smart Casual: sötétkék zakó + homokbézs chino kontraszt • 🌡️ 16°C rétegrend')",
     "styleArchetype": "A felhasználó személyes stílusához és az alkalomhoz illő stílusnév",
     "occasion": "${eventName}",
     "matchScore": 97,
@@ -1136,7 +1178,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
     "layeringAdvice": "Gyakorlati rétegezési útmutató",
     "culturalFitReasoning": "Hogyan érvényesül a felhasználó személyes stílusa és az esemény összhangja ebben a szettben",
     "weatherSuitability": "Időjárási és hőmérsékleti megfelelés (${temperature}°C)",
-    "itemIds": ["bázis_ing_id", "opcionalis_pulover_id", "opcionalis_zako_id", "opcionalis_teli_kabat_id", "nadrag_id", "cipo_id", "ov_id"]
+    "itemIds": ["bázis_ing_vagy_ruha_id", "opcionalis_pulover_vagy_kardigan_id", "opcionalis_zako_id", "opcionalis_teli_kabat_id", "opcionalis_nadrag_id_egyberuhanak_tilos", "cipo_id", "ov_id"]
   }
 ]`;
 
@@ -1158,6 +1200,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
           return {
             id: p.id || `outfit-${Date.now()}-${idx}`,
             title: p.title || `${idx + 1}. Stílusos Szett`,
+            decisionBadge: p.decisionBadge || `✓ ${p.styleArchetype || 'Smart Casual'} • 🌡️ ${temperature}°C`,
             styleArchetype: p.styleArchetype || 'Eseményhez Hangolt',
             occasion: p.occasion || eventName,
             matchScore: p.matchScore || 94 + (idx * 2) % 5,
@@ -2084,6 +2127,22 @@ ${formatWardrobeToCompactCatalog(wardrobe)}
 🏷️ INTERAKTÍV RUHA-HIVATKOZÁSOK (ITEM CARD EMBEDDING):
 Amikor a felhasználó ruhatárából konkrét darabokat javasolsz vagy említesz a válaszodban, a ruha neve mellett vagy a pontban MINDIG szúrd be a darab ID azonosító tokenjét a következő formátumban: {{item:ID}} (például: **Kényelmes Pamut Nadrág** {{item:w1}}).
 Ez lehetővé teszi, hogy a felület interaktív, megtekinthető fotós ruhakártyaként jelenítse meg a darabot a felhasználónak.
+
+🎯 VÁSÁRLÁSI ÉS GARDRÓB-BŐVÍTÉSI DÖNTÉSI PROTOKOLL (GAP & ZERO-REDUNDANCY AUDIT):
+Ha a felhasználó új darab vásárlásáról, színválasztásról vagy hiánypótlásról kérdez (pl. "Milyen színű X darabot vegyek? Szürke, navy vagy bézs?"):
+1. KÖTELEZŐ 1. LÉPÉS - KATEGÓRIA-SZINTŰ DUPLIKÁCIÓ SZŰRÉS (Zero-Redundancy Rule):
+   - Mielőtt színt vagy fazont javasolsz, alaposan vizsgáld meg a felhasználó [CATALOG]-jában a kérdéses főkategóriát (cat) és alkategóriát (sub)!
+   - Ha egy adott szín-anyag kombináció (pl. Homokbézs merinó kötöttáru) már létezik a ruhatárban, azt a színt SOHA NE tedd első helyre, kivéve, ha a felhasználó kifejezetten a meglévő darab cseréjét kéri!
+   - A javaslatnak valódi funkcionális és kromatikus űrt (GAP) kell betöltenie az adott kategórián belül.
+2. KROMATIKUS ŰR ELEMZÉS (Color Gap Analysis):
+   - Azokat a színeket priorizáld legmagasabbra, amelyek:
+     a) Illeszkednek a felhasználó színpalettájához és évszaktípusához,
+     b) Harmonizálnak a meglévő nadrágokkal/zakókkal,
+     c) DE JELENLEG TELJESEN HIÁNYOZNAK a kérdéses ruhakategóriából (pl. Navy kötöttáru hiánya, ha 0 db van belőle a kötöttáruk között)!
+3. DÖNTÉSI PRIORITÁSI SORREND:
+   1. Kategórián belüli Gap/Redundancia audit (Ne duplikálj meglévő színt a célkategóriában!)
+   2. Színtípus / Paletta illeszkedés
+   3. Kombinálhatóság a domináns alsókkal/felsőkkel
 
 STÍLUS ÉS KOMMUNIKÁCIÓS IRÁNYELVEK:
 1. Válaszolj közvetlen, barátságos, segítőkész és emberi magyar nyelven!
