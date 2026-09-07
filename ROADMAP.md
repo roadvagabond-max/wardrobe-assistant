@@ -107,6 +107,10 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
     1. A modal külső wrapperén `items-center` helyett `items-start sm:items-center` és `overflow-y-auto` használata, vagy `my-auto` nélküli felső margó / `100dvh` alapú rugalmas magasság.
     2. A belső kártya magasságának igazítása: `max-h-[calc(100dvh-2rem)]` vagy `max-h-[85vh]` fix fejléccel (`shrink-0`), hogy a fejléc garantáltan mindig a látható képernyőterület tetején maradjon.
     3. Valamennyi modal (`ProfileEditModal`, `HelpGuideModal`, `AddClothingModal`, `OnboardingModal`, `ItemDetailModal`, `GarmentLightboxModal`, `OutfitsView` és `StylistView` modalok) egységes felülvizsgálata és javítása.
+- [ ] 🎨 **Felugró Ablakok Teljes Minimalista Újratervezése (Minimalist Modal Redesign):**
+  - **Cél:** Az alkalmazás összes felugró ablakának (profil szerkesztés, súgó, ruha hozzáadása, onboarding, szettrészletek, képnézegető) átfogó letisztítása: minimális vizuális zaj, szellős és prémium tipográfia, egyszerűsített kártyák és űrlapok.
+  - **Irányelvek:** Felesleges vizuális elemek, túldíszített keretek és háttéreffektek tompítása; átláthatóbb mező-csoportosítás; egységes, kompakt és fix fejléc/lábléc struktúra; zavartalan fókusz a lényegi műveleteken és adatokon.
+  - **Státusz:** Későbbi részletes átbeszélés és specifikáció után valósítandó meg.
 - [ ] **Hangalapú Szettkérés (Web Speech API Mikrofon Integráció):**
   - Mikrofon gomb (`Mic` ikon) elhelyezése a szettkérő beviteli mezőben (`OutfitsView.jsx`).
   - Magyar nyelvű (`hu-HU`) böngészős beszédfelismerés pulzáló felvételi állapottal és automatikus mezőkitöltéssel.
