@@ -23,9 +23,9 @@ const SLOT_DEFINITIONS = [
 export default function StylistView({ weather, setWeather, initialAnchorItem = null }) {
   const { wardrobe, profile, saveOutfit } = useAuth();
 
-  // Mode: 'chat' (Default Master Stylist Chat) | 'manual-builder' (6-slot manual builder)
+  // Mode: 'manual-builder' (Default Mix & Match 6-slot builder) | 'chat' (Master Stylist Chat)
   const [activeMode, setActiveMode] = useState(() => {
-    return localStorage.getItem('sartorial_stylist_mode') || 'chat';
+    return localStorage.getItem('sartorial_stylist_mode') || 'manual-builder';
   });
 
   // Manual Outfit Builder & Audit States
@@ -175,6 +175,17 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     });
   };
 
+  // Lock body scroll when slot picker modal is open
+  useEffect(() => {
+    if (slotPickerModal) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = orig;
+      };
+    }
+  }, [slotPickerModal]);
+
   return (
     <div className="space-y-6 animate-slide-up">
       
@@ -182,44 +193,73 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="badge badge-gold">AI Stylist</span>
-            <span className="badge badge-emerald">Master Stylist</span>
+            <span className="badge badge-gold">
+              {activeMode === 'manual-builder' ? '🧩 Mix & Match' : '💬 AI Stylist'}
+            </span>
+            <span className="badge badge-emerald">
+              {activeMode === 'manual-builder' ? '6-Slotos Szettépítő' : 'Master Stylist Csevegés'}
+            </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
-            AI Stylist & Személyes Tanácsadó
+            {activeMode === 'manual-builder' ? 'Mix & Match Szettépítő' : 'AI Stylist Csevegés'}
           </h2>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
-            Interaktív stíluskonzultáció csevegésben és 6-slotos manuális szettépítő elemzés.
+            {activeMode === 'manual-builder' 
+              ? 'Állíts össze saját szettet a gardróbodból a 6 kategória-slot segítségével, és kérj rá azonnali szakértői auditot.' 
+              : 'Kérdezz bármit személyes AI Stylistodtól: ruhatári szett-ötletek, események dress code-ja, színek és rétegezés.'}
           </p>
         </div>
 
         {/* Mode Selector Toggle */}
-        <div className="flex items-center bg-black/60 p-1 rounded-xl border border-white/10 self-start sm:self-auto shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveMode('chat')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              activeMode === 'chat'
-                ? 'bg-[var(--accent-gold)] text-black shadow-md font-bold'
-                : 'text-[var(--text-secondary)] hover:text-white'
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>Master Stylist Chat</span>
-          </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          {activeMode === 'manual-builder' ? (
+            <button
+              type="button"
+              onClick={() => setActiveMode('chat')}
+              className="px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all bg-white/10 hover:bg-white/15 text-white border border-[var(--border-gold)]/50 shadow-md hover:border-[var(--accent-gold)]"
+              title="Váltás a csevegéshez"
+            >
+              <MessageSquare className="w-4 h-4 text-[var(--accent-gold)]" />
+              <span>💬 AI Stylist Csevegés</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setActiveMode('manual-builder')}
+              className="px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all bg-[var(--accent-gold)] text-black font-bold shadow-md hover:filter hover:brightness-110"
+              title="Vissza a szettépítőhöz"
+            >
+              <Sliders className="w-4 h-4 text-black" />
+              <span>🧩 Vissza a Mix & Match-hez</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveMode('manual-builder')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              activeMode === 'manual-builder'
-                ? 'bg-[var(--accent-gold)] text-black shadow-md font-bold'
-                : 'text-[var(--text-secondary)] hover:text-white'
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>6-Slotos Szettépítő</span>
-          </button>
+          <div className="flex items-center bg-black/60 p-1 rounded-xl border border-white/10">
+            <button
+              type="button"
+              onClick={() => setActiveMode('manual-builder')}
+              className={`p-1.5 rounded-lg text-xs transition-all ${
+                activeMode === 'manual-builder'
+                  ? 'bg-[var(--accent-gold)] text-black shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-white'
+              }`}
+              title="Mix & Match Szettépítő"
+            >
+              <Sliders className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveMode('chat')}
+              className={`p-1.5 rounded-lg text-xs transition-all ${
+                activeMode === 'chat'
+                  ? 'bg-[var(--accent-gold)] text-black shadow-md'
+                  : 'text-[var(--text-secondary)] hover:text-white'
+              }`}
+              title="Master Stylist Csevegés"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -525,9 +565,15 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
       {/* Slot Garment Picker Modal */}
       {slotPickerModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-card max-w-xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col border-[var(--border-gold)] shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setSlotPickerModal(null); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overscroll-contain animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="glass-card max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[85vh] my-auto flex flex-col border-[var(--border-gold)] shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
               <div className="flex items-center gap-2">
                 <Plus className="w-4 h-4 text-[var(--accent-gold)]" />
                 <h3 className="font-serif font-bold text-white text-base">
@@ -539,7 +585,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 overscroll-contain scrollbar-thin">
               {getSlotCandidates(slotPickerModal).map(item => (
                 <div
                   key={item.id}

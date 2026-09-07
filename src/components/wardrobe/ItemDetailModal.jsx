@@ -68,6 +68,15 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Lock background body scroll when item detail modal is open
+  useEffect(() => {
+    const orig = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = orig;
+    };
+  }, []);
+
   // Sync editData when item prop changes
   useEffect(() => {
     if (item) {
@@ -212,15 +221,15 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overscroll-contain animate-fade-in"
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-lg bg-[#0e121a] border border-[var(--border-gold)] rounded-2xl shadow-2xl p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto animate-scale-up"
+        className="relative w-full max-w-lg bg-[#0e121a] border border-[var(--border-gold)] rounded-2xl shadow-2xl my-auto max-h-[88vh] flex flex-col overflow-hidden animate-scale-up"
       >
         
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        {/* Header (Sticky) */}
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/10 bg-[#121824]/90 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-2">
             <span className="badge badge-gold">
               {item.formality || 'Smart Casual'}
@@ -263,9 +272,11 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
           </div>
         </div>
 
-        {isEditing ? (
-          /* EDIT MODE FORM */
-          <form onSubmit={handleSaveEdit} className="space-y-4">
+        {/* Scrollable Content Body */}
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4">
+          {isEditing ? (
+            /* EDIT MODE FORM */
+            <form onSubmit={handleSaveEdit} className="space-y-4">
             
             {/* Photo Replace */}
             <div className="space-y-2">
@@ -636,6 +647,7 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
             </div>
           </>
         )}
+        </div>
 
       </div>
     </div>

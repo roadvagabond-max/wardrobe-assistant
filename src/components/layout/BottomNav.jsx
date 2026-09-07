@@ -1,12 +1,12 @@
 import React from 'react';
-import { Sparkles, Layers, ShoppingBag, MessageSquare, UserCheck } from 'lucide-react';
+import { Sparkles, Layers, ShoppingBag, SlidersHorizontal, UserCheck } from 'lucide-react';
 
 export default function BottomNav({ activeTab, setActiveTab }) {
   const tabs = [
     { id: 'outfits', label: 'Szettek', icon: Sparkles },
     { id: 'wardrobe', label: 'Gardrób', icon: Layers },
     { id: 'advisor', label: 'Megvegyem?', icon: ShoppingBag },
-    { id: 'stylist', label: 'Stylist', icon: MessageSquare },
+    { id: 'stylist', label: 'Mix & Match', icon: SlidersHorizontal },
     { id: 'profile', label: 'Stílusprofil', icon: UserCheck }
   ];
 

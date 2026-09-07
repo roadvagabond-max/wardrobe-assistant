@@ -112,6 +112,17 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
     setRecentEvents(presets);
   }, [currentUser?.uid]);
 
+  // Lock body scroll when any modal is open to prevent background viewport jump
+  useEffect(() => {
+    if (showAnchorModal || itemSwapModal) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = orig;
+      };
+    }
+  }, [showAnchorModal, itemSwapModal]);
+
   // Sync event presets when demographics change
   useEffect(() => {
     const presets = getDynamicEventPresets(profile, weather);
@@ -676,39 +687,40 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
                       </div>
                     </div>
 
-                    {/* Reasoning & Layering Notes */}
-                    {profile?.displayCompactTips ? (
-                      <div className="space-y-1.5 text-xs">
-                        {outfit.culturalFitReasoning && (
-                          <div className="p-1.5 px-2.5 rounded-lg bg-black/30 border border-white/5 text-[var(--text-secondary)] text-[11px] truncate flex items-center gap-1.5">
-                            <span className="text-[var(--accent-gold)] font-bold shrink-0">Stílus:</span>
-                            <span className="truncate">{outfit.culturalFitReasoning}</span>
-                          </div>
-                        )}
-                        {outfit.layeringAdvice && (
-                          <div className="p-1.5 px-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10.5px] text-amber-200/90 truncate flex items-center gap-1.5">
-                            <span className="text-amber-300 font-bold shrink-0">Réteg:</span>
-                            <span className="truncate">{outfit.layerAdvice || outfit.layeringAdvice}</span>
-                          </div>
-                        )}
+                    {/* Concise Decision Badge */}
+                    {outfit.decisionBadge && (
+                      <div className="px-2.5 py-1 rounded-xl bg-[var(--accent-gold)]/10 border border-[var(--border-gold)]/35 text-[var(--accent-gold-light)] text-[11px] font-medium flex items-center gap-1.5 shadow-xs">
+                        <span className="shrink-0 text-xs">✨</span>
+                        <span className="truncate">{outfit.decisionBadge}</span>
                       </div>
-                    ) : (
-                      <div className="space-y-2 text-xs">
-                        {outfit.culturalFitReasoning && (
-                          <div className="p-2.5 rounded-xl bg-black/30 border border-white/5 text-[var(--text-secondary)] leading-relaxed">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-gold-light)] block mb-0.5">
-                              Stílusharmónia & Esemény-összhang:
-                            </span>
-                            {outfit.culturalFitReasoning}
-                          </div>
-                        )}
+                    )}
 
-                        {outfit.layeringAdvice && (
-                          <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-snug">
-                            <strong>Rétegezés:</strong> {outfit.layerAdvice || outfit.layeringAdvice}
+                    {/* Collapsible Reasoning & Layering Notes */}
+                    {(outfit.culturalFitReasoning || outfit.layeringAdvice) && (
+                      <details className="group/details text-xs rounded-xl bg-black/25 border border-white/5 overflow-hidden transition-all">
+                        <summary className="cursor-pointer select-none px-3 py-2 text-[11px] font-medium text-[var(--text-secondary)] hover:text-white flex items-center justify-between transition-colors">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <ChevronRight className="w-3.5 h-3.5 text-[var(--accent-gold)] transition-transform duration-200 group-open/details:rotate-90 shrink-0" />
+                            <span className="font-semibold text-white/90">Szakértői indoklás & rétegezés</span>
                           </div>
-                        )}
-                      </div>
+                          <span className="text-[10px] text-[var(--text-muted)] shrink-0 ml-1 group-open/details:hidden">részletek ▾</span>
+                        </summary>
+                        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-white/5 animate-fadeIn">
+                          {outfit.culturalFitReasoning && (
+                            <div className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accent-gold-light)] block mb-0.5">
+                                Stílusharmónia & Esemény-összhang:
+                              </span>
+                              {outfit.culturalFitReasoning}
+                            </div>
+                          )}
+                          {outfit.layeringAdvice && (
+                            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10.5px] text-amber-200/90 leading-snug">
+                              <strong className="text-amber-300">Rétegezés:</strong> {outfit.layerAdvice || outfit.layeringAdvice}
+                            </div>
+                          )}
+                        </div>
+                      </details>
                     )}
 
                     {/* Garment Items List with Swap Actions */}
@@ -822,9 +834,15 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
 
       {/* Anchor Items Modal */}
       {showAnchorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-card max-w-xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col border-[var(--border-gold)] shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAnchorModal(false); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overscroll-contain animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="glass-card max-w-xl w-full p-5 sm:p-6 space-y-4 max-h-[85vh] my-auto flex flex-col border-[var(--border-gold)] shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
               <div className="flex items-center gap-2">
                 <Lock className="w-4 h-4 text-[var(--accent-gold)]" />
                 <h3 className="font-serif font-bold text-white text-base">
@@ -836,11 +854,11 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
               </button>
             </div>
 
-            <p className="text-xs text-[var(--text-secondary)]">
+            <p className="text-xs text-[var(--text-secondary)] shrink-0">
               Válaszd ki azt a ruhadarabot, amely köré a szettet építeni szeretnéd (pl. egy konkrét zakó vagy új cipő).
             </p>
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 overscroll-contain scrollbar-thin">
               {wardrobe.map(item => {
                 const isSelected = anchorItems.some(a => a.id === item.id);
                 return (
@@ -876,7 +894,7 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
               })}
             </div>
 
-            <div className="pt-3 border-t border-white/10 flex justify-end">
+            <div className="pt-3 border-t border-white/10 flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setShowAnchorModal(false)}
@@ -891,9 +909,15 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
 
       {/* Garment Swap Modal (AI vs Manual replacement) */}
       {itemSwapModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-card max-w-lg w-full p-6 space-y-4 max-h-[85vh] flex flex-col border-[var(--border-gold)] shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setItemSwapModal(null); }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overscroll-contain animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="glass-card max-w-lg w-full p-5 sm:p-6 space-y-4 max-h-[85vh] my-auto flex flex-col border-[var(--border-gold)] shadow-2xl overflow-hidden"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
               <div className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4 text-[var(--accent-gold)]" />
                 <h3 className="font-serif font-bold text-white text-base">
@@ -949,7 +973,7 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
                 Vagy válassz egy darabot a gardróbodból:
               </span>
 
-              <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
+              <div className="max-h-48 overflow-y-auto overscroll-contain space-y-1.5 pr-1 scrollbar-thin">
                 {getSwapCandidates(itemSwapModal.item, itemSwapModal.outfit).map(candidate => (
                   <div
                     key={candidate.id}

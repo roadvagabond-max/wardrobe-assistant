@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.4` (Production Build)
+- **Aktuális Verzió:** `v1.7.5` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,31 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.3)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.5)
+- [x] **Tab 4 Átpozicionálás: 🧩 Mix & Match (Főképernyő) & Másodlagos Chat (v1.7.5):**
+  - A 4. tab neve „Mix & Match” (`BottomNav.jsx` és `DesktopTabs.jsx`, ikon: `SlidersHorizontal`).
+  - Alapértelmezett nézet a 6-slotos manuális szettépítő és valós idejű audit.
+  - A fejlécből egyetlen kattintással elérhető a másodlagos Master Stylist Chat nézet és fordítva, a választott mód megőrzésével (`StylistView.jsx`).
+- [x] **Tömör Decision Badges & Lenyitható Magyarázatok a Szettkártyákon (v1.7.5):**
+  - Mobilon azonnal átlátható, egysoros döntési jelvény (`decisionBadge`) renderelése a kártyák tetején (`OutfitsView.jsx`).
+  - A hosszú magyarázó szövegek (`culturalFitReasoning`, `layeringAdvice`) lenyitható harmonikába rendezése a mobilos képernyőterület kímélése érdekében.
+  - A `decisionBadge` mentése a `SavedOutfit` rekordokba.
+- [x] **„Quiet UI” Színvilág & Felugró Ablakok Viewport Pozicionálása (v1.7.5):**
+  - A korábbi élénk sárga-arany tónusok tompítása visszafogott, elegáns pezsgő/homok aranyra (`#c5a880` / `#d4af37`), mély obszidián-pala háttér gradienssel (`#0a0e17`, `index.css`).
+  - **Felugró ablakok viewport fókuszálása:** A `GarmentLightboxModal`, `ItemDetailModal`, `showAnchorModal`, `itemSwapModal` és `slotPickerModal` mobilon azonnal a képernyő fókuszába nyílnak meg (`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md overscroll-contain`), automatikus háttér-görgetés zárolással (`body overflow: hidden`), megszüntetve a fekete képernyőn való fel-le keresgélést.
+- [x] **Női Ruha (Dress) Rétegezési Hiba & Egyberuha Szabályjavítás (v1.7.4):**
+  - `isDress(item)` egyrészes ruhafelismerő az anatómiai motorban (`enforceAnatomicalOutfitLayers`, `gemini.js`).
+  - Egyberuha esetén a külön alsórész (nadrág, szoknyanadrág, farmer, szoknya) és felesleges bázisfelső automatikus kizárása/eltávolítása; csak felöltő (blézer, kardigán, kabát), cipő és kiegészítők engedélyezettek.
+  - Szigorú prompt tiltás a `generateEventOutfits` utasításban az egyberuha + alsórész társítására.
+- [x] **Stylist Chat Vásárlási & Színválasztási Döntési Protokoll (Zero-Redundancy, v1.7.4):**
+  - Kategória-szintű duplikáció szűrés (Zero-Redundancy Rule): létező kategória-színt (pl. bézs kötöttáru) tilos No. 1 helyre tenni új vásárlásnál.
+  - Kromatikus űr elemzés (Color Gap): hiányzó színek (pl. Navy kötöttáru, ha 0 db van) maximális prioritása.
+  - Döntési sorrend szigorítása: 1. Kategória Gap/Redundancia audit $\rightarrow$ 2. Színtípus $\rightarrow$ 3. Nadrág-kontraszt.
+- [x] **Kliens Konfiguráció & API Kulcsok Tisztítása (v1.7.4):**
+  - `VITE_GEMINI_API_KEY` sor eltávolítva a kliens `.env` és `.env.example` fájljaiból; a rendszer 100%-ban szerveroldali Firebase Cloud Functions v2 (`sartorialAiProxy`) proxy-t használ Secret Managerből védett mesterkulccsal.
+- [x] **Golden Eval Suite (TC-1 – TC-6) Minőségbiztosítási Futtató (v1.7.4):**
+  - Új [test_eval.mjs](file:///c:/Users/Attila/.gemini/antigravity-ide/scratch/wardrobe-assistant/test_eval.mjs) parancssori futtató és `"test:eval"` script a `package.json`-ban.
+  - Interaktív, egykattintásos böngészős tesztgomb a Stílusprofil `SartorialKnowledgeHub` felületén.
 - [x] **5-Lépéses Onboarding Varázsló & Kezdő Segítség Átfogó Felülvizsgálata (v1.7.3):**
   - Életkor alapú intelligens demográfiai profilozás, dinamikus korosztály-jelvény, gyermekeknél ($<13$ év) a felnőtt sziluettek elrejtése.
   - Varázsló sikeres befejezésekor arany-zöld konfetti animáció (`canvas-confetti`) és részletes összegzés.
@@ -74,38 +98,14 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Vendég Munkamenet LocalStorage Tisztítása & Szett/Profil Izoláció:** A `clearGuestSessionStorage` motorral kijelentkezéskor és demó resetkor a böngésző helyi tárolójából (`localStorage`) teljesen és automatikusan törlődnek a generált szettek (`sartorial_last_generated_outfits`, `saved_outfits`, `sartorial_last_anchor_items`, `sartorial_last_custom_event`, `stylist_chat_history`), garantálva a tiszta vendégállapotot.
 - [x] **Minta Ruhatár (`SAMPLE_SHOWCASE_WARDROBE`) Ruha-Kép Egyezés & Jogtiszta Fotók:** A 12 db bemutató ruha és a fallback fotók auditálása és cseréje. A képeltérések (női ruha ➔ férfi nadrág, hátizsák ➔ öv, pufidzseki ➔ teveszínű kabát) megszűntek; a darabok 100%-ban jogtiszta, megegyező Unsplash divatfotókkal és valós, népszerű márkákkal (Massimo Dutti, Eton, SuitSupply, Zara, Mango Man, Berwick 1707) futnak.
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
-- [x] **Női Ruha (Dress) Rétegezési Hiba & Egyberuha Szabályjavítás (v1.7.4):**
-  - `isDress(item)` egyrészes ruhafelismerő az anatómiai motorban (`enforceAnatomicalOutfitLayers`, `gemini.js`).
-  - Egyberuha esetén a külön alsórész (nadrág, szoknyanadrág, farmer, szoknya) és felesleges bázisfelső automatikus kizárása/eltávolítása; csak felöltő (blézer, kardigán, kabát), cipő és kiegészítők engedélyezettek.
-  - Szigorú prompt tiltás a `generateEventOutfits` utasításban az egyberuha + alsórész társítására.
-- [x] **Stylist Chat Vásárlási & Színválasztási Döntési Protokoll (Zero-Redundancy, v1.7.4):**
-  - Kategória-szintű duplikáció szűrés (Zero-Redundancy Rule): létező kategória-színt (pl. bézs kötöttáru) tilos No. 1 helyre tenni új vásárlásnál.
-  - Kromatikus űr elemzés (Color Gap): hiányzó színek (pl. Navy kötöttáru, ha 0 db van) maximális prioritása.
-  - Döntési sorrend szigorítása: 1. Kategória Gap/Redundancia audit $\rightarrow$ 2. Színtípus $\rightarrow$ 3. Nadrág-kontraszt.
-- [x] **Kliens Konfiguráció & API Kulcsok Tisztítása (v1.7.4):**
-  - `VITE_GEMINI_API_KEY` sor eltávolítva a kliens `.env` és `.env.example` fájljaiból; a rendszer 100%-ban szerveroldali Firebase Cloud Functions v2 (`sartorialAiProxy`) proxy-t használ Secret Managerből védett mesterkulccsal.
-- [x] **Golden Eval Suite (TC-1 – TC-6) Minőségbiztosítási Futtató (v1.7.4):**
-  - Új [test_eval.mjs](file:///c:/Users/Attila/.gemini/antigravity-ide/scratch/wardrobe-assistant/test_eval.mjs) parancssori futtató és `"test:eval"` script a `package.json`-ban.
-  - Interaktív, egykattintásos böngészős tesztgomb a Stílusprofil `SartorialKnowledgeHub` felületén.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
-- [ ] **Tab 4 Átpozicionálás: 🧩 Mix & Match (Főképernyő) & Másodlagos Chat:**
-  - A 4. tab neve „Mix & Match” (asztali nézetben `🧩 Mix & Match`, ikon: `SlidersHorizontal`).
-  - Alapértelmezett nézet a 6-slotos manuális szettépítő és valós idejű 5D audit.
-  - A fejlécből egyetlen kattintással elérhető a másodlagos Master Stylist Chat nézet és vissza.
 - [ ] **Hangalapú Szettkérés (Web Speech API Mikrofon Integráció):**
   - Mikrofon gomb (`Mic` ikon) elhelyezése a szettkérő beviteli mezőben (`OutfitsView.jsx`).
   - Magyar nyelvű (`hu-HU`) böngészős beszédfelismerés pulzáló felvételi állapottal és automatikus mezőkitöltéssel.
-- [ ] **Tömör Decision Badges & Lenyitható Magyarázatok a Szettkártyákon:**
-  - Mobilon azonnal átlátható, egysoros döntési jelvény (`decisionBadge`) renderelése a kártyák tetején.
-  - A hosszú magyarázó szövegek (`culturalFitReasoning`, `layeringAdvice`) lenyitható harmonikába rendezése a képernyőterület kímélése érdekében.
-  - A `decisionBadge` mentése a `SavedOutfit` rekordokba.
 - [ ] **Onboarding Áramvonalasítása (Kötelező Mezők Fókuszban):**
   - A Név, Nem (kötelező) és születési év (korosztály) megtartása a fókuszban.
   - A pontos cm méretek és az első ruha feltöltése halaszthatóvá tétele (átirányítás a Gardrób lebegő FAB gombjához).
-- [ ] **„Quiet UI” Színvilág & Felugró Ablakok Viewport Pozicionálása:**
-  - A rikító sárga-arany tónusok tompítása visszafogott, elegáns pezsgő/homok aranyra (`#c5a880` / `#d4af37`), háttér radiális gradiens foltok egységesítése mély obszidián-pala felületre.
-  - **Felugró ablakok fókuszálása:** A `GarmentLightboxModal`, `ItemDetailModal` és szettrészletek mobilon azonnal a képernyő (viewport) fókuszába nyíljanak meg (`fixed inset-0 flex items-center justify-center`), megszüntetve a fekete képernyőn való fel-le görgetési keresgélést, minimális vizuális zajjal.
 - [ ] **Kliensoldali Háttérmaszkolás (`@imgly/background-removal`):**
   - `@imgly/background-removal` WASM csomag integrálása a háttérben futó párhuzamos pipeline-ba.
   - Azonnali Canvas 640×640 JPEG továbbítás az AI híváshoz (<100ms), háttérben WebP maszkolás 6 mp-es timeouttal és tiszta fallbackkel.
@@ -171,4 +171,4 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ---
 
-*Utoljára frissítve: 2026-09-06 (v1.5.4)*
+*Utoljára frissítve: 2026-09-07 (v1.7.5)*

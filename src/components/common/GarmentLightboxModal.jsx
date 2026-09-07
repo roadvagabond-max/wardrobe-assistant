@@ -26,6 +26,17 @@ export default function GarmentLightboxModal({
     }
   }, [isOpen, initialIndex, items.length, defaultView]);
 
+  // Lock background body scroll when lightbox is open
+  useEffect(() => {
+    if (isOpen) {
+      const orig = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = orig;
+      };
+    }
+  }, [isOpen]);
+
   // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
@@ -78,12 +89,15 @@ export default function GarmentLightboxModal({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-xl animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-md overscroll-contain animate-fade-in"
     >
-      <div className="relative w-full max-w-4xl bg-[#161310] border border-[var(--border-gold)]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up">
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-4xl bg-[#11141d] border border-[var(--border-gold)]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] my-auto overscroll-contain animate-scale-up"
+      >
         
         {/* Modal Top Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/10 bg-[#1c1814]/80 backdrop-blur-md">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/10 bg-[#161a26]/90 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-3">
             <span className="badge badge-gold text-xs font-semibold">
               {outfitTitle ? outfitTitle : (items.length > 1 ? `Komplett Szett (${items.length} darab)` : 'Ruhadarab Betekintő')}
@@ -139,7 +153,7 @@ export default function GarmentLightboxModal({
         {/* Content Body */}
         {viewMode === 'lookbook' ? (
           /* LOOKBOOK GRID VIEW: All garments in the outfit rendered immediately without scrolling */
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-white/5">
               <div>
                 <h4 className="text-sm sm:text-base font-serif font-bold text-white">
@@ -214,7 +228,7 @@ export default function GarmentLightboxModal({
           </div>
         ) : (
           /* SINGLE ITEM ZOOM VIEW: Compact, perfectly proportioned view */
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
             
             {/* Left/Main: Enlarged Photo Showcase */}
             <div className="md:col-span-6 flex flex-col items-center justify-center relative">
