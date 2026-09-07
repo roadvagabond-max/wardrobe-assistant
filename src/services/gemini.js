@@ -1938,8 +1938,41 @@ ${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincse
 👔 AKTÍV STÍLUS- ÉS RÉTEGEZÉSI SZABÁLYZAT:
 ${dynamicSartorialRules}
 
+      const hasWeatherMention = Boolean(
+        weather && 
+        eventName && 
+        typeof eventName === 'string' && 
+        /\b(időjárás|fok|°c|meleg|hideg|hűvös|eső|esős|hó|fagy|napsütés|szél|nyár|tél|ősz|tavasz|vihar|zápor|fagyos)\b/i.test(eventName)
+      );
+
+      const weatherPromptContext = hasWeatherMention
+        ? `HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${weather?.temperature ?? 21}°C, ${weather?.condition || 'Kellemes'}. Vedd figyelembe a megadott időjárási hőmérsékletet!`
+        : `IDŐJÁRÁS: A felhasználó nem specifikált külső időjárási körülményt ehhez az összeállításhoz. A vizsgálat fókusza kizárólag a darabok stílusösszhangja, a sziluett, az arányok, a színek és az anyagharmónia. TILOS külső időjárási körülményre vagy feltételezett hőmérsékletre hivatkozva levonni pontot!`;
+
+      const prompt = `Te egy mester személyi stylist, szín- és aránytanácsadó, valamint stílusszakértő vagy. Kerüld a "sartorial" kifejezés használatát a válaszaidban, helyette használj természetes magyar kifejezéseket (stílusos, elegáns, kifinomult, harmonikus)!
+A felhasználó saját maga állított össze egy szettet a meglévő ruhatárából.
+
+A FELADATOD: Végezz professzionális, építő jellegű Stílus- és Összhang Auditot a szettre a felhasználó személyes profilja, Stílus DNS-e és az alábbi paraméterek alapján!
+
+DEMOGRÁFIAI PROFIL ÉS KORCSOPORT SZABÁLYOK:
+- Felhasználó kategóriája: ${demographics.gender} (${demographics.age} éves, ${demographics.bracketDescription})
+${demographicInstructions}
+
+FELHASZNÁLÓ STÍLUSPROFILJA (100%-ban érvényesítendő):
+- Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || (demographics.isFemale ? ['Klasszikus & Nőies', 'Smart Casual'] : ['Klasszikus & Időtlen', 'Smart Casual']))}
+- Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult harmónia, prémium kényelmes anyagok és stílusos megjelenés'}"
+- Kedvenc Színpaletta: ${styleProfile.favoriteColors && styleProfile.favoriteColors.length > 0 ? JSON.stringify(styleProfile.favoriteColors) : 'Nincs rögzítve (Alkalmazz természetes harmóniát)'}
+- Testalkat és Magasság: ${styleProfile.bodyType || 'Normál'}${styleProfile.height ? `, ${styleProfile.height}` : ''}${styleProfile.skinTone ? ` (${styleProfile.skinTone})` : ''}
+- Öltözködési Hőérzet & Komfort: ${styleProfile.thermalPreference === 'coldSensitive' ? 'Fázósabb alkat (hűvösben melegebb textúrák, finomkötöttek és rétegek előnyben)' : styleProfile.thermalPreference === 'warmSensitive' ? 'Melegkedvelő alkat (könnyed, szellős pamut/len preferálása)' : 'Kiegyensúlyozott / Normál hőérzet'}
+
+🚫 FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI (Ha a választott szettben ezek bármelyike sérül, jelezd a figyelmeztetésben és a tanácsokban!):
+${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
+
+👔 AKTÍV STÍLUS- ÉS RÉTEGEZÉSI SZABÁLYZAT:
+${dynamicSartorialRules}
+
 ${eventPromptContext}
-HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${weather?.temperature ?? 21}°C, ${weather?.condition || 'Kellemes'}
+${weatherPromptContext}
 
 A FELHASZNÁLÓ ÁLTAL ÖSSZEVÁLOGATOTT DARABOK (${items.length} db):
 ${formatWardrobeToCompactCatalog(items)}
@@ -1947,21 +1980,21 @@ ${formatWardrobeToCompactCatalog(items)}
 SZEMPONTOK AZ AUDITHOZ:
 1. 🎯 Stílus- & Esemény összhang: ${isSpecificEvent ? 'Illik-e az esemény dress code-jához?' : 'Harmonikus-e a szett általános stílusvilága és önazonossága?'}
    - LAZA / CASUAL / STREETWEAR SZETTEKNÉL: Egy minőségi póló + nadrág + sneaker összeállítás 100%-ban teljes értékű szett! TILOS kötelezően zakót, blézert vagy nyakkendőt erőltetni, ha a szett laza jellegű!
-2. 👔 Sartorial Gallér- és Ujj-Harmónia:
+2. 👔 Gallér- és Ujj-Harmónia:
    - Állógalléros ing + zárt kötött pulóver vagy klasszikus hajtókás zakó: DISSZONÁNS!
    - Rövid ujjú kötött pulóver + alatta rövid ujjú póló: KETTŐS UJJVÉG HIBA!
    - Garbó + alatta galléros ing: DISSZONÁNS! (A garbó önmagában bázis).
    - Ingdzseki (Shacket) + alatta klasszikus galléros ing: DISSZONÁNS! (Kettős gallér és gombsor).
 3. 🧦 Lábbeli, Zokni & Harisnya Harmónia:
    - Ha van zokni vagy harisnya, illeszkedik-e a cipőhöz és az alsórészhez (hossz, szín, textúra, denier)?
-   - Melegben (>= 19°C) kerülendők a vastag téli csizmák és bélelt bakancsok; hűvösben szellős vászon helyett zártabb lábbeli ajánlott.
+   - Ha a felhasználó kifejezetten meleg időt adott meg (>= 19°C), kerülendők a vastag téli csizmák és bélelt bakancsok; hűvösben szellős vászon helyett zártabb lábbeli ajánlott.
 4. 🎗️ Kiegészítők & Részletek (Öv, Karóra, Táska, Ékszer):
    - Az öv színe és textúrája harmonizál-e a cipővel? A karóra fém- vagy bőrszíja támogatja-e az összképet?
 5. 👗 Egyberuha / Sziluett Arányok (ha szerepel):
    - Egyberuha esetén a sziluett arányai és a kiegészítők (cipő, táska, öv, kabát) egyensúlya.
 6. 🎨 Színharmónia & Kontraszt: Hideg/meleg tónusok, 3-szín szabály érvényesülése.
 7. 🧵 Anyagok & Textúrák szinergiája: Természetes szálak és textúrák találkozása.
-8. 🧥 Anatómiai rétegezés & Időjárási alkalmasság a megadott ${weather?.temperature ?? 21}°C-hoz.
+8. 🧥 ${hasWeatherMention ? `Anatómiai rétegezés & Időjárási alkalmasság a megadott ${weather?.temperature ?? 21}°C-hoz.` : 'Anatómiai rétegezés & sziluett egyensúly (bázis felső, köztes réteg, külső réteg viszonya).'}
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
@@ -1970,7 +2003,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "eventAlignment": "Részletes, szabatos összefoglaló a stílusösszhangról és az alkalmasságról",
   "colorHarmony": "A színek és árnyalatok kölcsönhatásának értékelése",
   "fabricSynergy": "Az anyagok és textúrák találkozásának értékelése",
-  "layeringEvaluation": "A rétegezés és a hőmérsékleti komfort elemzése",
+  "layeringEvaluation": "A rétegezés és a sziluett egyensúly elemzése",
   "bodyFitVerdict": "Hogyan támogatja a szett a testalkatot és a személyes arányokat",
   "strengths": [
     "Az összeállítás elemei jól kiegészítik egymást és kényelmes mozgást biztosítanak"
@@ -1990,7 +2023,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
       });
 
       const temp = typeof weather?.temperature === 'number' ? weather.temperature : 22;
-      const hasBootInWarmWeather = temp >= 19 && items.some(i => isHeavyBoot(i));
+      const hasBootInWarmWeather = hasWeatherMention && temp >= 19 && items.some(i => isHeavyBoot(i));
 
       // Deterministic Sartorial Checks for Manual Selection
       const hasStandCollarShirt = items.some(i => (i.category === 'tops' || (i.name || '').toLowerCase().includes('ing')) && isStandCollar(i));

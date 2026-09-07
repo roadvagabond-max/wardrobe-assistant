@@ -3,12 +3,11 @@ import { createPortal } from 'react-dom';
 import { 
   Sparkles, MessageSquare, SlidersHorizontal as Sliders, Plus, X, Bookmark, Check, 
   Loader2, Compass, Feather, CloudSun, Maximize2, RefreshCw, AlertCircle, ChevronUp,
-  Layers, Trash2, ShieldAlert, Info
+  Layers, Trash2, ShieldAlert, Info, FolderHeart
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { auditManualOutfit } from '../../services/gemini';
-import { getSmartGarmentImage } from '../../services/imageOptimizer';
-import confetti from 'canvas-confetti';
+import { createGarmentSvgPlaceholder } from '../../services/imageOptimizer';
 import StylistChatView from './StylistChatView';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
 import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
@@ -33,7 +32,7 @@ function cleanSartorialText(text) {
 }
 
 export default function StylistView({ weather, setWeather, initialAnchorItem = null }) {
-  const { wardrobe, profile, saveOutfit } = useAuth();
+  const { wardrobe, profile, saveOutfit, savedOutfits = [], deleteOutfit } = useAuth();
 
   // Mode: 'manual-builder' (Default Mix & Match) | 'chat' (Master Stylist Chat)
   const [activeMode, setActiveMode] = useState(() => {
@@ -63,6 +62,8 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
   const [isManualSaved, setIsManualSaved] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [isSavedOutfitsOpen, setIsSavedOutfitsOpen] = useState(false);
+  const [saveToastMessage, setSaveToastMessage] = useState('');
 
   // Validation Toast State
   const [toastMessage, setToastMessage] = useState(null);
@@ -314,16 +315,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
       setManualAuditResult(auditRes);
 
-      if (auditRes?.score >= 85) {
-        try {
-          confetti({
-            particleCount: 50,
-            spread: 60,
-            origin: { y: 0.7 },
-            colors: ['#e2e8f0', '#10b981', '#38bdf8']
-          });
-        } catch (_) {}
-      }
+      // Quiet luxury: zero confetti, subtle feedback
     } catch (err) {
       console.error('AI Elemzési hiba:', err);
       showToast(`Hiba történt az elemzés során: ${err.message}`);
@@ -332,26 +324,83 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     }
   };
 
-  // Save outfit to Firestore savedOutfits
-  const handleSaveManualAuditedOutfit = () => {
-    if (!manualAuditResult || selectedItems.length === 0) return;
+  // Save outfit directly or from audit (100% no confetti, elegant feedback)
+  const handleDirectSaveOutfit = () => {
+    if (selectedItems.length === 0) return;
+
+    const occasionTitle = manualEvent.trim() || 'Saját Mix & Match Szett';
+    const topItem = ensemble.upperLayers[0] || ensemble.dress;
+    const lowerItem = ensemble.lower;
+    const defaultTitle = topItem && lowerItem 
+      ? `${topItem.name} + ${lowerItem.name}`
+      : topItem 
+        ? `${topItem.name} összeállítás`
+        : occasionTitle;
 
     const newOutfit = {
       id: `manual-outfit-${Date.now()}`,
-      title: manualAuditResult.verdict || 'Saját Összeállítás',
+      title: manualAuditResult?.verdict ? cleanSartorialText(manualAuditResult.verdict) : defaultTitle,
       styleArchetype: profile?.preferredStyles?.[0] || 'Egyéni Stílus',
-      occasion: manualEvent.trim() || 'Mindennapi Megjelenés',
-      matchScore: manualAuditResult.score || 90,
-      stylingNotes: manualAuditResult.colorHarmony || 'Harmonikus saját szett.',
-      layeringAdvice: manualAuditResult.layeringEvaluation || '',
-      culturalFitReasoning: manualAuditResult.eventAlignment || '',
-      weatherSuitability: `Kiértékelve a(z) ${weather?.city || 'Budapest'} (${weather?.temperature ?? 21}°C) időjárásra.`,
+      occasion: occasionTitle,
+      matchScore: manualAuditResult?.score || 92,
+      stylingNotes: manualAuditResult?.colorHarmony || `${selectedItems.length} darabból összeállított egyéni kapszula szett.`,
+      layeringAdvice: manualAuditResult?.layeringEvaluation || '',
+      culturalFitReasoning: manualAuditResult?.eventAlignment || '',
       items: selectedItems,
-      isManual: true
+      ensembleSnapshot: ensemble,
+      isManual: true,
+      savedAt: new Date().toISOString()
     };
 
     saveOutfit(newOutfit);
     setIsManualSaved(true);
+    setSaveToastMessage('✨ Szett sikeresen elmentve a Kedvencekhez!');
+    setTimeout(() => setSaveToastMessage(''), 3500);
+  };
+
+  const handleSaveManualAuditedOutfit = () => {
+    handleDirectSaveOutfit();
+  };
+
+  // Load a saved outfit back onto the Mix & Match canvas
+  const handleLoadSavedOutfit = (savedOutfit) => {
+    if (!savedOutfit) return;
+    if (savedOutfit.ensembleSnapshot) {
+      setEnsemble(savedOutfit.ensembleSnapshot);
+    } else if (savedOutfit.items && Array.isArray(savedOutfit.items)) {
+      const newEnsemble = {
+        upperLayers: [],
+        dress: null,
+        lower: null,
+        shoes: null,
+        socks: null,
+        accessories: []
+      };
+      savedOutfit.items.forEach(item => {
+        const cat = item.category?.toLowerCase() || '';
+        if (cat === 'dresses') {
+          newEnsemble.dress = item;
+        } else if (cat === 'tops' || cat === 'knitwear' || cat === 'outerwear') {
+          newEnsemble.upperLayers.push(item);
+        } else if (cat === 'bottoms' || cat === 'skirts') {
+          newEnsemble.lower = item;
+        } else if (cat === 'shoes') {
+          newEnsemble.shoes = item;
+        } else if (cat === 'accessories') {
+          newEnsemble.accessories.push(item);
+        } else {
+          newEnsemble.upperLayers.push(item);
+        }
+      });
+      setEnsemble(newEnsemble);
+    }
+    if (savedOutfit.occasion) {
+      setManualEvent(savedOutfit.occasion);
+    }
+    setIsManualSaved(true);
+    setIsSavedOutfitsOpen(false);
+    setSaveToastMessage('✨ Mentett szett betöltve a vászonra!');
+    setTimeout(() => setSaveToastMessage(''), 3000);
   };
 
   const openLightbox = (items, initialIndex = 0, outfitTitle = '') => {
@@ -472,8 +521,23 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         </div>
       )}
 
+      {/* Save Toast Notification */}
+      {saveToastMessage && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[calc(100%-2rem)] px-4 py-3 rounded-xl bg-[#0f1420]/95 border border-emerald-500/40 shadow-2xl backdrop-blur-md flex items-center gap-3 text-slate-100 text-xs font-medium animate-slide-down">
+          <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="flex-1 leading-snug">{saveToastMessage}</span>
+          <button 
+            type="button"
+            onClick={() => setSaveToastMessage('')}
+            className="text-slate-400 hover:text-white p-1"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ========================================================================= */}
-      {/* CLEAN TOP HEADER: STABLE TOGGLE (LEFT) & WEATHER + HELP (RIGHT) */}
+      {/* CLEAN TOP HEADER: STABLE TOGGLE (LEFT) & SAVED OUTFITS + HELP (RIGHT) */}
       {/* ========================================================================= */}
       <div className="flex items-center justify-between gap-3 pt-1 pb-1">
         {/* Stable 2-Segmented Toggle: Left Mix & Match, Right AI Stylist (Never jumping) */}
@@ -504,13 +568,23 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
           </button>
         </div>
 
-        {/* Right: Weather & Help info toggle */}
+        {/* Right: Saved Outfits & Help info toggle (Weather removed to eliminate overflow) */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="px-3 py-1.5 rounded-xl bg-[#0d121c] border border-slate-800 text-xs flex items-center gap-1.5 text-slate-300">
-            <CloudSun className="w-4 h-4 text-slate-300 shrink-0" />
-            <span className="font-semibold text-slate-200">{weather?.city || 'Budapest'}, {weather?.temperature ?? 21}°C</span>
-            <span className="text-[11px] text-slate-500 hidden sm:inline">({weather?.condition || 'Kellemes'})</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsSavedOutfitsOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-xs flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+            title="Mentett szettek megtekintése"
+          >
+            <Bookmark className="w-3.5 h-3.5 text-slate-400" />
+            <span className="font-semibold hidden sm:inline">Mentett szettek</span>
+            <span className="font-semibold sm:hidden">Szettek</span>
+            {savedOutfits.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-slate-700 text-[10px] text-slate-200 font-mono">
+                {savedOutfits.length}
+              </span>
+            )}
+          </button>
 
           <button
             type="button"
@@ -582,15 +656,40 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               </div>
 
               {selectedItems.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleResetEnsemble}
-                  className="text-xs text-slate-400 hover:text-rose-400 flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 transition-colors shrink-0"
-                  title="Szett ürítése"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Kiürítés</span>
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleDirectSaveOutfit}
+                    className={`text-xs flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-all ${
+                      isManualSaved
+                        ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-slate-200 hover:bg-white text-slate-950 font-bold border-transparent shadow-sm'
+                    }`}
+                    title="Szett mentése a kedvencekhez"
+                  >
+                    {isManualSaved ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Elmentve</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-3.5 h-3.5" />
+                        <span>Mentés</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResetEnsemble}
+                    className="text-xs text-slate-400 hover:text-rose-400 flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
+                    title="Szett ürítése"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Kiürítés</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -623,11 +722,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               /* Dress active: One large lookbook card */
               <div className="relative w-full aspect-[4/3] max-h-72 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group">
                 <img 
-                  src={ensemble.dress.imageUrl || getSmartGarmentImage('dresses', ensemble.dress.color, 'dress')} 
+                  src={ensemble.dress.imageUrl || createGarmentSvgPlaceholder('dresses', ensemble.dress.name, ensemble.dress.color)} 
                   alt={ensemble.dress.name}
+                  referrerPolicy="no-referrer"
                   onError={(e) => {
                     e.currentTarget.onerror = null;
-                    e.currentTarget.src = getSmartGarmentImage('dresses', ensemble.dress.color, 'dress');
+                    e.currentTarget.src = createGarmentSvgPlaceholder('dresses', ensemble.dress.name, ensemble.dress.color);
                   }}
                   onClick={() => openLightbox([ensemble.dress], 0, ensemble.dress.name)}
                   className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
@@ -685,11 +785,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     className="relative w-36 h-44 sm:w-44 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group"
                   >
                     <img 
-                      src={layer.imageUrl || getSmartGarmentImage(layer.category, layer.color, layer.subCategory)} 
+                      src={layer.imageUrl || createGarmentSvgPlaceholder(layer.category, layer.name, layer.color)} 
                       alt={layer.name}
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
-                        e.currentTarget.src = getSmartGarmentImage(layer.category, layer.color, layer.subCategory);
+                        e.currentTarget.src = createGarmentSvgPlaceholder(layer.category, layer.name, layer.color);
                       }}
                       onClick={() => openLightbox([layer], 0, layer.name)}
                       className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
@@ -739,11 +840,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 {ensemble.lower ? (
                   <div className="relative flex-1 h-44 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group">
                     <img 
-                      src={ensemble.lower.imageUrl || getSmartGarmentImage(ensemble.lower.category, ensemble.lower.color, ensemble.lower.subCategory)} 
+                      src={ensemble.lower.imageUrl || createGarmentSvgPlaceholder(ensemble.lower.category, ensemble.lower.name, ensemble.lower.color)} 
                       alt={ensemble.lower.name}
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
-                        e.currentTarget.src = getSmartGarmentImage(ensemble.lower.category, ensemble.lower.color, ensemble.lower.subCategory);
+                        e.currentTarget.src = createGarmentSvgPlaceholder(ensemble.lower.category, ensemble.lower.name, ensemble.lower.color);
                       }}
                       onClick={() => openLightbox([ensemble.lower], 0, ensemble.lower.name)}
                       className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
@@ -787,11 +889,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     return (
                       <div className="relative w-24 sm:w-32 h-44 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group">
                         <img 
-                          src={belt.imageUrl || getSmartGarmentImage('accessories', belt.color, 'belt')} 
+                          src={belt.imageUrl || createGarmentSvgPlaceholder('accessories', belt.name, belt.color)} 
                           alt={belt.name}
+                          referrerPolicy="no-referrer"
                           onError={(e) => {
                             e.currentTarget.onerror = null;
-                            e.currentTarget.src = getSmartGarmentImage('accessories', belt.color, 'belt');
+                            e.currentTarget.src = createGarmentSvgPlaceholder('accessories', belt.name, belt.color);
                           }}
                           onClick={() => openLightbox([belt], 0, belt.name)}
                           className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
@@ -827,11 +930,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               {ensemble.shoes ? (
                 <div className="relative flex-1 h-36 sm:h-44 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group">
                   <img 
-                    src={ensemble.shoes.imageUrl || getSmartGarmentImage('shoes', ensemble.shoes.color, ensemble.shoes.subCategory)} 
+                    src={ensemble.shoes.imageUrl || createGarmentSvgPlaceholder('shoes', ensemble.shoes.name, ensemble.shoes.color)} 
                     alt={ensemble.shoes.name}
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
-                      e.currentTarget.src = getSmartGarmentImage('shoes', ensemble.shoes.color, ensemble.shoes.subCategory);
+                      e.currentTarget.src = createGarmentSvgPlaceholder('shoes', ensemble.shoes.name, ensemble.shoes.color);
                     }}
                     onClick={() => openLightbox([ensemble.shoes], 0, ensemble.shoes.name)}
                     className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
@@ -871,11 +975,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               {ensemble.socks ? (
                 <div className="relative w-24 sm:w-32 h-36 sm:h-44 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group">
                   <img 
-                    src={ensemble.socks.imageUrl || getSmartGarmentImage('accessories', ensemble.socks.color, 'socks')} 
+                    src={ensemble.socks.imageUrl || createGarmentSvgPlaceholder('accessories', ensemble.socks.name, ensemble.socks.color)} 
                     alt={ensemble.socks.name}
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
                       e.currentTarget.onerror = null;
-                      e.currentTarget.src = getSmartGarmentImage('accessories', ensemble.socks.color, 'socks');
+                      e.currentTarget.src = createGarmentSvgPlaceholder('accessories', ensemble.socks.name, ensemble.socks.color);
                     }}
                     onClick={() => openLightbox([ensemble.socks], 0, ensemble.socks.name)}
                     className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
@@ -914,11 +1019,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                       className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group"
                     >
                       <img 
-                        src={acc.imageUrl || getSmartGarmentImage('accessories', acc.color, acc.subCategory)} 
+                        src={acc.imageUrl || createGarmentSvgPlaceholder('accessories', acc.name, acc.color)} 
                         alt={acc.name}
+                        referrerPolicy="no-referrer"
                         onError={(e) => {
                           e.currentTarget.onerror = null;
-                          e.currentTarget.src = getSmartGarmentImage('accessories', acc.color, acc.subCategory);
+                          e.currentTarget.src = createGarmentSvgPlaceholder('accessories', acc.name, acc.color);
                         }}
                         onClick={() => openLightbox([acc], 0, acc.name)}
                         className="w-full h-full object-contain p-1.5 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
@@ -968,42 +1074,92 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
             </div>
           )}
 
-          {/* STATE B: Already Audited (Click opens Details Drawer - No overflow for 'Részletek') */}
+          {/* STATE B: Already Audited (Click opens Details Drawer - Direct Save on right) */}
           {!isAuditing && manualAuditResult && scoreBadgeConfig && (
-            <div 
-              onClick={() => setIsDrawerOpen(true)}
-              className={`px-4 sm:px-5 py-3 rounded-2xl border backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 cursor-pointer transition-all hover:brightness-110 shadow-2xl ${scoreBadgeConfig.glowClass}`}
-            >
-              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                <span className="text-lg sm:text-xl shrink-0">{scoreBadgeConfig.icon}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <span className="text-sm sm:text-base font-bold font-serif shrink-0">{manualAuditResult.score}%</span>
-                    <span className="text-xs font-medium opacity-90 truncate">{scoreBadgeConfig.title}</span>
+            <div className="flex items-center gap-2">
+              <div 
+                onClick={() => setIsDrawerOpen(true)}
+                className={`flex-1 px-4 sm:px-5 py-3 rounded-2xl border backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 cursor-pointer transition-all hover:brightness-110 shadow-2xl ${scoreBadgeConfig.glowClass}`}
+              >
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <span className="text-lg sm:text-xl shrink-0">{scoreBadgeConfig.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <span className="text-sm sm:text-base font-bold font-serif shrink-0">{manualAuditResult.score}%</span>
+                      <span className="text-xs font-medium opacity-90 truncate">{scoreBadgeConfig.title}</span>
+                    </div>
+                    <span className="text-[10px] opacity-75 block truncate">
+                      {cleanSartorialText(manualAuditResult.verdict)}
+                    </span>
                   </div>
-                  <span className="text-[10px] opacity-75 block truncate">
-                    {cleanSartorialText(manualAuditResult.verdict)}
-                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 text-xs font-semibold shrink-0 whitespace-nowrap pl-2 border-l border-white/10">
+                  <span>Részletek</span>
+                  <ChevronUp className="w-3.5 h-3.5" />
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 text-xs font-semibold shrink-0 whitespace-nowrap pl-2 border-l border-white/10">
-                <span>Részletek</span>
-                <ChevronUp className="w-3.5 h-3.5" />
-              </div>
+              <button
+                type="button"
+                onClick={handleDirectSaveOutfit}
+                className={`px-3.5 sm:px-4 py-3 rounded-2xl border backdrop-blur-md flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-2xl shrink-0 ${
+                  isManualSaved
+                    ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50'
+                    : 'bg-slate-200 hover:bg-white text-slate-950 border-white'
+                }`}
+                title="Szett mentése a kedvencekhez"
+              >
+                {isManualSaved ? (
+                  <>
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span className="hidden sm:inline">Elmentve</span>
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="w-4 h-4" />
+                    <span>Mentés</span>
+                  </>
+                )}
+              </button>
             </div>
           )}
 
           {/* STATE C: Ready to Audit (Minimum is met) */}
           {!isAuditing && !manualAuditResult && validationState.isComplete && (
-            <button
-              type="button"
-              onClick={handleRunManualAudit}
-              className="w-full px-5 py-3.5 rounded-2xl bg-slate-200 hover:bg-white text-slate-900 font-serif font-bold text-sm shadow-2xl transition-all flex items-center justify-center gap-2 score-glow-titanium"
-            >
-              <Sparkles className="w-4 h-4 text-slate-900" />
-              <span>🎯 Összhang Elemzése ({selectedItems.length} darab)</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleRunManualAudit}
+                className="flex-1 px-4 sm:px-5 py-3.5 rounded-2xl bg-slate-200 hover:bg-white text-slate-900 font-serif font-bold text-xs sm:text-sm shadow-2xl transition-all flex items-center justify-center gap-2 score-glow-titanium"
+              >
+                <Sparkles className="w-4 h-4 text-slate-900" />
+                <span>🎯 Összhang Elemzése ({selectedItems.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDirectSaveOutfit}
+                className={`px-3.5 sm:px-4 py-3.5 rounded-2xl border backdrop-blur-md flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-2xl shrink-0 ${
+                  isManualSaved
+                    ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50'
+                    : 'bg-[#0f1420]/90 hover:bg-slate-800 text-slate-200 border-slate-700'
+                }`}
+                title="Szett mentése azonnal"
+              >
+                {isManualSaved ? (
+                  <>
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span className="hidden sm:inline">Elmentve</span>
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="w-4 h-4 text-slate-400" />
+                    <span>Mentés</span>
+                  </>
+                )}
+              </button>
+            </div>
           )}
 
           {/* STATE D: Incomplete (Minimum NOT met - Guides the user) */}
@@ -1098,26 +1254,27 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 <div
                   key={item.id}
                   onClick={() => handleSelectItem(item)}
-                  className="group relative rounded-xl overflow-hidden bg-[#070a12] border border-slate-800 hover:border-slate-400 cursor-pointer transition-all flex flex-col"
+                  className="group relative rounded-xl overflow-hidden bg-[#070a12] border border-slate-800 hover:border-slate-400 cursor-pointer transition-all flex flex-col h-56 sm:h-64"
                 >
-                  <div className="w-full aspect-square p-2 bg-[#05070c] flex items-center justify-center overflow-hidden">
+                  <div className="w-full h-36 sm:h-44 shrink-0 p-2 bg-[#05070c] flex items-center justify-center overflow-hidden">
                     <img 
-                      src={item.imageUrl || getSmartGarmentImage(item.category, item.color, item.subCategory)} 
+                      src={item.imageUrl || createGarmentSvgPlaceholder(item.category, item.name, item.color)} 
                       alt={item.name} 
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
-                        e.currentTarget.src = getSmartGarmentImage(item.category, item.color, item.subCategory);
+                        e.currentTarget.src = createGarmentSvgPlaceholder(item.category, item.name, item.color);
                       }}
                       className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
                     />
                   </div>
 
-                  <div className="p-2.5 bg-[#090d15] flex flex-col justify-between flex-1 border-t border-slate-800/50">
-                    <h4 className="text-xs font-semibold text-slate-200 truncate group-hover:text-white">
+                  <div className="p-2.5 bg-[#090d15] flex flex-col justify-between flex-1 border-t border-slate-800/50 min-w-0">
+                    <h4 className="text-xs font-semibold text-slate-200 truncate group-hover:text-white" title={item.name}>
                       {item.name}
                     </h4>
-                    <span className="text-[10px] text-slate-500 truncate mt-0.5">
-                      {item.brand ? `${item.brand} • ` : ''}{item.color || ''}
+                    <span className="text-[10px] text-slate-400 truncate mt-0.5">
+                      {item.brand ? `${item.brand} • ` : ''}{item.color || item.category || ''}
                     </span>
                   </div>
                 </div>
@@ -1315,6 +1472,132 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               </button>
             </div>
 
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ========================================================================= */}
+      {/* SAVED OUTFITS DRAWER / MODAL (PORTAL BASED) */}
+      {/* ========================================================================= */}
+      {isSavedOutfitsOpen && createPortal(
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setIsSavedOutfitsOpen(false); }}
+          className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-2xl max-h-[90dvh] sm:max-h-[85vh] bg-[#0c101a] border-t sm:border border-slate-700/80 rounded-t-3xl sm:rounded-2xl flex flex-col shadow-2xl overflow-hidden animate-slide-up"
+          >
+            {/* Drawer Header */}
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between shrink-0 bg-[#090d15]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-200">
+                  <Bookmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-serif font-bold text-slate-100">Mentett Szettek</h3>
+                  <p className="text-xs text-slate-400">
+                    {savedOutfits.length} összeállítás a gardróbodból
+                  </p>
+                </div>
+              </div>
+
+              <button 
+                type="button"
+                onClick={() => setIsSavedOutfitsOpen(false)}
+                className="w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+                title="Bezárás"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 overscroll-contain">
+              {savedOutfits.length === 0 ? (
+                <div className="py-16 text-center space-y-3">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-800/50 border border-slate-700 mx-auto flex items-center justify-center text-2xl">
+                    👔
+                  </div>
+                  <p className="text-sm text-slate-300 font-semibold">Még nincs elmentett szetted</p>
+                  <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                    Válogass össze ruhadarabokat a vásznon, majd kattints a „Mentés” gombra az elmentésükhöz!
+                  </p>
+                </div>
+              ) : (
+                savedOutfits.map((saved) => (
+                  <div 
+                    key={saved.id}
+                    className="p-4 rounded-2xl bg-[#090d15] border border-slate-800 hover:border-slate-700 transition-all space-y-3 group"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-semibold text-slate-200 group-hover:text-white">
+                            {saved.title || saved.occasion || 'Mentett Szett'}
+                          </h4>
+                          {saved.matchScore && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-800 border border-slate-700 text-slate-300">
+                              {saved.matchScore}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {saved.occasion && saved.occasion !== saved.title ? `${saved.occasion} • ` : ''}
+                          {saved.savedAt ? new Date(saved.savedAt).toLocaleDateString('hu-HU') : 'Mentve'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleLoadSavedOutfit(saved)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 text-xs font-bold transition-colors flex items-center gap-1 shadow-sm"
+                          title="Betöltés a szettépítő vászonra"
+                        >
+                          <span>Betöltés</span>
+                        </button>
+                        {deleteOutfit && (
+                          <button
+                            type="button"
+                            onClick={() => deleteOutfit(saved.id)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                            title="Szett törlése"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Thumbnail strip of items */}
+                    {saved.items && saved.items.length > 0 && (
+                      <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+                        {saved.items.map((it, idx) => (
+                          <div 
+                            key={it.id || idx}
+                            className="w-12 h-14 rounded-lg bg-[#05070c] border border-slate-800 shrink-0 p-1 flex items-center justify-center overflow-hidden"
+                            title={it.name}
+                          >
+                            <img 
+                              src={it.imageUrl || createGarmentSvgPlaceholder(it.category, it.name, it.color)}
+                              alt={it.name}
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = createGarmentSvgPlaceholder(it.category, it.name, it.color);
+                              }}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>,
         document.body

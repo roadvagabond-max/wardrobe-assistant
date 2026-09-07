@@ -202,8 +202,8 @@ export function getSmartGarmentImage(category = 'outerwear', colorName = 'bézs'
     bottoms: {
       sand: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80',
       beige: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80',
-      navy: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=640&q=80',
-      blue: 'https://images.unsplash.com/photo-1542272604-780c96856592?w=640&q=80',
+      navy: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80',
+      blue: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80',
       grey: 'https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=640&q=80',
       black: 'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?w=640&q=80',
       default: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=640&q=80'
@@ -233,4 +233,52 @@ export function getSmartGarmentImage(category = 'outerwear', colorName = 'bézs'
   if (normColor.includes('barna') || normColor.includes('brown')) return catDict.brown || catDict.default;
 
   return catDict.default;
+}
+
+/**
+ * 100% Guaranteed Local Vector Graphic Fallback
+ * Never requires network connection; prevents empty/collapsed image frames.
+ */
+export function createGarmentSvgPlaceholder(category = 'tops', name = '', color = '') {
+  const normCat = (category || '').toLowerCase();
+  let iconEmoji = '👔';
+  let label = 'Felső / Ing';
+  if (normCat.includes('knit') || normCat.includes('kötött') || normCat.includes('pulóver')) {
+    iconEmoji = '🧶';
+    label = 'Pulóver / Kötött';
+  } else if (normCat.includes('outer') || normCat.includes('zakó') || normCat.includes('kabát')) {
+    iconEmoji = '🧥';
+    label = 'Zakó / Kabát';
+  } else if (normCat.includes('bottom') || normCat.includes('nadrág') || normCat.includes('szoknya')) {
+    iconEmoji = '👖';
+    label = 'Nadrág';
+  } else if (normCat.includes('shoe') || normCat.includes('cipő')) {
+    iconEmoji = '👞';
+    label = 'Lábbeli';
+  } else if (normCat.includes('dress') || normCat.includes('ruha')) {
+    iconEmoji = '👗';
+    label = 'Ruha';
+  } else if (normCat.includes('access') || normCat.includes('kiegész') || normCat.includes('öv')) {
+    iconEmoji = '🎗️';
+    label = 'Kiegészítő';
+  }
+
+  const cleanName = (name || label).replace(/[<>&"]/g, '').slice(0, 22);
+  const cleanColor = (color || '').replace(/[<>&"]/g, '').slice(0, 16);
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+    <defs>
+      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#0d121c"/>
+        <stop offset="100%" stop-color="#060910"/>
+      </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#bgGrad)" rx="16"/>
+    <rect x="8" y="8" width="304" height="304" fill="none" stroke="#222f44" stroke-width="1.2" stroke-dasharray="4 4" rx="12"/>
+    <text x="50%" y="42%" dominant-baseline="middle" text-anchor="middle" font-size="56">${iconEmoji}</text>
+    <text x="50%" y="68%" dominant-baseline="middle" text-anchor="middle" fill="#cbd5e1" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="600">${cleanName}</text>
+    <text x="50%" y="81%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-family="system-ui, -apple-system, sans-serif" font-size="10">${cleanColor}</text>
+  </svg>`;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

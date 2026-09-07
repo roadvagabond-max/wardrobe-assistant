@@ -29,7 +29,7 @@ import {
 
 const AuthContext = createContext(null);
 const SHOWCASE_VERSION_KEY = 'sartorial_showcase_version';
-const CURRENT_SHOWCASE_VERSION = 'v1.5.5_20260906_v1';
+const CURRENT_SHOWCASE_VERSION = 'v1.7.9_20260908_v1';
 
 const getInitialWardrobe = () => {
   try {
@@ -372,12 +372,42 @@ export function AuthProvider({ children }) {
     return finalProfile;
   };
 
-  // Save an Outfit
-  const saveOutfit = (outfit) => {
-    setSavedOutfits(prev => [
-      { ...outfit, id: `outfit-${Date.now()}`, savedAt: new Date().toISOString() },
-      ...prev
-    ]);
+  // Save an Outfit (Syncs to Firestore for logged-in users and localStorage)
+  const saveOutfit = async (outfit) => {
+    const newOutfit = {
+      ...outfit,
+      id: outfit.id || `outfit-${Date.now()}`,
+      savedAt: new Date().toISOString()
+    };
+    const updated = [newOutfit, ...(savedOutfits || []).filter(o => o.id !== newOutfit.id)];
+    setSavedOutfits(updated);
+    localStorage.setItem('saved_outfits', JSON.stringify(updated));
+
+    if (currentUser?.uid) {
+      try {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        await setDoc(userDocRef, { savedOutfits: updated }, { merge: true });
+      } catch (err) {
+        console.warn('Hiba a szett Firestore-ba mentésekor:', err);
+      }
+    }
+    return newOutfit;
+  };
+
+  const deleteOutfit = async (outfitId) => {
+    const updated = (savedOutfits || []).filter(o => o.id !== outfitId);
+    setSavedOutfits(updated);
+    localStorage.setItem('saved_outfits', JSON.stringify(updated));
+
+    if (currentUser?.uid) {
+      try {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        await setDoc(userDocRef, { savedOutfits: updated }, { merge: true });
+      } catch (err) {
+        console.warn('Hiba a szett Firestore-ból törlésekor:', err);
+      }
+    }
+    return updated;
   };
 
 
@@ -778,6 +808,7 @@ export function AuthProvider({ children }) {
         updateProfile,
         completeOnboarding,
         saveOutfit,
+        deleteOutfit,
         resetToDemoData,
         loginWithGoogle: handleGoogleLogin,
         loginWithEmail: handleEmailLogin,

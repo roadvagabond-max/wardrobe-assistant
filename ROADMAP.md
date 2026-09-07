@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.8` (Production Build)
+- **Aktuális Verzió:** `v1.7.9` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,13 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.8)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.9)
+- [x] **Mix & Match Képkeret Összeomlás Javítás, Időjárás Leválasztás & Közvetlen Szettmentés (v1.7.9):**
+  - **Képkeret Összeomlás Megszüntetése:** A mobilos Flexboxban összeomló `aspect-square` kiváltása robusztus fix magasságú konténerrel (`h-56 sm:h-64` kártya, `h-36 sm:h-44 shrink-0` képkeret).
+  - **Univerzális Hotlinking & Offline SVG Védelem:** `<meta name="referrer" content="no-referrer">` és `referrerPolicy="no-referrer"` bevezetése a harmadik feles CDN képeknél (Next, Zara), valamint 100%-ban helyi, hálózattól független dinamikus SVG helyettesítő ikon (`createGarmentSvgPlaceholder`) minden ruha típusra és színre.
+  - **Időjárás Teljes Eltávolítása a Fejlécből:** A kilógó `Budapest, 21°C` panel eltávolítva a Mix & Match fejlécéből. A Mix & Match audit nem veszi figyelembe az időjárást alapértelmezetten, kizárólag ha a felhasználó kifejezetten megadja az esemény szövegében.
+  - **Közvetlen Szettmentés (Konfetti Nélkül):** A vásznon és az értékelő sávon közvetlen `[ 💾 Mentés ]` gomb jelent meg, amely audit nélkül is azonnal elmenti a szettet Cloud Firestore-ba és LocalStorage-ba csendes luxus stílusú visszajelzéssel (zero confetti).
+  - **Mentett Szettek Fiók & Betöltés:** A fejlécből elérhető a `[ 🔖 Mentett szettek ]` fiók, amely egyetlen kattintással visszatölti az összeállítást a vászonra (`ensembleSnapshot`).
 - [x] **Mix & Match Lookbook Flatlay, Belső Webshop Képmentés & Tisztítás (v1.7.8):**
   - **Tiszta Fejléc & Jobb Felső Időjárás:** Felesleges címkék, nagyméretű cím és leírás törlése. Az időjárás widget a jobb felső sarokba került, mellette diszkrét `(i)` segítség-visszahívó gombbal.
   - **Stabil Módválasztó (Zero Jumping Toggle):** A `[ 🧩 Mix & Match ]` és `[ 💬 AI Stylist ]` gombok fixen a bal és jobb oldalon rögzítve, sosem ugrálnak át egymás pozíciójára.
