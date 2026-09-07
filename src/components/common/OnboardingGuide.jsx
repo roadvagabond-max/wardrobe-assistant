@@ -7,27 +7,48 @@ import {
 import { useAuth } from '../../context/AuthContext';
 
 export default function OnboardingGuide({ onNavigateTab, onOpenAddModal }) {
-  const { profile, wardrobe, savedOutfits = [] } = useAuth();
+  const { currentUser, profile, wardrobe, savedOutfits = [] } = useAuth();
+
+  const collapsedKey = `sartorial_onboarding_collapsed_${currentUser?.uid || 'guest'}`;
+  const hiddenKey = `sartorial_onboarding_hidden_${currentUser?.uid || 'guest'}`;
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    return localStorage.getItem('sartorial_onboarding_collapsed') === 'true';
+    try {
+      return localStorage.getItem(collapsedKey) === 'true';
+    } catch (_) {
+      return false;
+    }
   });
   const [isHidden, setIsHidden] = useState(() => {
-    return localStorage.getItem('sartorial_onboarding_hidden') === 'true';
+    try {
+      return localStorage.getItem(hiddenKey) === 'true';
+    } catch (_) {
+      return false;
+    }
   });
+
+  React.useEffect(() => {
+    try {
+      setIsCollapsed(localStorage.getItem(collapsedKey) === 'true');
+      setIsHidden(localStorage.getItem(hiddenKey) === 'true');
+    } catch (_) {
+      setIsCollapsed(false);
+      setIsHidden(false);
+    }
+  }, [collapsedKey, hiddenKey]);
 
   React.useEffect(() => {
     const handleShowOnboarding = () => {
       setIsHidden(false);
       setIsCollapsed(false);
       try {
-        localStorage.removeItem('sartorial_onboarding_hidden');
-        localStorage.removeItem('sartorial_onboarding_collapsed');
+        localStorage.removeItem(hiddenKey);
+        localStorage.removeItem(collapsedKey);
       } catch (_) {}
     };
     window.addEventListener('show-onboarding', handleShowOnboarding);
     return () => window.removeEventListener('show-onboarding', handleShowOnboarding);
-  }, []);
+  }, [hiddenKey, collapsedKey]);
 
   // Dynamic step completion logic
   const isStep1Done = Boolean(profile.avatarUrl || (profile.skinTone && !profile.skinTone.includes('Közép tónus')));
@@ -90,12 +111,16 @@ export default function OnboardingGuide({ onNavigateTab, onOpenAddModal }) {
   const toggleCollapse = () => {
     const next = !isCollapsed;
     setIsCollapsed(next);
-    localStorage.setItem('sartorial_onboarding_collapsed', String(next));
+    try {
+      localStorage.setItem(collapsedKey, String(next));
+    } catch (_) {}
   };
 
   const handleDismiss = () => {
     setIsHidden(true);
-    localStorage.setItem('sartorial_onboarding_hidden', 'true');
+    try {
+      localStorage.setItem(hiddenKey, 'true');
+    } catch (_) {}
   };
 
   if (isHidden) {

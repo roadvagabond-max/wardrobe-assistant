@@ -6,7 +6,7 @@ import { getProfileDemographics, getDynamicQuickPrompts } from '../../services/d
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
 
 export default function StylistChatView({ weather }) {
-  const { wardrobe, profile, geminiApiKey } = useAuth();
+  const { wardrobe, profile, currentUser, geminiApiKey } = useAuth();
   const demographics = getProfileDemographics(profile);
   const dynamicQuickPrompts = getDynamicQuickPrompts(profile, wardrobe, weather);
   
@@ -37,6 +37,25 @@ export default function StylistChatView({ weather }) {
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+
+  // Re-sync chat on user change / logout
+  useEffect(() => {
+    const saved = localStorage.getItem('stylist_chat_history');
+    if (saved) {
+      try {
+        setMessages(JSON.parse(saved));
+        return;
+      } catch (_) {}
+    }
+    const emoji = demographics.isFemale ? '👗✨' : '👔✨';
+    setMessages([
+      {
+        role: 'model',
+        content: `Üdvözöllek! Én vagyok a személyes **AI Stylistod**. ${emoji}\n\nIsmerem a teljes digitális gardróbodat (${wardrobe.length} db ruha), a stíluspreferenciáidat és az egyéni szabályaidat.\n\nKérdezz bármit: szett-kombinációkról, alkalomhoz vagy időjáráshoz illő öltözködésről, rétegezésről vagy hiányzó kulcsdarabokról!`,
+        timestamp: new Date().toISOString()
+      }
+    ]);
+  }, [currentUser?.uid]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {

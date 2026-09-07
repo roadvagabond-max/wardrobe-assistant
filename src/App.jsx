@@ -125,13 +125,19 @@ export default function App() {
 
   // Auto-open Onboarding Modal for newly authenticated users who haven't completed onboarding
   useEffect(() => {
-    if (currentUser && profile && profile.onboardingCompleted === false) {
+    if (!currentUser) {
+      setIsOnboardingModalOpen(false);
+      return;
+    }
+    if (profile && profile.onboardingCompleted === false) {
       const skippedKey = `sartorial_onboarding_skipped_${currentUser.uid}`;
       if (!sessionStorage.getItem(skippedKey)) {
         setIsOnboardingModalOpen(true);
       }
+    } else {
+      setIsOnboardingModalOpen(false);
     }
-  }, [currentUser, profile?.onboardingCompleted]);
+  }, [currentUser?.uid, profile?.onboardingCompleted]);
 
   const handleTestInAdvisor = (gapItem) => {
     setAdvisorPrefill(gapItem);

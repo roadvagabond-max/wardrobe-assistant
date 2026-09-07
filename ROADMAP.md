@@ -14,6 +14,24 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
 ### ✅ Lezárt Javítások (v1.5.4 – v1.7.0)
+- [x] **Firebase Fióktörlés & Re-autentikáció Javítása (GDPR Auth Sync v1.7.0):**
+  - Kötelező jelszó-megerősítés (Re-authentication) vagy Google OAuth újrahitelesítés fióktörlés előtt, kizárva a Firebase `auth/requires-recent-login` hibát.
+  - Tiszta műveleti sorrend: a Firestore adatok és az Authentication rekord csak sikeres újrahitelesítés után törlődnek, megszüntetve a későbbi `auth/email-already-in-use` árva fiók hibát.
+  - Pontos, barátságos magyar nyelvű hibakezelés jelszóhiba vagy megszakítás esetén.
+- [x] **4-Pilléres Kapszula Ruhatár Index & Új Értékelési Formula (`src/services/capsuleAnalytics.js`, v1.7.0):**
+  - **1. Pillér (35 pont):** Alap Ruhatár Egyensúly (felsők, alsók, cipők és harmóniaarány).
+  - **2. Pillér (25 pont):** Szezonális & Lábbeli Egészség (meleg vs hideg lábbelik megléte és rétegzési készültség).
+  - **3. Pillér (20 pont):** Ruhaállapot & Hordhatóság (kiváló és jó állapotú ruhák aránya).
+  - **4. Pillér (20 pont):** Anyagminőség (prémium természetes szálak és lélegző szövetek aránya).
+  - Lenyitható 4-pilléres részletező fiók (`WardrobeAnalyticsCard.jsx`), színkódolt pontszámok és azonnali cselekvési tippek.
+- [x] **Férfi Stílusszabályok Kategorizálása & 4-Dimenziós Szabálymátrix (`sartorialRules.js`, `SartorialKnowledgeHub.jsx`, v1.7.0):**
+  - Külön `menswear_specific` („👔 Férfi Stílusszabályok”) kategória létrehozása és beépítése a Tudástárba.
+  - 4D szabályszűrés (Nem, 5 Korosztály, Stílusarchetipusok, Egyéni Szabályok) valamennyi szabályon.
+  - Új klasszikus férfi stílusszabályok (Hajtóka vs nyakkendő arány, nadrágtörés, nadrágtartó vs öv, zakó gombolási etika).
+- [x] **Több-Felhasználós & Mobil Fiókváltási Adatizoláció (v1.7.0):**
+  - Az Onboarding Varázsló (`OnboardingModal.jsx`) memóriaszivárgásának megszüntetése fiókváltáskor (tiszta form reset).
+  - Felhasználó-specifikus LocalStorage kulcsok (`sartorial_guide_dismissed_${moduleId}_${uid}`, `sartorial_onboarding_*_${uid}`).
+  - Automatikus állapotürítés és szinkronizáció kijelentkezéskor és fiókváltáskor a Stylist, Outfit, Gap Elemző és Chat nézetekben.
 - [x] **Demográfiai Intelligencia, 5 Hivatalos Korosztály & Rugalmas Adaptív Stylist (v1.7.0):**
   - Központi demográfiai modul (`src/services/demographics.js`), dinamikus életkorszámítás születési év (`birthYear`) alapján.
   - Szigorúan két nemi kategória (`👔 Férfi` és `👗 Női`), nyers életkori címkék („kisiskolás”, „kamasz”) elrejtése a felhasználói felületről.
@@ -41,7 +59,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
 - [ ] **Az 5 lépéses kezdő segítség (Onboarding & Onboarding Guide) felülvizsgálata:**
   - Az interaktív varázsló (`OnboardingModal.jsx` és alkomponensei: `StepIdentity.jsx`, `StepColorSeason.jsx`, `StepStyles.jsx`, `StepAddFirstItem.jsx`, `StepSummaryLaunch.jsx`) és a felületi teendőlista (`OnboardingGuide.jsx`) átfogó auditja és felülvizsgálata.
-  - A lépések egyszerűsítése, demográfiai és nemi harmónia ellenőrzése, redundanciák megszüntetése, valamint a felhasználói élmény és az első ruha felvitel folyamatának további optimalizálása.
+  - A lépések egyszerűsítése, születési év (`birthYear`) és demográfiai harmónia ellenőrzése, redundanciák megszüntetése, valamint az első ruha felvitel folyamatának további optimalizálása.
 - [ ] **„Megvegyem?” Átnevezés & „Audit” Szó Kivezetése a UI-ból:**
   - A korábbi „Vásárlási Döntésteszt / Audit” helyett emberközeli, világos megnevezés: **„Megvegyem? (Nézzük meg, mennyire érdemes megvenned a kiszemelt darabot!)”**.
   - Az „Audit” szó (Stílus Audit, Szabás Audit, Minőségi Audit stb.) teljes kivezetése a felhasználói felületről és gombokról; helyette természetes kifejezések: *Elemzés, Stílus-ellenőrzés, Szakértői vélemény, Összhang-vizsgálat*.
@@ -49,8 +67,6 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
   - A felhasználói felület letisztítása a felesleges, zavaró technikai badge-ektől (pl. `PurchaseAdvisorView.jsx`-ben az *„Egyéni stílusszabály-ellenőrzés aktív (X)”* doboz, felesleges debug/státusz jelölők).
 - [ ] **Magyarázó Blokkok Háttérbe Helyezése („Hogyan segít az AI...”, Edukációs Panelek):**
   - A nézeteken (Vásárlási Tanácsadó, Stylist, Kapszula Gap) közvetlenül helyet foglaló nagy magyarázó kártyák (pl. *„Hogyan segít az AI megelőzni a rossz vásárlási döntéseket?”*) átalakítása diszkrét, lenyitható („Tudj meg többet” / collapsible accordion vagy súgó modál) formátumba.
-- [ ] **Kapszula Ruhatár Index & Értékelési Formula Mélyreható Felülvizsgálata:**
-  - A kapszula ruhatár telítettségi és minőségi index számítási algoritmusának finomítása (szezonális lefedettség, állapotarányok, funkcionális hiányok súlyozása).
 - [ ] **GCP Service Account Jogosultság (Firebase Rules Deploy):** A `roles/firebaserules.admin` hozzárendelése a CI/CD service accounthoz a Google Cloud konzolon, ha a jövőben a Firestore szabályok deployját is a CI/CD-re bíznánk.
 - [ ] **Nagy Ruhatárak Megjelenítési Optimalizálása (Virtual List):** 300–500+ darabos ruhatárak esetén `react-window` vagy CSS optimalizáció.
 - [ ] **PWA Service Worker & Offline Kép Gyorsítótár:** Statikus assetek és teljes offline élmény biztosítása.

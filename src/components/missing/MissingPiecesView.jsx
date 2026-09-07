@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { analyzeWardrobeGaps } from '../../services/gemini';
 
 export default function MissingPiecesView({ onTestInAdvisor }) {
-  const { wardrobe, profile } = useAuth();
+  const { wardrobe, profile, currentUser } = useAuth();
   const [gaps, setGaps] = useState(() => {
     const saved = localStorage.getItem('capsule_gaps_cache');
     return saved ? JSON.parse(saved) : [];
@@ -15,6 +15,7 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
 
   const rulesKey = (profile?.customStylingRules || []).join(';;');
   const prevRulesKeyRef = useRef(rulesKey);
+  const prevUserRef = useRef(currentUser?.uid);
 
   const loadGaps = async (force = false) => {
     if (!force && gaps.length > 0) return;
@@ -33,10 +34,17 @@ export default function MissingPiecesView({ onTestInAdvisor }) {
   };
 
   useEffect(() => {
-    if (gaps.length === 0) {
+    if (prevUserRef.current !== currentUser?.uid) {
+      prevUserRef.current = currentUser?.uid;
+      const saved = localStorage.getItem('capsule_gaps_cache');
+      setGaps(saved ? JSON.parse(saved) : []);
+      if (!saved && wardrobe.length > 0) {
+        loadGaps(true);
+      }
+    } else if (gaps.length === 0 && wardrobe.length > 0) {
       loadGaps(true);
     }
-  }, []);
+  }, [currentUser?.uid, wardrobe.length]);
 
   // Invalidate and reload when custom styling rules change in profile
   useEffect(() => {

@@ -13,7 +13,7 @@ import GarmentLightboxModal from '../common/GarmentLightboxModal';
 import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 
 export default function OutfitsView({ weather, setWeather, initialAnchorItem = null }) {
-  const { wardrobe, profile, saveOutfit, savedOutfits } = useAuth();
+  const { wardrobe, profile, currentUser, saveOutfit, savedOutfits } = useAuth();
   const eventPresets = getDynamicEventPresets(profile, weather);
 
   // Generator States (Preserved until next explicit request)
@@ -99,6 +99,18 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
     const saved = localStorage.getItem('user_event_history');
     return saved ? JSON.parse(saved) : eventPresets;
   });
+
+  // Re-sync outfits and event presets on user change / logout
+  useEffect(() => {
+    const saved = localStorage.getItem('sartorial_last_generated_outfits');
+    setGeneratedOutfits(saved ? JSON.parse(saved) : []);
+    const savedAnchor = localStorage.getItem('sartorial_last_anchor_items');
+    setAnchorItems(initialAnchorItem ? [initialAnchorItem] : (savedAnchor ? JSON.parse(savedAnchor) : []));
+    const presets = getDynamicEventPresets(profile, weather);
+    setSelectedEvent(presets[0] || '☕ Kávérandi & Séta');
+    setCustomEvent('');
+    setRecentEvents(presets);
+  }, [currentUser?.uid]);
 
   // Sync event presets when demographics change
   useEffect(() => {

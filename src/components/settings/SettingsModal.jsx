@@ -40,8 +40,12 @@ export default function SettingsModal({ isOpen, onClose }) {
 
   // Account deletion states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+
+  const isGoogleUser = currentUser?.providerData?.some(p => p.providerId === 'google.com');
+  const isPasswordUser = currentUser?.providerData?.some(p => p.providerId === 'password');
 
   // Admin states
   const [newAdminEmail, setNewAdminEmail] = useState('');
@@ -56,6 +60,7 @@ export default function SettingsModal({ isOpen, onClose }) {
       setCompactCards(Boolean(profile.displayCompactCards));
       setCompactTips(Boolean(profile.displayCompactTips));
       setShowDeleteConfirm(false);
+      setDeletePassword('');
       setDeleteError(null);
     }
   }, [isOpen, profile]);
@@ -94,10 +99,14 @@ export default function SettingsModal({ isOpen, onClose }) {
   };
 
   const handleDeleteAccount = async () => {
+    if (isPasswordUser && !deletePassword.trim()) {
+      setDeleteError('Kérlek add meg a jelszavadat a fiók törlésének megerősítéséhez!');
+      return;
+    }
     setIsDeletingAccount(true);
     setDeleteError(null);
     try {
-      await deleteUserAccountAndData();
+      await deleteUserAccountAndData({ password: deletePassword });
       onClose();
     } catch (err) {
       setDeleteError(err.message || 'Nem sikerült a fiók törlése. Kérlek próbáld újra!');
@@ -395,14 +404,44 @@ export default function SettingsModal({ isOpen, onClose }) {
                     </div>
                   </div>
 
+                  {/* Re-authentication Inputs based on Auth Provider */}
+                  {isPasswordUser && (
+                    <div className="space-y-1 pt-1 bg-black/40 p-2.5 rounded-lg border border-rose-500/30">
+                      <label className="text-[11px] font-semibold text-rose-200 block">
+                        A törlés megerősítéséhez kérlek add meg a jelszavadat:
+                      </label>
+                      <input
+                        type="password"
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        placeholder="Jelenlegi jelszavad..."
+                        disabled={isDeletingAccount}
+                        className="w-full text-xs p-2 rounded-lg bg-black/60 border border-rose-500/40 text-white placeholder-rose-300/40 focus:outline-none focus:border-rose-400"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+
+                  {isGoogleUser && (
+                    <div className="p-2.5 rounded-lg bg-black/40 border border-rose-500/30 text-[11px] text-rose-200/90 leading-relaxed">
+                      🔒 A törlés véglegesítéséhez a Google fiókoddal szükséges jóváhagynod a műveletet a felugró ablakban.
+                    </div>
+                  )}
+
                   {deleteError && (
-                    <span className="text-[11px] text-rose-300 font-bold block">{deleteError}</span>
+                    <div className="p-2.5 rounded-lg bg-rose-500/20 border border-rose-500/40 text-[11px] text-rose-200 font-bold block">
+                      ⚠️ {deleteError}
+                    </div>
                   )}
 
                   <div className="flex items-center justify-end gap-2 pt-1">
                     <button
                       type="button"
-                      onClick={() => setShowDeleteConfirm(false)}
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeletePassword('');
+                        setDeleteError(null);
+                      }}
                       disabled={isDeletingAccount}
                       className="btn-secondary text-xs py-1.5 px-3"
                     >
@@ -415,7 +454,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                       className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-1.5 shadow"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>{isDeletingAccount ? 'Törlés folyamatban...' : 'Igen, Véglegesen Törlöm'}</span>
+                      <span>{isDeletingAccount ? 'Törlés folyamatban...' : isGoogleUser ? 'Google Jóváhagyás & Törlés' : 'Igen, Véglegesen Törlöm'}</span>
                     </button>
                   </div>
                 </div>

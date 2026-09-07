@@ -522,10 +522,10 @@ export function isRuleApplicableToDemographics(rule, demographics) {
   const { isFemale, isMale, isBaby, isPreschool, isSchoolChild, isChild } = demographics;
 
   // Gender check
-  if (rule.gender === 'womenswear_specific' && isMale) {
+  if ((rule.gender === 'womenswear_specific' || rule.category === 'womenswear_specific') && isMale) {
     return false;
   }
-  if (rule.gender === 'menswear_specific' && isFemale) {
+  if ((rule.gender === 'menswear_specific' || rule.category === 'menswear_specific') && isFemale) {
     return false;
   }
 

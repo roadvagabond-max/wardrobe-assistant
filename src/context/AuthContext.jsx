@@ -6,6 +6,9 @@ import {
   loginWithEmail, 
   registerWithEmail, 
   sendPasswordReset, 
+  reauthenticateWithPassword,
+  reauthenticateWithGoogle,
+  deleteFirebaseUser,
   logoutUser, 
   isFirebaseConfigured, 
   getAuthErrorMessage 
@@ -405,19 +408,38 @@ export function AuthProvider({ children }) {
     setSartorialRules(updated);
   };
 
-  // Complete Guest Session Storage Isolation
+  // Complete User & Guest Session Storage Isolation
   const clearGuestSessionStorage = () => {
     try {
-      localStorage.removeItem('sartorial_last_generated_outfits');
-      localStorage.removeItem('sartorial_last_anchor_items');
-      localStorage.removeItem('sartorial_last_custom_event');
-      localStorage.removeItem('sartorial_last_selected_event');
-      localStorage.removeItem('saved_outfits');
-      localStorage.removeItem('stylist_chat_history');
-      localStorage.removeItem('capsule_gaps_cache');
-      localStorage.removeItem('sartorial_last_ai_gaps');
-      localStorage.removeItem('user_style_profile');
-      localStorage.removeItem('wardrobe_items');
+      const keysToRemove = [
+        'sartorial_last_generated_outfits',
+        'sartorial_last_anchor_items',
+        'sartorial_last_custom_event',
+        'sartorial_last_selected_event',
+        'user_event_history',
+        'saved_outfits',
+        'stylist_chat_history',
+        'capsule_gaps_cache',
+        'sartorial_last_ai_gaps',
+        'user_style_profile',
+        'wardrobe_items',
+        'sartorial_onboarding_collapsed',
+        'sartorial_onboarding_hidden',
+        'sartorial_rules_knowledge_base',
+        'last_sartorial_mining_timestamp',
+        'sartorial_stylist_mode',
+        'user_role',
+        'preferred_gemini_model',
+        'admin_secret_pin'
+      ];
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sartorial_guide_dismissed_') || key.startsWith('sartorial_onboarding_'))) {
+          localStorage.removeItem(key);
+        }
+      }
+      sessionStorage.clear();
     } catch (_) {}
   };
 
@@ -637,22 +659,40 @@ export function AuthProvider({ children }) {
   /**
    * 🛡️ GDPR-Compliant Complete Account & Data Deletion (Art. 17 Right to Erasure)
    * Permanently deletes all wardrobe items, saved outfits, mined rules, profile, and Auth identity.
+   * Requires mandatory re-authentication before touching any data.
    */
-  const deleteUserAccountAndData = async () => {
+  const deleteUserAccountAndData = async (options = {}) => {
     if (!currentUser) {
       resetToDemoData();
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (_) {}
+      clearGuestSessionStorage();
       window.location.reload();
       return { success: true };
     }
 
     const uid = currentUser.uid;
+    const isGoogleUser = currentUser.providerData.some(p => p.providerId === 'google.com');
+    const isPasswordUser = currentUser.providerData.some(p => p.providerId === 'password');
+
+    // 1. Mandatory Re-authentication BEFORE touching any data
+    try {
+      if (isGoogleUser) {
+        await reauthenticateWithGoogle(currentUser);
+      } else if (isPasswordUser) {
+        if (!options.password || !options.password.trim()) {
+          throw new Error('A fiókod és adataid végleges törléséhez kérlek add meg a jelenlegi jelszavadat!');
+        }
+        await reauthenticateWithPassword(currentUser, options.password.trim());
+      }
+    } catch (reauthErr) {
+      console.error('Re-autentikációs hiba fióktörlés előtt:', reauthErr);
+      const friendlyMsg = getAuthErrorMessage(reauthErr);
+      throw new Error(friendlyMsg);
+    }
+
+    // 2. Delete Firestore data only after successful re-auth
     try {
       if (db && isFirebaseConfigured) {
-        // 1. Delete all items in wardrobe subcollection
+        // Delete wardrobe subcollection
         try {
           const wardrobeCol = collection(db, 'users', uid, 'wardrobe');
           const wardrobeSnap = await getDocs(wardrobeCol);
@@ -660,7 +700,7 @@ export function AuthProvider({ children }) {
           await Promise.all(wardrobeDeletes);
         } catch (_) {}
 
-        // 2. Delete minedRules subcollection
+        // Delete minedRules subcollection
         try {
           const rulesCol = collection(db, 'users', uid, 'minedRules');
           const rulesSnap = await getDocs(rulesCol);
@@ -668,27 +708,24 @@ export function AuthProvider({ children }) {
           await Promise.all(rulesDeletes);
         } catch (_) {}
 
-        // 3. Delete root user document
+        // Delete user settings subcollection
+        try {
+          await deleteDoc(doc(db, 'users', uid, 'settings', 'sartorialRules'));
+        } catch (_) {}
+
+        // Delete root user document
         try {
           await deleteDoc(doc(db, 'users', uid));
         } catch (_) {}
       }
 
-      // 4. Clear local storage and caches
-      try {
-        localStorage.clear();
-        sessionStorage.clear();
-      } catch (_) {}
+      // 3. Clear Local Storage and Session Storage completely
+      clearGuestSessionStorage();
 
-      // 5. Delete Firebase Auth User Account
-      try {
-        await currentUser.delete();
-      } catch (authDeleteErr) {
-        console.warn('Auth user delete warning (e.g. requires recent login):', authDeleteErr);
-        await logoutUser();
-      }
+      // 4. Delete Firebase Auth User Account (guaranteed to succeed due to fresh re-auth)
+      await deleteFirebaseUser(currentUser);
 
-      // 6. Reset in-memory state and reload
+      // 5. Reset in-memory state and reload to clean guest session
       setCurrentUser(null);
       setIsDemoMode(true);
       setWardrobe(SAMPLE_SHOWCASE_WARDROBE);
@@ -699,7 +736,8 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (err) {
       console.error('GDPR fióktörlési hiba:', err);
-      throw err;
+      const friendlyMsg = getAuthErrorMessage(err);
+      throw new Error(friendlyMsg);
     }
   };
 

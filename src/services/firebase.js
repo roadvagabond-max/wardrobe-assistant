@@ -9,7 +9,11 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
-  updateProfile as fbUpdateProfile
+  updateProfile as fbUpdateProfile,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  deleteUser as fbDeleteUser
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -118,6 +122,27 @@ export async function registerWithEmail(email, password, displayName = '') {
 export async function sendPasswordReset(email) {
   if (!auth) throw new Error('Firebase Auth nincs inicializálva.');
   return await sendPasswordResetEmail(auth, email.trim());
+}
+
+// Re-authenticate User with Password (for secure GDPR deletion & sensitive operations)
+export async function reauthenticateWithPassword(user, password) {
+  if (!user || !user.email) throw new Error('Nincs aktív bejelentkezett felhasználó.');
+  if (!password) throw new Error('Kérlek add meg a jelszavadat a művelet megerősítéséhez!');
+  const credential = EmailAuthProvider.credential(user.email, password);
+  return await reauthenticateWithCredential(user, credential);
+}
+
+// Re-authenticate User with Google OAuth (for secure GDPR deletion & sensitive operations)
+export async function reauthenticateWithGoogle(user) {
+  if (!user) throw new Error('Nincs aktív bejelentkezett felhasználó.');
+  const provider = new GoogleAuthProvider();
+  return await reauthenticateWithPopup(user, provider);
+}
+
+// Permanent Firebase Auth Account Deletion
+export async function deleteFirebaseUser(user) {
+  if (!user) throw new Error('Nincs aktív bejelentkezett felhasználó.');
+  return await fbDeleteUser(user);
 }
 
 // Friendly Hungarian Error Message Translator for Firebase Auth

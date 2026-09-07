@@ -296,12 +296,17 @@ export default function SartorialKnowledgeHub({
             {SARTORIAL_CATEGORIES
               .filter(cat => {
                 if (cat.id === 'womenswear_specific' && demographics.isMale) return false;
+                if (cat.id === 'menswear_specific' && demographics.isFemale) return false;
                 return true;
               })
               .map(cat => {
                 const count = cat.id === 'all' 
                   ? applicableRules.length 
-                  : applicableRules.filter(r => r.category === cat.id).length;
+                  : applicableRules.filter(r => {
+                      if (cat.id === 'menswear_specific') return r.category === 'menswear_specific' || r.gender === 'menswear_specific';
+                      if (cat.id === 'womenswear_specific') return r.category === 'womenswear_specific' || r.gender === 'womenswear_specific';
+                      return r.category === cat.id;
+                    }).length;
                 const isSelected = selectedCategory === cat.id;
 
                 return (
@@ -328,7 +333,16 @@ export default function SartorialKnowledgeHub({
           {/* Rules Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {applicableRules
-              .filter(r => selectedCategory === 'all' || r.category === selectedCategory)
+              .filter(r => {
+                if (selectedCategory === 'all') return true;
+                if (selectedCategory === 'menswear_specific') {
+                  return r.category === 'menswear_specific' || r.gender === 'menswear_specific';
+                }
+                if (selectedCategory === 'womenswear_specific') {
+                  return r.category === 'womenswear_specific' || r.gender === 'womenswear_specific';
+                }
+                return r.category === selectedCategory;
+              })
               .map((rule) => {
                 const isEnabled = rule.enabled !== false;
                 const catObj = SARTORIAL_CATEGORIES.find(c => c.id === rule.category);

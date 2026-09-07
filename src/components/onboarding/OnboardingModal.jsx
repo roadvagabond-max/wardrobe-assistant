@@ -10,44 +10,50 @@ import StepSummaryLaunch from './steps/StepSummaryLaunch';
 const TOTAL_STEPS = 5;
 
 export default function OnboardingModal({ isOpen, onClose, onFinish }) {
-  const { profile, updateProfile, addItem, wardrobe = [] } = useAuth();
+  const { profile, currentUser, updateProfile, addItem, wardrobe = [] } = useAuth();
   
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState(() => ({
-    name: profile?.name || '',
-    gender: profile?.gender || 'Férfi',
-    birthYear: profile?.birthYear || '',
-    height: profile?.height || '',
-    weight: profile?.weight || '',
-    bodyType: profile?.bodyType || 'Normál / Átlagos',
-    skinTone: profile?.skinTone || '',
-    thermalPreference: profile?.thermalPreference || 'balanced',
-    preferredStyles: profile?.preferredStyles || ['Klasszikus & Időtlen', 'Smart Urban'],
-    favoriteColors: profile?.favoriteColors || [],
-    avoidColors: profile?.avoidColors || [],
-    avatarUrl: profile?.avatarUrl || ''
-  }));
+  const [formData, setFormData] = useState(() => {
+    const isFemale = profile?.gender === 'Női' || profile?.gender === 'female';
+    return {
+      name: profile?.name || '',
+      gender: isFemale ? 'Női' : 'Férfi',
+      birthYear: profile?.birthYear || '',
+      height: profile?.height || '',
+      weight: profile?.weight || '',
+      bodyType: profile?.bodyType || 'Normál / Átlagos',
+      skinTone: profile?.skinTone || '',
+      thermalPreference: profile?.thermalPreference || 'balanced',
+      preferredStyles: profile?.preferredStyles?.length ? profile.preferredStyles : (isFemale ? ['Klasszikus & Nőies Chic', 'Smart Casual'] : ['Klasszikus & Időtlen', 'Smart Urban']),
+      favoriteColors: profile?.favoriteColors || [],
+      avoidColors: profile?.avoidColors || [],
+      avatarUrl: profile?.avatarUrl || ''
+    };
+  });
 
-  // Sync when profile changes or modal opens
+  // Strict re-sync when profile, user or modal visibility changes (clean slate per user)
   useEffect(() => {
     if (isOpen && profile) {
-      setFormData(prev => ({
-        ...prev,
-        name: prev.name || profile.name || '',
-        gender: prev.gender || profile.gender || 'Férfi',
-        birthYear: prev.birthYear || profile.birthYear || '',
-        height: prev.height || profile.height || '',
-        weight: prev.weight || profile.weight || '',
-        bodyType: prev.bodyType || profile.bodyType || 'Normál / Átlagos',
-        skinTone: prev.skinTone || profile.skinTone || '',
-        thermalPreference: prev.thermalPreference || profile.thermalPreference || 'balanced',
-        preferredStyles: prev.preferredStyles?.length ? prev.preferredStyles : (profile.preferredStyles || ['Klasszikus & Időtlen', 'Smart Urban']),
-        favoriteColors: prev.favoriteColors?.length ? prev.favoriteColors : (profile.favoriteColors || []),
-        avoidColors: prev.avoidColors?.length ? prev.avoidColors : (profile.avoidColors || []),
-        avatarUrl: prev.avatarUrl || profile.avatarUrl || ''
-      }));
+      const isFemale = profile.gender === 'Női' || profile.gender === 'female';
+      setFormData({
+        name: profile.name || '',
+        gender: isFemale ? 'Női' : 'Férfi',
+        birthYear: profile.birthYear || '',
+        height: profile.height || '',
+        weight: profile.weight || '',
+        bodyType: profile.bodyType || 'Normál / Átlagos',
+        skinTone: profile.skinTone || '',
+        thermalPreference: profile.thermalPreference || 'balanced',
+        preferredStyles: Array.isArray(profile.preferredStyles) && profile.preferredStyles.length > 0 
+          ? profile.preferredStyles 
+          : (isFemale ? ['Klasszikus & Nőies Chic', 'Smart Casual'] : ['Klasszikus & Időtlen', 'Smart Urban']),
+        favoriteColors: Array.isArray(profile.favoriteColors) ? profile.favoriteColors : [],
+        avoidColors: Array.isArray(profile.avoidColors) ? profile.avoidColors : [],
+        avatarUrl: profile.avatarUrl || ''
+      });
+      setCurrentStep(1);
     }
-  }, [isOpen, profile]);
+  }, [isOpen, currentUser?.uid, profile?.name, profile?.birthYear, profile?.gender]);
 
   if (!isOpen) return null;
 

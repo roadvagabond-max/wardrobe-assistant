@@ -168,6 +168,7 @@ export default function StyleDNAView() {
           <div className="lg:col-span-1">
             <WardrobeAnalyticsCard 
               wardrobe={wardrobe}
+              profile={profile}
             />
           </div>
         </div>

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Info, X, ArrowRight, Shirt } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ModuleFirstTimeGuide({
   moduleId,
@@ -14,7 +15,8 @@ export default function ModuleFirstTimeGuide({
   wardrobeCount = 0,
   minRequiredItems = 3
 }) {
-  const storageKey = `sartorial_guide_dismissed_${moduleId}`;
+  const { currentUser } = useAuth();
+  const storageKey = `sartorial_guide_dismissed_${moduleId}_${currentUser?.uid || 'guest'}`;
 
   const [isDismissed, setIsDismissed] = useState(() => {
     try {
@@ -23,6 +25,14 @@ export default function ModuleFirstTimeGuide({
       return false;
     }
   });
+
+  useEffect(() => {
+    try {
+      setIsDismissed(localStorage.getItem(storageKey) === 'true');
+    } catch (_) {
+      setIsDismissed(false);
+    }
+  }, [storageKey]);
 
   const handleDismiss = () => {
     setIsDismissed(true);
