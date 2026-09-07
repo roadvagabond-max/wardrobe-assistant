@@ -128,6 +128,13 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
+- [ ] 🛍️ **„Megvegyem?” Modul Átnevezése ➔ „Buy or Skip”:**
+  - **Cél:** A korábbi „Megvegyem?” vásárlási döntéstámogató modul nevének átnevezése **„Buy or Skip”** megnevezésre.
+  - **Érintett komponensek:**
+    - Alsó navigációs sáv (`BottomNav.jsx`): címke `Buy or Skip`.
+    - Asztali navigációs sáv (`DesktopTabs.jsx`): fül `🛍️ Buy or Skip`.
+    - Vásárlási modul (`PurchaseAdvisorView.jsx`): fejléc cím, akciógombok és CTA feliratok átírása.
+    - Gardrób nézet (`WardrobeView.jsx`): kártya gyorsgomb átírása.
 - [ ] 🎨 **Felugró Ablakok Teljes Minimalista Újratervezése (Minimalist Modal Redesign):**
   - **Cél:** Az alkalmazás összes felugró ablakának (profil szerkesztés, súgó, ruha hozzáadása, onboarding, szettrészletek, képnézegető) átfogó letisztítása: minimális vizuális zaj, szellős és prémium tipográfia, egyszerűsített kártyák és űrlapok.
   - **Irányelvek:** Felesleges vizuális elemek, túldíszített keretek és háttéreffektek tompítása; átláthatóbb mező-csoportosítás; egységes, kompakt és fix fejléc/lábléc struktúra; zavartalan fókusz a lényegi műveleteken és adatokon.
