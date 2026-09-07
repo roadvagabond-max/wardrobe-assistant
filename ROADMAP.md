@@ -100,6 +100,13 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
+- [ ] 🚨 **Felugró Ablakok Tetejének Levágása Mobilon (Flex Centering Scroll Trap):**
+  - **Hiba:** Mobilon a felugró ablakok (pl. `ProfileEditModal`, `HelpGuideModal`, `AddClothingModal`, `OnboardingModal`, `ItemDetailModal`, `GarmentLightboxModal`) teteje lecsúszik a képernyő teteje fölé (negatív Y koordinátatérbe), így a fejléc, a cím és a bezáró `(X)` gomb nem látható és nem elérhető.
+  - **Gyökérok:** A flexbox `items-center` igazítás miatt, ha a modal kártya magassága (`max-h-[90vh]` / `max-h-[92vh]` + margók `my-6`/`my-8`) meghaladja a mobil böngésző látható viewport magasságát (címsor + alsó vezérlősávok levonása után), a flexbox mindkét irányban kifelé tolja a tartalmat, így a teteje a képernyő fölé lóg ki, ahová felfelé már nem lehet görgetni.
+  - **Javítási terv:**
+    1. A modal külső wrapperén `items-center` helyett `items-start sm:items-center` és `overflow-y-auto` használata, vagy `my-auto` nélküli felső margó / `100dvh` alapú rugalmas magasság.
+    2. A belső kártya magasságának igazítása: `max-h-[calc(100dvh-2rem)]` vagy `max-h-[85vh]` fix fejléccel (`shrink-0`), hogy a fejléc garantáltan mindig a látható képernyőterület tetején maradjon.
+    3. Valamennyi modal (`ProfileEditModal`, `HelpGuideModal`, `AddClothingModal`, `OnboardingModal`, `ItemDetailModal`, `GarmentLightboxModal`, `OutfitsView` és `StylistView` modalok) egységes felülvizsgálata és javítása.
 - [ ] **Hangalapú Szettkérés (Web Speech API Mikrofon Integráció):**
   - Mikrofon gomb (`Mic` ikon) elhelyezése a szettkérő beviteli mezőben (`OutfitsView.jsx`).
   - Magyar nyelvű (`hu-HU`) böngészős beszédfelismerés pulzáló felvételi állapottal és automatikus mezőkitöltéssel.
