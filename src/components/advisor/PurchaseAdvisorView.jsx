@@ -290,7 +290,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           <span className="badge badge-emerald">4 Döntési Pillér</span>
         </div>
         <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
-          Megvegyem?
+          Buy or Skip
         </h2>
         <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
           Nézzük meg, mennyire érdemes megvenned a kiszemelt darabot! Fotózd le a próbafülkében vagy illeszd be a webshop linket a minőségi és kombinálhatósági elemzéshez.
@@ -635,7 +635,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5" />
-                    <span>Megvegyem? Elemzés és Szett-ötletek Indítása</span>
+                    <span>Buy or Skip — Elemzés és Szett-ötletek Indítása</span>
                   </>
                 )}
               </button>

@@ -321,7 +321,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                           onClick={() => onNavigateTab && onNavigateTab('advisor')}
                           className="btn-gold text-[10px] py-1.5 px-2.5 flex-1 flex items-center justify-center gap-1"
                         >
-                          <span>Megvegyem?</span>
+                          <span>Buy or Skip</span>
                           <ArrowRight className="w-3 h-3" />
                         </button>
                       </div>

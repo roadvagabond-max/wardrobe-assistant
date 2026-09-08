@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.9` (Production Build)
+- **Aktuális Verzió:** `v1.7.10` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,10 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.9)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.10)
+- [x] **Gemini Szintaktikai Javítás & „Buy or Skip” Modul Átnevezés (v1.7.10):**
+  - **Vite Build AST Szintaktikai Hiba Felszámolása:** A `gemini.js` `auditManualOutfit` függvényében egy korábbi szerkesztésnél megkettőződött `const prompt = \`...` sablon-kezdés és záratlan string felszámolása, helyreállítva a hibátlan és azonnali éles Rollup/Vite build folyamatot.
+  - **„Megvegyem?” ➔ „Buy or Skip” Átnevezés:** A modul teljes körű átnevezése az alsó navigációs sávon (`BottomNav.jsx`), az asztali fülsoron (`DesktopTabs.jsx`), a modul fejlécében és gombjain (`PurchaseAdvisorView.jsx`), valamint a Gardrób kártyák gyorsműveleteinél (`WardrobeView.jsx`).
 - [x] **Mix & Match Képkeret Összeomlás Javítás, Időjárás Leválasztás & Közvetlen Szettmentés (v1.7.9):**
   - **Képkeret Összeomlás Megszüntetése:** A mobilos Flexboxban összeomló `aspect-square` kiváltása robusztus fix magasságú konténerrel (`h-56 sm:h-64` kártya, `h-36 sm:h-44 shrink-0` képkeret).
   - **Univerzális Hotlinking & Offline SVG Védelem:** `<meta name="referrer" content="no-referrer">` és `referrerPolicy="no-referrer"` bevezetése a harmadik feles CDN képeknél (Next, Zara), valamint 100%-ban helyi, hálózattól független dinamikus SVG helyettesítő ikon (`createGarmentSvgPlaceholder`) minden ruha típusra és színre.
@@ -128,13 +131,6 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
-- [ ] 🛍️ **„Megvegyem?” Modul Átnevezése ➔ „Buy or Skip”:**
-  - **Cél:** A korábbi „Megvegyem?” vásárlási döntéstámogató modul nevének átnevezése **„Buy or Skip”** megnevezésre.
-  - **Érintett komponensek:**
-    - Alsó navigációs sáv (`BottomNav.jsx`): címke `Buy or Skip`.
-    - Asztali navigációs sáv (`DesktopTabs.jsx`): fül `🛍️ Buy or Skip`.
-    - Vásárlási modul (`PurchaseAdvisorView.jsx`): fejléc cím, akciógombok és CTA feliratok átírása.
-    - Gardrób nézet (`WardrobeView.jsx`): kártya gyorsgomb átírása.
 - [ ] 🎨 **Felugró Ablakok Teljes Minimalista Újratervezése (Minimalist Modal Redesign):**
   - **Cél:** Az alkalmazás összes felugró ablakának (profil szerkesztés, súgó, ruha hozzáadása, onboarding, szettrészletek, képnézegető) átfogó letisztítása: minimális vizuális zaj, szellős és prémium tipográfia, egyszerűsített kártyák és űrlapok.
   - **Irányelvek:** Felesleges vizuális elemek, túldíszített keretek és háttéreffektek tompítása; átláthatóbb mező-csoportosítás; egységes, kompakt és fix fejléc/lábléc struktúra; zavartalan fókusz a lényegi műveleteken és adatokon.

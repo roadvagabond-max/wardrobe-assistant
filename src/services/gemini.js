@@ -1916,28 +1916,6 @@ Vizsgáld meg a szett formai szintjét, dress code normáit és kulturális alka
         : `ESEMÉNY / ALKALOM: Nincs rögzítve konkrét esemény (önálló, mindennapi / stílusos megjelenés).
 FONTOS: Ne erőltess rá semmilyen merev alkalmi dress code-ot vagy protokollt! A vizsgálat fókusza a választott darabok belső esztétikai harmóniája, a színek és textúrák egymásra hatása, az anatómiai rétegrend, valamint a felhasználó személyes Stílus DNS-éhez és az aktuális időjárási hőmérséklethez való illeszkedése.`;
 
-      const prompt = `Te egy mester személyi stylist, szín- és aránytanácsadó, valamint stílusszakértő vagy. Kerüld a "sartorial" kifejezés használatát a válaszaidban, helyette használj természetes magyar kifejezéseket (stílusos, elegáns, kifinomult, harmonikus)!
-A felhasználó saját maga állított össze egy szettet a meglévő ruhatárából.
-
-A FELADATOD: Végezz professzionális, építő jellegű Stílus- és Összhang Auditot a szettre a felhasználó személyes profilja, Stílus DNS-e és az alábbi paraméterek alapján!
-
-DEMOGRÁFIAI PROFIL ÉS KORCSOPORT SZABÁLYOK:
-- Felhasználó kategóriája: ${demographics.gender} (${demographics.age} éves, ${demographics.bracketDescription})
-${demographicInstructions}
-
-FELHASZNÁLÓ STÍLUSPROFILJA (100%-ban érvényesítendő):
-- Preferált Stílusirányzatok: ${JSON.stringify(styleProfile.preferredStyles || (demographics.isFemale ? ['Klasszikus & Nőies', 'Smart Casual'] : ['Klasszikus & Időtlen', 'Smart Casual']))}
-- Stílusfilozófia: "${styleProfile.stylePhilosophy || 'Kifinomult harmónia, prémium kényelmes anyagok és stílusos megjelenés'}"
-- Kedvenc Színpaletta: ${styleProfile.favoriteColors && styleProfile.favoriteColors.length > 0 ? JSON.stringify(styleProfile.favoriteColors) : 'Nincs rögzítve (Alkalmazz természetes harmóniát)'}
-- Testalkat és Magasság: ${styleProfile.bodyType || 'Normál'}${styleProfile.height ? `, ${styleProfile.height}` : ''}${styleProfile.skinTone ? ` (${styleProfile.skinTone})` : ''}
-- Öltözködési Hőérzet & Komfort: ${styleProfile.thermalPreference === 'coldSensitive' ? 'Fázósabb alkat (hűvösben melegebb textúrák, finomkötöttek és rétegek előnyben)' : styleProfile.thermalPreference === 'warmSensitive' ? 'Melegkedvelő alkat (könnyed, szellős pamut/len preferálása)' : 'Kiegyensúlyozott / Normál hőérzet'}
-
-🚫 FELHASZNÁLÓ EGYÉNI SZABÁLYAI & TILTÁSAI (Ha a választott szettben ezek bármelyike sérül, jelezd a figyelmeztetésben és a tanácsokban!):
-${customRules.length > 0 ? customRules.map(r => `• ${r}`).join('\n') : 'Nincsenek külön rögzített tiltások.'}
-
-👔 AKTÍV STÍLUS- ÉS RÉTEGEZÉSI SZABÁLYZAT:
-${dynamicSartorialRules}
-
       const hasWeatherMention = Boolean(
         weather && 
         eventName && 
