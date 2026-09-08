@@ -17,6 +17,7 @@ import {
   UserPlus
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import AppLogo from '../common/AppLogo';
 
 export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
   const { 
@@ -150,10 +151,8 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#f59e0b] to-[#b45309] flex items-center justify-center shadow-md shadow-[#f59e0b]/20">
-              <User className="w-4 h-4 text-[#080e1a]" />
-            </div>
+          <div className="flex items-center gap-2.5">
+            <AppLogo className="w-9 h-9 shrink-0 shadow-md" />
             <div>
               <h3 className="font-serif font-bold text-base sm:text-lg text-white">
                 {currentUser 

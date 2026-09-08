@@ -6,6 +6,7 @@ import StepColorSeason from './steps/StepColorSeason';
 import StepStyles from './steps/StepStyles';
 import StepAddFirstItem from './steps/StepAddFirstItem';
 import StepSummaryLaunch from './steps/StepSummaryLaunch';
+import AppLogo from '../common/AppLogo';
 
 const TOTAL_STEPS = 5;
 
@@ -115,9 +116,7 @@ export default function OnboardingModal({ isOpen, onClose, onFinish }) {
         <div className="shrink-0 p-4 sm:p-6 pb-3 border-b border-white/10 bg-[#0e131d] space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#f59e0b] to-[#b45309] flex items-center justify-center text-black font-bold shadow-md shrink-0">
-                <Sparkles className="w-4 h-4 text-[#080e1a]" />
-              </div>
+              <AppLogo className="w-9 h-9 shrink-0 shadow-md" />
               <div>
                 <h3 className="font-serif font-bold text-base sm:text-lg text-white">
                   Stílusprofil Varázsló

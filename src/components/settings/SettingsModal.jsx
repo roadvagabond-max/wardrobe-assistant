@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { exportWardrobeToPrintableHtml, exportWardrobeToCsv } from '../../services/exportService';
 import { APP_VERSION, APP_BUILD_NAME } from '../../version';
 import { isFirebaseConfigured } from '../../services/firebase';
+import AppLogo from '../common/AppLogo';
 
 export default function SettingsModal({ isOpen, onClose }) {
   const { 
@@ -145,8 +146,8 @@ export default function SettingsModal({ isOpen, onClose }) {
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <Sliders className="w-5 h-5 text-[var(--accent-gold)]" />
+          <div className="flex items-center gap-2.5">
+            <AppLogo className="w-8 h-8 shrink-0 shadow-sm" />
             <h3 className="font-serif font-bold text-lg text-white">
               {isActualAdmin && activeTab === 'admin' ? '👑 Admin Rendszerközpont' : 'Beállítások & Preferenciák'}
             </h3>

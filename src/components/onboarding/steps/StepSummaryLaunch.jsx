@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Sparkles, CheckCircle2, Shirt, User, ArrowRight, Compass, ShieldCheck } from 'lucide-react';
+import AppLogo from '../../common/AppLogo';
 import confetti from 'canvas-confetti';
 import { getProfileDemographics } from '../../../services/demographics';
 
@@ -24,8 +25,8 @@ export default function StepSummaryLaunch({ formData, wardrobeCount, onComplete 
       
       {/* Celebration Header */}
       <div className="space-y-2 text-center max-w-lg mx-auto">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#d4af37] via-[#f59e0b] to-[#b45309] flex items-center justify-center mx-auto text-black shadow-xl shadow-amber-500/20 animate-bounce">
-          <Sparkles className="w-8 h-8 text-[#07090e]" />
+        <div className="flex justify-center pb-1">
+          <AppLogo className="w-16 h-16 shadow-2xl shadow-slate-900/50" />
         </div>
         <span className="badge badge-gold text-[11px] uppercase tracking-wider font-bold">
           Gratulálunk!

@@ -5,15 +5,36 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.18` (Production Build)
+- **Aktuális Verzió:** `v1.7.21` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
+
+### 🏛️ Hivatalos Modul Architektúra & Névtér
+Az alkalmazás 5 főlapja egységes, professzionális és letisztult nemzetközi nómenklatúrát használ:
+- **`Outfit`** (`outfits`): Esemény- és időjárás-hangolt szettgenerátor a meglévő ruhatárból.
+- **`Wardrobe`** (`wardrobe`): A fizikai ruhatár digitális katalógusa, szűrők, intelligens ruhafelvitel és leltár.
+- **`Buy or Skip`** (`advisor`): 4-pilléres vásárlási döntéstámogató, duplikáció- és illeszkedés-audit.
+- **`Mix & Match`** (`stylist`): Szabad szettépítő vászon, Lookbook flatlay, anatómiai rétegezés és AI Stylist csevegő.
+- **`Profile`** (`profile`): Személyes Stílus DNS, testalkati paraméterek, színtípus, mérettérkép, szabálytár és fiókközpont.
+
+> [!IMPORTANT]
+> **A „Capsule” Névtér Tudatos Fenntartása a Jövőbeli Moduloknak:**
+> A „Capsule” kifejezést szándékosan nem használjuk az általános ruhatár (Wardrobe) szinonimájaként. A „Capsule” elnevezés dedikáltan fenntartott a későbbi, specializált kapszula-funkciók és modulok számára:
+> 1. 🧳 **Travel Capsule (Trip Capsule Packer):** Utazási kapszula asszisztens — 8–12 variálható kulcsdarab kiválasztása a ruhatárból, az úti cél időjárásához, napok számához és eseményeihez igazított digitális csomagolólistával.
+> 2. 🗓️ **Seasonal Capsule (Szezonális Kapszula Építő):** Időszakos tavasz/nyár és ősz/tél kapszulák forgatása, szekrényrotáció és kapszula-lefedettség audit.
+> 3. 💼 **Work / Business Capsule:** Kifejezetten irodai, üzleti kapszula összeállítás.
 
 ---
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.18)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.21)
+- [x] **Szettek Oldali Renderelési Hiba Javítása (`ModuleFirstTimeGuide`, v1.7.21):**
+  - A hiányzó `import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';` pótlása az `OutfitsView.jsx`-ben, azonnal elhárítva a `ReferenceError`-t és a megjelenítési hibát.
+- [x] **Fő Modulok Átnevezése & Nemzetközi Nómenklatúra (v1.7.21):**
+  - A navigációs címkék frissítése: `Szettek` ➔ `Outfit`, `Gardrób` ➔ `Wardrobe`, `Stílusprofil` ➔ `Profile` mind a mobilos alsó sávon (`BottomNav.jsx`), mind az asztali fülsoron (`DesktopTabs.jsx`), mind a profil fejlécében (`StyleDNAView.jsx`).
+- [x] **Sartorial Titán-Toll Márkalogó Integráció (v1.7.20):**
+  - A `Docs/gemini-svg.svg` vektoros squircle logó integrálása a böngésző faviconba (`favicon.svg`), a PWA ikonokba (`icon-192.svg`, `icon-512.svg`), statikus logóba (`logo.svg`), az `AppLogo.jsx` komponensbe, valamint a bejelentkező (`AuthModal.jsx`), onboarding (`OnboardingModal.jsx`, `StepSummaryLaunch.jsx`), beállítások (`SettingsModal.jsx`) és profil (`StyleDNAView.jsx`) fejlécekbe.
 - [x] **Dupla Kabát Sor, Sorközi Öv & Zokni, Felső Rétegszám Limit & Női Ruhatár Támogatás (v1.7.18):**
   - **Mobilos Lelógás Megszüntetése (Felsők Max 2 Darab):** A korábbi 3 felső réteg mobilon (~360–390px képernyőszélesség) vízszintesen lefejezte/levágta a kártyákat. A felső sor mostantól szigorúan legfeljebb 2 bázis/köztes darabot (ing + pulóver/kardigán) fogad el, így mobilon 100%-ban elfér vágás nélkül.
   - **Dupla Külső Réteg a Kabát Sorban (Overshirt + Kabát / Dzseki):** A különálló kabát sor mostantól akár 2 külső réteget is kezel (pl. ingdzseki/overshirt vagy zakó + télikabát), saját `(+) + Kabát` gombbal a jobb oldali sínen.

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { analyzeColorSeason } from '../../services/gemini';
 import { ensureBase64Image } from '../../services/imageOptimizer';
 import { deduplicateColors } from '../common/ColorPalettePicker';
+import AppLogo from '../common/AppLogo';
 
 // Subcomponents
 import ProfileIdentityCard from './components/ProfileIdentityCard';
@@ -114,7 +115,7 @@ export default function StyleDNAView({ onOpenSettings, onOpenHelp, onOpenAuth })
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="badge badge-gold">Stílusprofil</span>
+            <span className="badge badge-gold">Profile</span>
             {isAdmin ? (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
                 <span>👑</span>
@@ -128,7 +129,7 @@ export default function StyleDNAView({ onOpenSettings, onOpenHelp, onOpenAuth })
             )}
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
-            Stílusprofil
+            Profile
           </h2>
           <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
             Testalkati adottságok, színtípus, mérettérkép és egyéni szabályok.
@@ -186,9 +187,7 @@ export default function StyleDNAView({ onOpenSettings, onOpenHelp, onOpenAuth })
                   className="w-10 h-10 rounded-xl object-cover border border-[var(--border-gold)] shrink-0" 
                 />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center font-bold shrink-0">
-                  <User className="w-5 h-5" />
-                </div>
+                <AppLogo className="w-10 h-10 shrink-0 shadow-md" />
               )}
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -222,9 +221,7 @@ export default function StyleDNAView({ onOpenSettings, onOpenHelp, onOpenAuth })
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[var(--text-muted)] shrink-0">
-                <User className="w-5 h-5" />
-              </div>
+              <AppLogo className="w-10 h-10 shrink-0 shadow-md" />
               <div>
                 <span className="text-xs font-semibold text-white block">Vendég fiók</span>
                 <span className="text-[10px] text-[var(--text-muted)]">Jelentkezz be adatszinkronizációhoz</span>

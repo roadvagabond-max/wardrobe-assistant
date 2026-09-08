@@ -10,6 +10,7 @@ import { fetchCurrentWeather, CITIES } from '../../services/weather';
 import { getDynamicEventPresets } from '../../services/demographics';
 import confetti from 'canvas-confetti';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
+import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 
 export default function OutfitsView({ weather, setWeather, initialAnchorItem = null }) {
   const { wardrobe, profile, currentUser, saveOutfit, savedOutfits } = useAuth();

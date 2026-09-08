@@ -3,11 +3,11 @@ import { Sparkles, Layers, ShoppingBag, SlidersHorizontal, UserCheck } from 'luc
 
 export default function DesktopTabs({ activeTab, setActiveTab }) {
   const tabs = [
-    { id: 'outfits', label: '👔 Szettek', icon: Sparkles },
-    { id: 'wardrobe', label: '🚪 Gardróbom', icon: Layers },
+    { id: 'outfits', label: '👔 Outfit', icon: Sparkles },
+    { id: 'wardrobe', label: '🚪 Wardrobe', icon: Layers },
     { id: 'advisor', label: '🛍️ Buy or Skip', icon: ShoppingBag },
     { id: 'stylist', label: 'Mix & Match', emoji: '🧩' },
-    { id: 'profile', label: '👤 Stílusprofil', icon: UserCheck }
+    { id: 'profile', label: '👤 Profile', icon: UserCheck }
   ];
 
   return (

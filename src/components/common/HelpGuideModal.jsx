@@ -4,6 +4,7 @@ import {
   ShoppingBag, Layers, AlertCircle, Bookmark, Feather, ShieldCheck,
   ExternalLink, Smartphone, MessageSquare, BookOpen, RefreshCw, Scissors
 } from 'lucide-react';
+import AppLogo from './AppLogo';
 
 export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }) {
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -35,9 +36,7 @@ export default function HelpGuideModal({ isOpen, onClose, defaultTab = 'rules' }
         <div className="shrink-0 p-4 sm:p-6 pb-2 border-b border-white/10 bg-[#0b0e14] space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#8a6b18] flex items-center justify-center text-black font-bold shadow-md shrink-0">
-                <BookOpen className="w-5 h-5 text-[#07090e]" />
-              </div>
+              <AppLogo className="w-10 h-10 shrink-0 shadow-md" />
               <div>
                 <div className="flex items-center gap-2">
                   <span className="badge badge-gold text-[10px] uppercase font-bold tracking-wider">
