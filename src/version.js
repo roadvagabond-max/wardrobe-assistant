@@ -1,9 +1,9 @@
 /**
  * AI Wardrobe Assistant - Application Version & Build Information
  */
-export const APP_VERSION = '1.7.11';
-export const APP_BUILD = '1.7.11';
-export const APP_BUILD_NAME = 'v1.7.11 Belt Swap Button & Mobile Score Pill Layout Fix';
+export const APP_VERSION = '1.7.12';
+export const APP_BUILD = '1.7.12';
+export const APP_BUILD_NAME = 'v1.7.12 Mix & Match Icon Unification, Header Overflow & AI Stylist Polish';
 export const APP_RELEASE_STAGE = 'Production';
 export const APP_NAME = 'AI Wardrobe Assistant';
 export const BUILD_DATE = '2026-09-08';

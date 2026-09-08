@@ -6,7 +6,7 @@ export default function BottomNav({ activeTab, setActiveTab }) {
     { id: 'outfits', label: 'Szettek', icon: Sparkles },
     { id: 'wardrobe', label: 'Gardrób', icon: Layers },
     { id: 'advisor', label: 'Buy or Skip', icon: ShoppingBag },
-    { id: 'stylist', label: 'Mix & Match', icon: SlidersHorizontal },
+    { id: 'stylist', label: 'Mix & Match', emoji: '🧩' },
     { id: 'profile', label: 'Stílusprofil', icon: UserCheck }
   ];
 
@@ -29,7 +29,13 @@ export default function BottomNav({ activeTab, setActiveTab }) {
               }`}
             >
               <div className="relative flex items-center justify-center">
-                <Icon className={`w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform ${isActive ? 'scale-110' : ''}`} />
+                {tab.emoji ? (
+                  <span className={`text-sm sm:text-base leading-none transition-transform ${isActive ? 'scale-110' : ''}`}>
+                    {tab.emoji}
+                  </span>
+                ) : (
+                  <Icon className={`w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform ${isActive ? 'scale-110' : ''}`} />
+                )}
                 {tab.badge && !isActive && (
                   <span className="absolute -top-1.5 -right-2 px-1 py-0.2 text-[8px] font-bold bg-[var(--accent-gold)] text-black rounded-full shadow-sm">
                     {tab.badge}

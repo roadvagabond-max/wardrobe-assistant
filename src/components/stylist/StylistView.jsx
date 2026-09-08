@@ -552,48 +552,45 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       {/* ========================================================================= */}
       {/* CLEAN TOP HEADER: STABLE TOGGLE (LEFT) & SAVED OUTFITS + HELP (RIGHT) */}
       {/* ========================================================================= */}
-      <div className="flex items-center justify-between gap-3 pt-1 pb-1">
-        {/* Stable 2-Segmented Toggle: Left Mix & Match, Right AI Stylist (Never jumping) */}
+      <div className="flex items-center justify-between gap-2 sm:gap-3 pt-1 pb-1">
+        {/* Stable 2-Segmented Toggle: Left Mix & Match (🧩), Right AI Stylist (💬) */}
         <div className="flex items-center bg-[#0d121c] p-1 rounded-xl border border-slate-800 shrink-0">
           <button
             type="button"
             onClick={() => setActiveMode('manual-builder')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all ${
               activeMode === 'manual-builder'
                 ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Sliders className="w-3.5 h-3.5" />
             <span>🧩 Mix & Match</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveMode('chat')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all ${
               activeMode === 'chat'
                 ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <MessageSquare className="w-3.5 h-3.5" />
             <span>💬 AI Stylist</span>
           </button>
         </div>
 
-        {/* Right: Saved Outfits & Help info toggle (Weather removed to eliminate overflow) */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: Saved Outfits & Help info toggle */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setIsSavedOutfitsOpen(true)}
-            className="px-3 py-1.5 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-xs flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors"
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-xs flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors shrink-0"
             title="Mentett szettek megtekintése"
           >
-            <Bookmark className="w-3.5 h-3.5 text-slate-400" />
+            <Bookmark className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span className="font-semibold hidden sm:inline">Mentett szettek</span>
-            <span className="font-semibold sm:hidden">Szettek</span>
             {savedOutfits.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-slate-700 text-[10px] text-slate-200 font-mono">
+              <span className="px-1.5 py-0.5 rounded-full bg-slate-700 text-[10px] text-slate-200 font-mono shrink-0">
                 {savedOutfits.length}
               </span>
             )}
@@ -602,7 +599,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
           <button
             type="button"
             onClick={() => setShowGuide(prev => !prev)}
-            className={`p-2 rounded-xl border transition-colors ${
+            className={`p-2 rounded-xl border transition-colors shrink-0 ${
               showGuide 
                 ? 'bg-slate-200 text-slate-900 border-white' 
                 : 'bg-[#0d121c] text-slate-400 hover:text-white border-slate-800'
@@ -647,8 +644,8 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
           {/* Slim Event Bar with Quick Chips & Reset */}
           <div className="p-3 rounded-2xl bg-[#0f1420]/70 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex-1 relative">
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <div className="flex-1 relative min-w-0">
                 <input
                   type="text"
                   placeholder="Esemény megadása (opcionális, pl. Toszkánai esküvő, Laza péntek)..."
@@ -673,7 +670,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                   <button
                     type="button"
                     onClick={handleDirectSaveOutfit}
-                    className={`text-xs flex items-center gap-1 px-3 py-1.5 rounded-lg border transition-all ${
+                    className={`text-xs flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
                       isManualSaved
                         ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40'
                         : 'bg-slate-200 hover:bg-white text-slate-950 font-bold border-transparent shadow-sm'
@@ -696,7 +693,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                   <button
                     type="button"
                     onClick={handleResetEnsemble}
-                    className="text-xs text-slate-400 hover:text-rose-400 flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
+                    className="text-xs text-slate-400 hover:text-rose-400 flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-rose-500/10 transition-colors shrink-0"
                     title="Szett ürítése"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1473,24 +1470,25 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
             </div>
 
             {/* Drawer Footer Actions */}
-            <div className="p-4 border-t border-slate-800 bg-[#090d15] flex items-center justify-between gap-3 shrink-0">
+            <div className="p-3.5 sm:p-4 border-t border-slate-800 bg-[#090d15] flex items-center justify-between gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   setIsDrawerOpen(false);
                   openLightbox(selectedItems, 0, manualAuditResult.verdict);
                 }}
-                className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                className="px-2.5 sm:px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
-                <span>Lookbook Nézet</span>
+                <span>Lookbook</span>
+                <span className="hidden sm:inline">Nézet</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleSaveManualAuditedOutfit}
                 disabled={isManualSaved}
-                className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md ${
+                className={`px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shrink-0 ${
                   isManualSaved
                     ? 'bg-emerald-600 text-white cursor-default'
                     : 'bg-slate-200 hover:bg-white text-slate-950'
@@ -1499,12 +1497,13 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 {isManualSaved ? (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>Elmentve a Kedvencekhez</span>
+                    <span>Elmentve</span>
                   </>
                 ) : (
                   <>
                     <Bookmark className="w-4 h-4" />
-                    <span>Szett Mentése a Kedvencekhez</span>
+                    <span>Mentés</span>
+                    <span className="hidden sm:inline">a Kedvencekhez</span>
                   </>
                 )}
               </button>
@@ -1569,10 +1568,10 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                     key={saved.id}
                     className="p-4 rounded-2xl bg-[#090d15] border border-slate-800 hover:border-slate-700 transition-all space-y-3 group"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-semibold text-slate-200 group-hover:text-white">
+                    <div className="flex items-start justify-between gap-3 min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h4 className="text-sm font-semibold text-slate-200 group-hover:text-white truncate">
                             {saved.title || saved.occasion || 'Mentett Szett'}
                           </h4>
                           {saved.matchScore && (

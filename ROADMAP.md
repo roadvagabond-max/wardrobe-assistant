@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.11` (Production Build)
+- **Aktuális Verzió:** `v1.7.12` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,14 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.11)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.12)
+- [x] **Ikonok Egységesítése (🧩 / 💬), Fejléc Szettek Keret & AI Stylist Letisztítás (v1.7.12):**
+  - **Ikonok & Emojik Egységesítése:** A Mix & Match fülön kizárólag a puzzle emoji (`🧩`), az AI Stylist fülön kizárólag a beszéd-buborék emoji (`💬`) jelenik meg a dupla Lucide ikonok helyett. Az alsó lebegő navigációs sávon (`BottomNav.jsx`) és a felső asztali fülsoron (`DesktopTabs.jsx`) is a puzzle emoji (`🧩`) váltja a SlidersHorizontal ikont.
+  - **Fejléc Szettek Keret Mobilos Lelógásának Felszámolása (`StylistView.jsx`):** A dupla ikonok törlésével és a `Szettek` gomb mobilos reszponzív optimalizálásával (`<Bookmark />` + számláló jelvény mobilon, teljes szöveg desktopon) a fejléc szélessége ~260px-re csökkent, kizárva a keret lelógását.
+  - **Részletek Fiók & Eseménysáv Mobilos Gombjai:** A Details Drawer alján lévő 420px széles gombsor (`Lookbook Nézet` + `Szett Mentése a Kedvencekhez`) mobilon reszponzívvá vált (`Lookbook` + `Mentés`), és az eseménysáv beviteli mezője `min-w-0` korlátot kapott.
+  - **AI Stylist Csevegő Letisztítása (`StylistChatView.jsx`):** Felesleges `Férfi - Attila`, `Ruhatár 76 db ruha`, időjárás és bal oldali címfelirat törölve; a felső sáv jobb sarkában diszkrét `[ + Új Téma ]` és `[ 🗑️ ]` gombok találhatók.
+  - **Alsó Szövegdoboz Betűlevágásának Javítása:** Stabil `minHeight: 44px`, `leading-relaxed` sormagasság, `py-2 px-3` margók és reszponzív magasság, megelőzve a betűk alsó szárainak levágását.
+  - **Obszidián & Titán Dizájn:** Mélyfekete és pala üvegkártyák, titán címsorok és akciógombok a csevegőben.
 - [x] **Öv Csere Gomb Pótlása & Lebegő Értékelő Sáv Mobilos Kilógásának Megszüntetése (v1.7.11):**
   - **Öv, Zokni & Kiegészítő Csere Gombok (`StylistView.jsx`):** A deréköv, a zokni és az egyéb kiegészítő kártyák jobb alsó sarkába beépítésre került a lebegő `(🔄)` csere gomb (`RefreshCw`), pontosan illeszkedve a felső, alsó és cipő kártyák ergonomikus mintájához.
   - **Dedikált Öv Kategória a Képválasztóban:** A `+ Öv` és az övcsere mostantól dedikáltan az öveket szűri le a képválasztóban (`type === 'belt'`), a kiválasztott darab pedig azonnal és tisztán cseréli az aktív övet.

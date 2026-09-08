@@ -6,7 +6,7 @@ export default function DesktopTabs({ activeTab, setActiveTab }) {
     { id: 'outfits', label: '👔 Szettek', icon: Sparkles },
     { id: 'wardrobe', label: '🚪 Gardróbom', icon: Layers },
     { id: 'advisor', label: '🛍️ Buy or Skip', icon: ShoppingBag },
-    { id: 'stylist', label: '🧩 Mix & Match', icon: SlidersHorizontal },
+    { id: 'stylist', label: 'Mix & Match', emoji: '🧩' },
     { id: 'profile', label: '👤 Stílusprofil', icon: UserCheck }
   ];
 
@@ -27,7 +27,11 @@ export default function DesktopTabs({ activeTab, setActiveTab }) {
                   : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-[var(--accent-gold)]' : 'text-[var(--text-muted)]'}`} />
+              {tab.emoji ? (
+                <span className="text-base leading-none shrink-0">{tab.emoji}</span>
+              ) : (
+                <Icon className={`w-4 h-4 ${isActive ? 'text-[var(--accent-gold)]' : 'text-[var(--text-muted)]'}`} />
+              )}
               <span>{tab.label}</span>
               {tab.badge && (
                 <span className="px-1.5 py-0.2 text-[8px] font-bold rounded-full bg-[var(--accent-gold)] text-black">
