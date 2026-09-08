@@ -61,13 +61,25 @@ export function isCoatGarment(item) {
   );
 }
 
-export default function StylistView({ weather, setWeather, initialAnchorItem = null }) {
+export default function StylistView({ 
+  weather, 
+  setWeather, 
+  initialAnchorItem = null,
+  activeMode: propActiveMode,
+  setActiveMode: propSetActiveMode,
+  isSavedOutfitsOpen: propIsSavedOutfitsOpen,
+  setIsSavedOutfitsOpen: propSetIsSavedOutfitsOpen,
+  showGuide: propShowGuide,
+  setShowGuide: propSetShowGuide
+}) {
   const { wardrobe, profile, saveOutfit, savedOutfits = [], deleteOutfit } = useAuth();
 
   // Mode: 'manual-builder' (Default Mix & Match) | 'chat' (Master Stylist Chat)
-  const [activeMode, setActiveMode] = useState(() => {
+  const [internalActiveMode, setInternalActiveMode] = useState(() => {
     return localStorage.getItem('sartorial_stylist_mode') || 'manual-builder';
   });
+  const activeMode = propActiveMode !== undefined ? propActiveMode : internalActiveMode;
+  const setActiveMode = propSetActiveMode || setInternalActiveMode;
 
   // Ensemble State: Structured anatomical layers
   const [ensemble, setEnsemble] = useState({
@@ -93,8 +105,15 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
   const [manualAuditResult, setManualAuditResult] = useState(null);
   const [isManualSaved, setIsManualSaved] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
-  const [isSavedOutfitsOpen, setIsSavedOutfitsOpen] = useState(false);
+  
+  const [internalShowGuide, setInternalShowGuide] = useState(false);
+  const showGuide = propShowGuide !== undefined ? propShowGuide : internalShowGuide;
+  const setShowGuide = propSetShowGuide || setInternalShowGuide;
+
+  const [internalIsSavedOutfitsOpen, setInternalIsSavedOutfitsOpen] = useState(false);
+  const isSavedOutfitsOpen = propIsSavedOutfitsOpen !== undefined ? propIsSavedOutfitsOpen : internalIsSavedOutfitsOpen;
+  const setIsSavedOutfitsOpen = propSetIsSavedOutfitsOpen || setInternalIsSavedOutfitsOpen;
+
   const [saveToastMessage, setSaveToastMessage] = useState('');
 
   // Validation Toast State
@@ -670,67 +689,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* CLEAN TOP HEADER: STABLE TOGGLE (LEFT) & SAVED OUTFITS + HELP (RIGHT) */}
-      {/* ========================================================================= */}
-      <div className="flex items-center justify-between gap-2 sm:gap-3 pt-1 pb-1">
-        {/* Stable 2-Segmented Toggle: Left Mix & Match (🧩), Right AI Stylist (💬) */}
-        <div className="flex items-center bg-[#0d121c] p-1 rounded-xl border border-slate-800 shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveMode('manual-builder')}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all ${
-              activeMode === 'manual-builder'
-                ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <span>🧩 Mix & Match</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveMode('chat')}
-            className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all ${
-              activeMode === 'chat'
-                ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <span>💬 AI Stylist</span>
-          </button>
-        </div>
 
-        {/* Right: Saved Outfits & Help info toggle */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsSavedOutfitsOpen(true)}
-            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-xs flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors shrink-0"
-            title="Mentett szettek megtekintése"
-          >
-            <Bookmark className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="font-semibold hidden sm:inline">Mentett szettek</span>
-            {savedOutfits.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-slate-700 text-[10px] text-slate-200 font-mono shrink-0">
-                {savedOutfits.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowGuide(prev => !prev)}
-            className={`p-2 rounded-xl border transition-colors shrink-0 ${
-              showGuide 
-                ? 'bg-slate-200 text-slate-900 border-white' 
-                : 'bg-[#0d121c] text-slate-400 hover:text-white border-slate-800'
-            }`}
-            title="Súgó ki/bekapcsolása"
-          >
-            <Info className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
 
       {/* Collapsible Guidance (Context-aware based on active tab) */}
       {showGuide && (

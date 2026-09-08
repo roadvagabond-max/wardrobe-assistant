@@ -31,7 +31,7 @@ const getInitialTab = () => {
 };
 
 export default function App() {
-  const { wardrobe, profile, currentUser, addItem } = useAuth();
+  const { wardrobe, profile, currentUser, addItem, savedOutfits } = useAuth();
   const [activeTab, setActiveTabState] = useState(getInitialTab);
   const [weather, setWeather] = useState(null);
 
@@ -55,6 +55,17 @@ export default function App() {
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
   const [initialAnchorItem, setInitialAnchorItem] = useState(null);
   const [advisorPrefill, setAdvisorPrefill] = useState(null);
+
+  // Stylist sub-mode & top bar states
+  const [stylistMode, setStylistMode] = useState(() => {
+    try {
+      return localStorage.getItem('sartorial_stylist_mode') || 'manual-builder';
+    } catch (_) {
+      return 'manual-builder';
+    }
+  });
+  const [isSavedOutfitsOpen, setIsSavedOutfitsOpen] = useState(false);
+  const [showStylistGuide, setShowStylistGuide] = useState(false);
 
   // Sync hash changes (e.g. mobile back button or direct bookmark)
   useEffect(() => {
@@ -111,15 +122,18 @@ export default function App() {
 
     const handleOpenSettings = () => setIsSettingsModalOpen(true);
     const handleOpenHelp = () => setIsHelpModalOpen(true);
+    const handleOpenAuth = () => setIsAuthModalOpen(true);
     const handleOpenOnboarding = () => setIsOnboardingModalOpen(true);
 
     window.addEventListener('open-settings', handleOpenSettings);
     window.addEventListener('open-help', handleOpenHelp);
+    window.addEventListener('open-auth', handleOpenAuth);
     window.addEventListener('open-onboarding', handleOpenOnboarding);
 
     return () => {
       window.removeEventListener('open-settings', handleOpenSettings);
       window.removeEventListener('open-help', handleOpenHelp);
+      window.removeEventListener('open-auth', handleOpenAuth);
       window.removeEventListener('open-onboarding', handleOpenOnboarding);
     };
   }, []);
@@ -153,12 +167,15 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
       
-      {/* Top Header */}
+      {/* Contextual Top Header (e.g. Mix & Match bar) */}
       <Header
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
-        onOpenHelp={() => setIsHelpModalOpen(true)}
-        weather={weather}
+        activeTab={activeTab}
+        stylistMode={stylistMode}
+        setStylistMode={setStylistMode}
+        onOpenSavedOutfits={() => setIsSavedOutfitsOpen(true)}
+        savedOutfitsCount={savedOutfits?.length || 0}
+        showStylistGuide={showStylistGuide}
+        onToggleStylistGuide={() => setShowStylistGuide(prev => !prev)}
       />
 
       {/* Discrete Offline & Network Status Banner */}
@@ -198,11 +215,21 @@ export default function App() {
               weather={weather}
               setWeather={setWeather}
               initialAnchorItem={initialAnchorItem}
+              activeMode={stylistMode}
+              setActiveMode={setStylistMode}
+              isSavedOutfitsOpen={isSavedOutfitsOpen}
+              setIsSavedOutfitsOpen={setIsSavedOutfitsOpen}
+              showGuide={showStylistGuide}
+              setShowGuide={setShowStylistGuide}
             />
           )}
 
           {activeTab === 'profile' && (
-            <StyleDNAView />
+            <StyleDNAView
+              onOpenSettings={() => setIsSettingsModalOpen(true)}
+              onOpenHelp={() => setIsHelpModalOpen(true)}
+              onOpenAuth={() => setIsAuthModalOpen(true)}
+            />
           )}
         </ErrorBoundary>
       </main>

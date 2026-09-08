@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { User, Sparkles, Sliders, ShieldCheck } from 'lucide-react';
+import { User, Sparkles, Sliders, ShieldCheck, Settings, HelpCircle, LogOut, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { analyzeColorSeason } from '../../services/gemini';
 import { ensureBase64Image } from '../../services/imageOptimizer';
@@ -15,12 +15,16 @@ import CustomRulesCard from './components/CustomRulesCard';
 import SartorialKnowledgeHub from './components/SartorialKnowledgeHub';
 import BrandSizingMatrixCard from './components/BrandSizingMatrixCard';
 
-export default function StyleDNAView() {
+export default function StyleDNAView({ onOpenSettings, onOpenHelp, onOpenAuth }) {
   const { 
     profile, 
     updateProfile, 
     wardrobe = [], 
+    currentUser,
+    logout,
     isAdmin,
+    isSimulatingUser,
+    toggleUserSimulation,
     sartorialRules = [],
     isMiningRules,
     mineNewRules,
@@ -36,6 +40,21 @@ export default function StyleDNAView() {
   const [colorSeasonResult, setColorSeasonResult] = useState(null);
 
   const photoInputRef = useRef(null);
+
+  const handleOpenSettings = () => {
+    if (onOpenSettings) onOpenSettings();
+    else window.dispatchEvent(new CustomEvent('open-settings'));
+  };
+
+  const handleOpenHelp = () => {
+    if (onOpenHelp) onOpenHelp();
+    else window.dispatchEvent(new CustomEvent('open-help'));
+  };
+
+  const handleOpenAuth = () => {
+    if (onOpenAuth) onOpenAuth();
+    else window.dispatchEvent(new CustomEvent('open-auth'));
+  };
 
   // Quick navigation smooth scroller
   const scrollToSection = (id) => {
@@ -89,7 +108,7 @@ export default function StyleDNAView() {
   };
 
   return (
-    <div className="space-y-7 animate-slide-up pb-10">
+    <div className="space-y-6 animate-slide-up pb-10">
       
       {/* View Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -151,6 +170,112 @@ export default function StyleDNAView() {
             <span>📏</span>
             <span>Mérettérkép</span>
           </button>
+        </div>
+      </div>
+
+      {/* Account, Settings & Help Control Hub */}
+      <div className="glass-card p-4 sm:p-5 border-[var(--border-gold)]/35 bg-gradient-to-r from-[#0c1527]/95 via-[#080d1a]/95 to-black/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+        {/* Left: User account identity / guest indicator */}
+        <div className="flex items-center gap-3 min-w-0">
+          {currentUser ? (
+            <div className="flex items-center gap-3 min-w-0">
+              {currentUser.photoURL ? (
+                <img 
+                  src={currentUser.photoURL} 
+                  alt="Avatar" 
+                  className="w-10 h-10 rounded-xl object-cover border border-[var(--border-gold)] shrink-0" 
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center font-bold shrink-0">
+                  <User className="w-5 h-5" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-white truncate">
+                    {currentUser.displayName || currentUser.email?.split('@')[0]}
+                  </span>
+                  {isAdmin ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm">
+                      👑 Admin
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 text-[9px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      Bejelentkezve
+                    </span>
+                  )}
+                  {isSimulatingUser && (
+                    <button
+                      type="button"
+                      onClick={toggleUserSimulation}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-bold uppercase rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 cursor-pointer"
+                      title="Visszalépés az Adminisztrátori Módba"
+                    >
+                      👁️ User Teszt (Visszalépés)
+                    </button>
+                  )}
+                </div>
+                <span className="text-[11px] text-[var(--text-muted)] truncate block mt-0.5">
+                  {currentUser.email}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[var(--text-muted)] shrink-0">
+                <User className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-white block">Vendég fiók</span>
+                <span className="text-[10px] text-[var(--text-muted)]">Jelentkezz be adatszinkronizációhoz</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Actions (Súgó, Beállítások, Login/Logout) */}
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <button
+            type="button"
+            onClick={handleOpenHelp}
+            className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            title="Használati Útmutató & Sartorial Kódex"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+            <span>Súgó</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenSettings}
+            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Rendszerbeállítások"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-300" />
+            <span>Beállítások</span>
+          </button>
+
+          {currentUser ? (
+            <button
+              type="button"
+              onClick={logout}
+              className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:text-rose-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Kijelentkezés a fiókból"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Kijelentkezés</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenAuth}
+              className="px-3 py-1.5 rounded-xl bg-[var(--accent-gold)] text-black text-xs font-bold flex items-center gap-1.5 hover:opacity-90 transition-all shadow cursor-pointer"
+              title="Bejelentkezés vagy Regisztráció"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Bejelentkezés</span>
+            </button>
+          )}
         </div>
       </div>
 
