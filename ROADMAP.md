@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.10` (Production Build)
+- **Aktuális Verzió:** `v1.7.11` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,12 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.10)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.11)
+- [x] **Öv Csere Gomb Pótlása & Lebegő Értékelő Sáv Mobilos Kilógásának Megszüntetése (v1.7.11):**
+  - **Öv, Zokni & Kiegészítő Csere Gombok (`StylistView.jsx`):** A deréköv, a zokni és az egyéb kiegészítő kártyák jobb alsó sarkába beépítésre került a lebegő `(🔄)` csere gomb (`RefreshCw`), pontosan illeszkedve a felső, alsó és cipő kártyák ergonomikus mintájához.
+  - **Dedikált Öv Kategória a Képválasztóban:** A `+ Öv` és az övcsere mostantól dedikáltan az öveket szűri le a képválasztóban (`type === 'belt'`), a kiválasztott darab pedig azonnal és tisztán cseréli az aktív övet.
+  - **Lebegő Értékelő Sáv Mobil-Biztos Rögzítése:** A korábbi `left-1/2 -translate-x-1/2 w-[calc(100%-2rem)]` helyett a konténer mobilon fix `left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-full sm:max-w-lg` elhelyezést kapott, így szigorúan 16px margót tart mindkét oldalon.
+  - **Flexbox Túlcsordulás-Védelem (`min-w-0 truncate`):** A belső flex konténer és a szöveges elemek `min-w-0 truncate` védelmet kaptak, mobilon a `Részletek` felirat helytakarékosra vált a felfelé mutató chevron ikon mellett, a `[ 💾 Mentés ]` gomb pedig mindig teljes terjedelmében a képernyőn belül marad.
 - [x] **Gemini Szintaktikai Javítás & „Buy or Skip” Modul Átnevezés (v1.7.10):**
   - **Vite Build AST Szintaktikai Hiba Felszámolása:** A `gemini.js` `auditManualOutfit` függvényében egy korábbi szerkesztésnél megkettőződött `const prompt = \`...` sablon-kezdés és záratlan string felszámolása, helyreállítva a hibátlan és azonnali éles Rollup/Vite build folyamatot.
   - **„Megvegyem?” ➔ „Buy or Skip” Átnevezés:** A modul teljes körű átnevezése az alsó navigációs sávon (`BottomNav.jsx`), az asztali fülsoron (`DesktopTabs.jsx`), a modul fejlécében és gombjain (`PurchaseAdvisorView.jsx`), valamint a Gardrób kártyák gyorsműveleteinél (`WardrobeView.jsx`).

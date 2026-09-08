@@ -208,6 +208,15 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         next.shoes = item;
       } else if (type === 'socks') {
         next.socks = item;
+      } else if (type === 'belt') {
+        const existingBeltIndex = next.accessories.findIndex(a => a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv') || (a.name || '').toLowerCase().includes('belt'));
+        if (existingBeltIndex >= 0) {
+          const updated = [...next.accessories];
+          updated[existingBeltIndex] = item;
+          next.accessories = updated;
+        } else {
+          next.accessories = [...next.accessories, item];
+        }
       } else if (type === 'accessory') {
         if (replaceIndex !== null && replaceIndex >= 0 && replaceIndex < next.accessories.length) {
           const updated = [...next.accessories];
@@ -454,6 +463,10 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
       if (type === 'socks') {
         return cat === 'accessories' && (sub === 'socks' || sub === 'tights' || name.includes('zokni') || name.includes('harisnya'));
+      }
+
+      if (type === 'belt') {
+        return cat === 'accessories' && (sub === 'belt' || name.includes('öv') || name.includes('belt'));
       }
 
       if (type === 'accessory') {
@@ -902,10 +915,18 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); handleRemoveAccessory(beltIdx); }}
-                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10"
+                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
                           title="Öv törlése"
                         >
                           <X className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleOpenPicker('belt', beltIdx); }}
+                          className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                          title="Öv cseréje"
+                        >
+                          <RefreshCw className="w-3 h-3" />
                         </button>
                       </div>
                     );
@@ -913,7 +934,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 ) : (
                   <button
                     type="button"
-                    onClick={() => handleOpenPicker('accessory')}
+                    onClick={() => handleOpenPicker('belt')}
                     className="w-20 sm:w-24 h-44 sm:h-52 border border-dashed border-slate-800 hover:border-slate-600 bg-[#090d15]/30 hover:bg-[#090d15] rounded-2xl flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 shrink-0 transition-colors group"
                     title="Öv hozzáadása"
                   >
@@ -988,10 +1009,18 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); handleRemoveSocks(); }}
-                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10"
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
                     title="Zokni törlése"
                   >
                     <X className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleOpenPicker('socks'); }}
+                    className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                    title="Zokni cseréje"
+                  >
+                    <RefreshCw className="w-3 h-3" />
                   </button>
                 </div>
               ) : (
@@ -1032,10 +1061,18 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); handleRemoveAccessory(originalIdx); }}
-                        className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10"
+                        className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
                         title="Törlés"
                       >
                         <X className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleOpenPicker('accessory', originalIdx); }}
+                        className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                        title="Kiegészítő cseréje"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5" />
                       </button>
                     </div>
                   );
@@ -1064,29 +1101,29 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       {/* FLOATING STATUS SCORE PILL (Bottom Fixed) */}
       {/* ========================================================================= */}
       {activeMode === 'manual-builder' && (
-        <div className="fixed bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-lg w-[calc(100%-2rem)]">
+        <div className="fixed bottom-24 sm:bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-full sm:max-w-lg z-40">
           
           {/* STATE A: Loading / Auditing */}
           {isAuditing && (
-            <div className="px-5 py-3.5 rounded-2xl bg-[#0d121c]/95 border border-slate-500 shadow-2xl backdrop-blur-md flex items-center justify-center gap-3 text-slate-100 text-xs font-semibold score-glow-titanium">
-              <Loader2 className="w-4 h-4 animate-spin text-slate-300" />
-              <span>Az AI elemzi a szettet és az összhangot...</span>
+            <div className="w-full px-5 py-3.5 rounded-2xl bg-[#0d121c]/95 border border-slate-500 shadow-2xl backdrop-blur-md flex items-center justify-center gap-3 text-slate-100 text-xs font-semibold score-glow-titanium">
+              <Loader2 className="w-4 h-4 animate-spin text-slate-300 shrink-0" />
+              <span className="truncate">Az AI elemzi a szettet és az összhangot...</span>
             </div>
           )}
 
           {/* STATE B: Already Audited (Click opens Details Drawer - Direct Save on right) */}
           {!isAuditing && manualAuditResult && scoreBadgeConfig && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full min-w-0">
               <div 
                 onClick={() => setIsDrawerOpen(true)}
-                className={`flex-1 px-4 sm:px-5 py-3 rounded-2xl border backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 cursor-pointer transition-all hover:brightness-110 shadow-2xl ${scoreBadgeConfig.glowClass}`}
+                className={`flex-1 min-w-0 px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-2xl border backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 cursor-pointer transition-all hover:brightness-110 shadow-2xl ${scoreBadgeConfig.glowClass}`}
               >
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                  <span className="text-lg sm:text-xl shrink-0">{scoreBadgeConfig.icon}</span>
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                  <span className="text-base sm:text-xl shrink-0">{scoreBadgeConfig.icon}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                       <span className="text-sm sm:text-base font-bold font-serif shrink-0">{manualAuditResult.score}%</span>
-                      <span className="text-xs font-medium opacity-90 truncate">{scoreBadgeConfig.title}</span>
+                      <span className="text-xs font-medium opacity-90 truncate min-w-0">{scoreBadgeConfig.title}</span>
                     </div>
                     <span className="text-[10px] opacity-75 block truncate">
                       {cleanSartorialText(manualAuditResult.verdict)}
@@ -1094,8 +1131,8 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-xs font-semibold shrink-0 whitespace-nowrap pl-2 border-l border-white/10">
-                  <span>Részletek</span>
+                <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold shrink-0 whitespace-nowrap pl-1.5 sm:pl-2 border-l border-white/10">
+                  <span className="hidden xs:inline sm:inline">Részletek</span>
                   <ChevronUp className="w-3.5 h-3.5" />
                 </div>
               </div>
@@ -1103,7 +1140,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               <button
                 type="button"
                 onClick={handleDirectSaveOutfit}
-                className={`px-3.5 sm:px-4 py-3 rounded-2xl border backdrop-blur-md flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-2xl shrink-0 ${
+                className={`px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl border backdrop-blur-md flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-2xl shrink-0 ${
                   isManualSaved
                     ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50'
                     : 'bg-slate-200 hover:bg-white text-slate-950 border-white'
@@ -1127,14 +1164,14 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
           {/* STATE C: Ready to Audit (Minimum is met) */}
           {!isAuditing && !manualAuditResult && validationState.isComplete && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full min-w-0">
               <button
                 type="button"
                 onClick={handleRunManualAudit}
-                className="flex-1 px-4 sm:px-5 py-3.5 rounded-2xl bg-slate-200 hover:bg-white text-slate-900 font-serif font-bold text-xs sm:text-sm shadow-2xl transition-all flex items-center justify-center gap-2 score-glow-titanium"
+                className="flex-1 min-w-0 px-3.5 sm:px-5 py-3.5 rounded-2xl bg-slate-200 hover:bg-white text-slate-900 font-serif font-bold text-xs sm:text-sm shadow-2xl transition-all flex items-center justify-center gap-2 score-glow-titanium truncate"
               >
-                <Sparkles className="w-4 h-4 text-slate-900" />
-                <span>🎯 Összhang Elemzése ({selectedItems.length})</span>
+                <Sparkles className="w-4 h-4 text-slate-900 shrink-0" />
+                <span className="truncate">🎯 Összhang Elemzése ({selectedItems.length})</span>
               </button>
 
               <button
@@ -1166,17 +1203,17 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
           {!isAuditing && !manualAuditResult && !validationState.isComplete && (
             <div 
               onClick={handleRunManualAudit}
-              className="px-5 py-3 rounded-2xl bg-[#090d15]/90 border border-slate-700/80 backdrop-blur-md shadow-xl flex items-center justify-between cursor-pointer text-slate-400 hover:text-slate-200 text-xs transition-colors"
+              className="w-full px-4 sm:px-5 py-3 rounded-2xl bg-[#090d15]/90 border border-slate-700/80 backdrop-blur-md shadow-xl flex items-center justify-between cursor-pointer text-slate-400 hover:text-slate-200 text-xs transition-colors gap-2"
             >
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-slate-600 animate-pulse" />
-                <span>
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span className="w-2 h-2 rounded-full bg-slate-600 animate-pulse shrink-0" />
+                <span className="truncate">
                   {validationState.missing === 'upper' && 'Válassz legalább egy felsőt a kezdéshez'}
                   {validationState.missing === 'lower' && 'Válassz egy nadrágot vagy szoknyát'}
                   {validationState.missing === 'shoes' && 'Válassz egy cipőt a befejezéshez'}
                 </span>
               </div>
-              <span className="text-[11px] font-mono text-slate-500">
+              <span className="text-[11px] font-mono text-slate-500 shrink-0">
                 {validationState.readyCount}/{validationState.totalNeeded} kész
               </span>
             </div>
@@ -1205,6 +1242,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                   {pickerConfig.type === 'dress' && 'Egyberuha Kiválasztása'}
                   {pickerConfig.type === 'lower' && 'Alsótest (Nadrág / Szoknya) Kiválasztása'}
                   {pickerConfig.type === 'shoes' && 'Lábbeli Kiválasztása'}
+                  {pickerConfig.type === 'belt' && 'Öv Kiválasztása'}
                   {pickerConfig.type === 'socks' && 'Zokni vagy Harisnya Kiválasztása'}
                   {pickerConfig.type === 'accessory' && 'Kiegészítő Kiválasztása'}
                 </h3>
