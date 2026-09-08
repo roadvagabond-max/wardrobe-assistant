@@ -31,6 +31,29 @@ function cleanSartorialText(text) {
     .replace(/\bSartorial\b/gi, 'Stílus');
 }
 
+export function isCoatGarment(item) {
+  if (!item) return false;
+  const name = (item.name || '').toLowerCase();
+  const sub = (item.subCategory || '').toLowerCase();
+  return (
+    name.includes('kabát') ||
+    name.includes('dzseki') ||
+    name.includes('trench') ||
+    name.includes('overcoat') ||
+    name.includes('parka') ||
+    name.includes('anorak') ||
+    name.includes('télikabát') ||
+    name.includes('szövetkabát') ||
+    name.includes('bőrdzseki') ||
+    name.includes('mellény') ||
+    sub === 'coat' ||
+    sub === 'overcoat' ||
+    sub === 'jacket' ||
+    sub === 'parka' ||
+    sub === 'trench'
+  );
+}
+
 export default function StylistView({ weather, setWeather, initialAnchorItem = null }) {
   const { wardrobe, profile, saveOutfit, savedOutfits = [], deleteOutfit } = useAuth();
 
@@ -41,7 +64,8 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
   // Ensemble State: Structured anatomical layers
   const [ensemble, setEnsemble] = useState({
-    upperLayers: [], // Array of garments (max 4)
+    coat: null,        // Single outer coat / jacket if chosen
+    upperLayers: [], // Array of garments (max 3)
     lower: null,     // Single garment (trousers / skirt)
     dress: null,     // Single garment (if chosen, integrates upper & lower)
     shoes: null,     // Footwear
@@ -92,7 +116,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     if (initialAnchorItem) {
       const cat = initialAnchorItem.category;
       if (cat === 'dresses') {
-        setEnsemble(prev => ({ ...prev, dress: initialAnchorItem, lower: null, upperLayers: [] }));
+        setEnsemble(prev => ({ ...prev, dress: initialAnchorItem, lower: null, upperLayers: [], coat: null }));
       } else if (cat === 'bottoms' || cat === 'skirts') {
         setEnsemble(prev => ({ ...prev, lower: initialAnchorItem, dress: null }));
       } else if (cat === 'shoes') {
@@ -104,6 +128,8 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
             ? prev.accessories
             : [...prev.accessories, initialAnchorItem].slice(0, 4)
         }));
+      } else if (isCoatGarment(initialAnchorItem)) {
+        setEnsemble(prev => ({ ...prev, coat: initialAnchorItem }));
       } else {
         // Upper layers (tops, knitwear, outerwear)
         setEnsemble(prev => ({
@@ -111,7 +137,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
           dress: null,
           upperLayers: prev.upperLayers.some(u => u.id === initialAnchorItem.id)
             ? prev.upperLayers
-            : [...prev.upperLayers, initialAnchorItem].slice(0, 4)
+            : [...prev.upperLayers, initialAnchorItem].slice(0, 3)
         }));
       }
       setActiveMode('manual-builder');
@@ -121,6 +147,9 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
   // Flatten all active selected items in ensemble
   const selectedItems = useMemo(() => {
     const list = [];
+    if (ensemble.coat) {
+      list.push(ensemble.coat);
+    }
     if (ensemble.dress) {
       list.push(ensemble.dress);
     }
@@ -146,7 +175,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       };
     }
 
-    const hasUpper = ensemble.upperLayers.length > 0;
+    const hasUpper = ensemble.upperLayers.length > 0 || Boolean(ensemble.coat);
     const hasLower = Boolean(ensemble.lower);
     let count = 0;
     if (hasUpper) count++;
@@ -190,14 +219,19 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       if (type === 'dress') {
         next.dress = item;
         next.lower = null; // Clear separate bottoms
+      } else if (type === 'coat') {
+        next.coat = item;
       } else if (type === 'upper') {
         next.dress = null; // Clear dress if adding standard upper
-        if (replaceIndex !== null && replaceIndex >= 0 && replaceIndex < next.upperLayers.length) {
+        if (isCoatGarment(item)) {
+          // Automatic routing: coats go into dedicated coat slot!
+          next.coat = item;
+        } else if (replaceIndex !== null && replaceIndex >= 0 && replaceIndex < next.upperLayers.length) {
           const updated = [...next.upperLayers];
           updated[replaceIndex] = item;
           next.upperLayers = updated;
         } else {
-          if (next.upperLayers.length < 4 && !next.upperLayers.some(u => u.id === item.id)) {
+          if (next.upperLayers.length < 3 && !next.upperLayers.some(u => u.id === item.id)) {
             next.upperLayers = [...next.upperLayers, item];
           }
         }
@@ -247,6 +281,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
     setIsManualSaved(false);
   };
 
+  const handleRemoveCoat = () => {
+    setEnsemble(prev => ({ ...prev, coat: null }));
+    setManualAuditResult(null);
+    setIsManualSaved(false);
+  };
+
   const handleRemoveDress = () => {
     setEnsemble(prev => ({ ...prev, dress: null }));
     setManualAuditResult(null);
@@ -282,6 +322,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
   const handleResetEnsemble = () => {
     setEnsemble({
+      coat: null,
       upperLayers: [],
       lower: null,
       dress: null,
@@ -379,9 +420,18 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
   const handleLoadSavedOutfit = (savedOutfit) => {
     if (!savedOutfit) return;
     if (savedOutfit.ensembleSnapshot) {
-      setEnsemble(savedOutfit.ensembleSnapshot);
+      setEnsemble({
+        coat: savedOutfit.ensembleSnapshot.coat || null,
+        upperLayers: savedOutfit.ensembleSnapshot.upperLayers || [],
+        dress: savedOutfit.ensembleSnapshot.dress || null,
+        lower: savedOutfit.ensembleSnapshot.lower || null,
+        shoes: savedOutfit.ensembleSnapshot.shoes || null,
+        socks: savedOutfit.ensembleSnapshot.socks || null,
+        accessories: savedOutfit.ensembleSnapshot.accessories || []
+      });
     } else if (savedOutfit.items && Array.isArray(savedOutfit.items)) {
       const newEnsemble = {
+        coat: null,
         upperLayers: [],
         dress: null,
         lower: null,
@@ -393,6 +443,8 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         const cat = item.category?.toLowerCase() || '';
         if (cat === 'dresses') {
           newEnsemble.dress = item;
+        } else if (isCoatGarment(item)) {
+          newEnsemble.coat = item;
         } else if (cat === 'tops' || cat === 'knitwear' || cat === 'outerwear') {
           newEnsemble.upperLayers.push(item);
         } else if (cat === 'bottoms' || cat === 'skirts') {
@@ -400,7 +452,11 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         } else if (cat === 'shoes') {
           newEnsemble.shoes = item;
         } else if (cat === 'accessories') {
-          newEnsemble.accessories.push(item);
+          if (item.subCategory === 'socks' || (item.name || '').toLowerCase().includes('zokni')) {
+            newEnsemble.socks = item;
+          } else {
+            newEnsemble.accessories.push(item);
+          }
         } else {
           newEnsemble.upperLayers.push(item);
         }
@@ -442,6 +498,10 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
 
       if (type === 'dress') {
         return cat === 'dresses' || sub === 'dress' || name.includes('ruha');
+      }
+
+      if (type === 'coat') {
+        return cat === 'outerwear' || isCoatGarment(item);
       }
 
       if (type === 'upper') {
@@ -491,6 +551,19 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       };
     }
   }, [pickerConfig, isDrawerOpen]);
+
+  // Gather all accessory pieces (belt, socks, and other accessories)
+  const allAccessories = useMemo(() => {
+    const list = [];
+    if (ensemble.socks) {
+      list.push({ item: ensemble.socks, type: 'socks', key: 'socks' });
+    }
+    ensemble.accessories.forEach((acc, idx) => {
+      const isBelt = acc.subCategory === 'belt' || (acc.name || '').toLowerCase().includes('öv') || (acc.name || '').toLowerCase().includes('belt');
+      list.push({ item: acc, type: isBelt ? 'belt' : 'accessory', key: acc.id || `acc-${idx}`, originalIndex: idx });
+    });
+    return list;
+  }, [ensemble.socks, ensemble.accessories]);
 
   // Score bar styling classes & labels
   const scoreBadgeConfig = useMemo(() => {
@@ -740,157 +813,266 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
           </div>
 
           {/* ========================================================================= */}
-          {/* THE SEAMLESS VISUAL LOOKBOOK FLATLAY (TEXTLESS, TIGHTLY SPACED) */}
+          {/* THE SEAMLESS VISUAL LOOKBOOK FLATLAY (CENTERED & 2-COLUMN STRUCTURE) */}
           {/* ========================================================================= */}
-          <div className="p-3 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-2.5 shadow-2xl">
+          <div className="p-3 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-3 shadow-2xl">
 
-            {/* 1. FELSŐTEST ZÓNA (Upper Body: Single large initial card OR horizontal flow + compact [+]) */}
-            {ensemble.dress ? (
-              /* Dress active: One large lookbook card */
-              <div className="relative w-full aspect-[4/3] max-h-72 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group">
-                <img 
-                  src={ensemble.dress.imageUrl || createGarmentSvgPlaceholder('dresses', ensemble.dress.name, ensemble.dress.color)} 
-                  alt={ensemble.dress.name}
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = createGarmentSvgPlaceholder('dresses', ensemble.dress.name, ensemble.dress.color);
-                  }}
-                  onClick={() => openLightbox([ensemble.dress], 0, ensemble.dress.name)}
-                  className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
-                />
-                {/* Floating Corner Actions directly on the photo */}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleRemoveDress(); }}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/75 hover:bg-rose-600 text-slate-200 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                  title="Ruha levétele"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleOpenPicker('dress'); }}
-                  className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-black/75 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                  title="Ruha cseréje"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : ensemble.upperLayers.length === 0 ? (
-              /* Empty initial state: Exactly ONE large button */
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleOpenPicker('upper')}
-                  className="flex-1 py-12 border border-dashed border-slate-700 hover:border-slate-400 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/50 group"
-                >
-                  <div className="w-10 h-10 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300">
-                    <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  </div>
-                  <span className="text-xs font-semibold">+ Válassz felsőt (Ing, Póló, Pulóver, Zakó)</span>
-                </button>
-
-                {isFemale && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenPicker('dress')}
-                    className="w-24 py-12 border border-dashed border-slate-800 hover:border-slate-600 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/30 shrink-0"
-                    title="Egyberuha választása"
-                  >
-                    <span className="text-xl">👗</span>
-                    <span className="text-[11px] font-medium">Ruha</span>
-                  </button>
-                )}
-              </div>
-            ) : (
-              /* Loaded Upper Layers: Horizontal flow + ONE single compact [+] button */
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
-                {ensemble.upperLayers.map((layer, idx) => (
-                  <div 
-                    key={layer.id || idx}
-                    className="relative w-36 h-44 sm:w-44 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group"
-                  >
+            {/* 0. KABÁT ZÓNA (Coat: Rendered only if coat is added via upper picker) */}
+            {ensemble.coat && (
+              <div className="flex items-center gap-3">
+                {/* Left area: Centered coat card */}
+                <div className="flex-1 min-w-0 flex justify-center items-center gap-2.5">
+                  <div className="relative w-32 h-44 sm:w-40 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group shrink-0 shadow-lg">
                     <img 
-                      src={layer.imageUrl || createGarmentSvgPlaceholder(layer.category, layer.name, layer.color)} 
-                      alt={layer.name}
+                      src={ensemble.coat.imageUrl || createGarmentSvgPlaceholder('outerwear', ensemble.coat.name, ensemble.coat.color)} 
+                      alt={ensemble.coat.name}
                       referrerPolicy="no-referrer"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
-                        e.currentTarget.src = createGarmentSvgPlaceholder(layer.category, layer.name, layer.color);
+                        e.currentTarget.src = createGarmentSvgPlaceholder('outerwear', ensemble.coat.name, ensemble.coat.color);
                       }}
-                      onClick={() => openLightbox([layer], 0, layer.name)}
+                      onClick={() => openLightbox([ensemble.coat], 0, ensemble.coat.name)}
                       className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
                     />
-
-                    {/* Floating Corner Actions directly on the photo */}
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/75 backdrop-blur-sm text-[10px] font-medium text-slate-300 pointer-events-none">
+                      Kabát
+                    </span>
+                    {/* Floating Corner Actions */}
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleRemoveUpperLayer(idx); }}
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                      title="Réteg törlése"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveCoat(); }}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                      title="Kabát levétele"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleOpenPicker('upper', idx); }}
-                      className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                      title="Réteg cseréje"
+                      onClick={(e) => { e.stopPropagation(); handleOpenPicker('coat'); }}
+                      className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                      title="Kabát cseréje"
                     >
                       <RefreshCw className="w-3 h-3" />
                     </button>
                   </div>
-                ))}
+                </div>
 
-                {/* Exactly 1 small compact [+] button for additional layers (up to 4) */}
-                {ensemble.upperLayers.length < 4 && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenPicker('upper')}
-                    className="w-16 h-44 sm:h-52 rounded-2xl border border-dashed border-slate-700 hover:border-slate-400 bg-[#090d15]/40 hover:bg-[#090d15] flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 shrink-0 transition-all group"
-                    title="További réteg hozzáadása"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 mb-1">
-                      <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    </div>
-                    <span className="text-[10px] font-mono opacity-80">+ Réteg</span>
-                  </button>
-                )}
+                {/* Right rail spacer to preserve straight column */}
+                <div className="w-14 sm:w-16 shrink-0" />
               </div>
             )}
 
-            {/* 2. ALSÓTEST ZÓNA (Lower Body: Trousers/Skirt + Belt tightly beside it) */}
-            {!ensemble.dress && (
-              <div className="flex items-center gap-2">
-                {/* Pants / Skirt Card */}
-                {ensemble.lower ? (
-                  <div className="relative flex-1 h-44 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group">
+            {/* 1. FELSŐTEST ZÓNA (Upper Body: Tops, Knitwear, Blazer OR Dress) */}
+            <div className="flex items-center gap-3">
+              {/* Left area: Centered Upper layers cards */}
+              <div className="flex-1 min-w-0 flex justify-center items-center gap-2.5 overflow-x-auto scrollbar-none py-1">
+                {ensemble.dress ? (
+                  /* Dress active: One lookbook card */
+                  <div className="relative w-44 h-56 sm:w-52 sm:h-64 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group shrink-0 shadow-lg">
                     <img 
-                      src={ensemble.lower.imageUrl || createGarmentSvgPlaceholder(ensemble.lower.category, ensemble.lower.name, ensemble.lower.color)} 
-                      alt={ensemble.lower.name}
+                      src={ensemble.dress.imageUrl || createGarmentSvgPlaceholder('dresses', ensemble.dress.name, ensemble.dress.color)} 
+                      alt={ensemble.dress.name}
                       referrerPolicy="no-referrer"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
-                        e.currentTarget.src = createGarmentSvgPlaceholder(ensemble.lower.category, ensemble.lower.name, ensemble.lower.color);
+                        e.currentTarget.src = createGarmentSvgPlaceholder('dresses', ensemble.dress.name, ensemble.dress.color);
                       }}
-                      onClick={() => openLightbox([ensemble.lower], 0, ensemble.lower.name)}
+                      onClick={() => openLightbox([ensemble.dress], 0, ensemble.dress.name)}
                       className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
                     />
-                    {/* Floating Corner Actions directly on the photo */}
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleRemoveLower(); }}
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                      title="Nadrág törlése"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveDress(); }}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/75 hover:bg-rose-600 text-slate-200 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                      title="Ruha levétele"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleOpenPicker('dress'); }}
+                      className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-black/75 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                      title="Ruha cseréje"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : ensemble.upperLayers.length === 0 ? (
+                  /* Empty state: Centered initial placeholder button */
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenPicker('upper')}
+                      className="w-32 h-44 sm:w-40 sm:h-52 rounded-2xl border border-dashed border-slate-700 hover:border-slate-400 bg-[#090d15]/50 flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-all group cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300">
+                        <Plus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                      </div>
+                      <span className="text-xs font-semibold text-center px-2">+ Válassz felsőt</span>
+                    </button>
+
+                    {isFemale && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPicker('dress')}
+                        className="w-24 h-44 sm:h-52 border border-dashed border-slate-800 hover:border-slate-600 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/30 shrink-0 cursor-pointer"
+                        title="Egyberuha választása"
+                      >
+                        <span className="text-xl">👗</span>
+                        <span className="text-[11px] font-medium">Ruha</span>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  /* Loaded Upper Layers: Identical card dimensions, centered */
+                  ensemble.upperLayers.map((layer, idx) => (
+                    <div 
+                      key={layer.id || idx}
+                      className="relative w-32 h-44 sm:w-40 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group shadow-md"
+                    >
+                      <img 
+                        src={layer.imageUrl || createGarmentSvgPlaceholder(layer.category, layer.name, layer.color)} 
+                        alt={layer.name}
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = createGarmentSvgPlaceholder(layer.category, layer.name, layer.color);
+                        }}
+                        onClick={() => openLightbox([layer], 0, layer.name)}
+                        className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                      />
+                      {/* Floating Corner Actions */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveUpperLayer(idx); }}
+                        className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                        title="Réteg törlése"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleOpenPicker('upper', idx); }}
+                        className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                        title="Réteg cseréje"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Right rail: Borderless (+) Réteg button */}
+              <div className="w-14 sm:w-16 shrink-0 flex flex-col items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => handleOpenPicker('upper')}
+                  className="w-10 h-10 rounded-full bg-slate-800/90 hover:bg-slate-700 text-sky-400 hover:text-sky-300 border border-slate-700 shadow-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                  title="További réteg vagy kabát hozzáadása"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <span className="text-[10px] text-slate-400 mt-1 font-medium text-center leading-tight">+ Réteg</span>
+              </div>
+            </div>
+
+            {/* 2. ALSÓTEST ZÓNA (Lower Body: Trousers / Skirt) */}
+            {!ensemble.dress && (
+              <div className="flex items-center gap-3">
+                {/* Left area: Centered Trousers Card */}
+                <div className="flex-1 min-w-0 flex justify-center items-center gap-2.5">
+                  {ensemble.lower ? (
+                    <div className="relative w-32 h-44 sm:w-40 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group shrink-0 shadow-md">
+                      <img 
+                        src={ensemble.lower.imageUrl || createGarmentSvgPlaceholder(ensemble.lower.category, ensemble.lower.name, ensemble.lower.color)} 
+                        alt={ensemble.lower.name}
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = createGarmentSvgPlaceholder(ensemble.lower.category, ensemble.lower.name, ensemble.lower.color);
+                        }}
+                        onClick={() => openLightbox([ensemble.lower], 0, ensemble.lower.name)}
+                        className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                      />
+                      {/* Floating Corner Actions */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveLower(); }}
+                        className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                        title="Nadrág törlése"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleOpenPicker('lower'); }}
+                        className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                        title="Nadrág cseréje"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenPicker('lower')}
+                      className="w-32 h-44 sm:w-40 sm:h-52 rounded-2xl border border-dashed border-slate-700 hover:border-slate-400 bg-[#090d15]/50 flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-all group cursor-pointer"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300">
+                        <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      </div>
+                      <span className="text-xs font-semibold text-center px-2">+ Nadrág</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Right rail: Borderless (+) Öv button */}
+                <div className="w-14 sm:w-16 shrink-0 flex flex-col items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPicker('belt')}
+                    className="w-10 h-10 rounded-full bg-slate-800/90 hover:bg-slate-700 text-sky-400 hover:text-sky-300 border border-slate-700 shadow-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                    title="Öv hozzáadása vagy cseréje"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  <span className="text-[10px] text-slate-400 mt-1 font-medium text-center leading-tight">+ Öv</span>
+                </div>
+              </div>
+            )}
+
+            {/* 3. LÁBBELI ZÓNA (Footwear: Shoes / Boots) */}
+            <div className="flex items-center gap-3">
+              {/* Left area: Centered Shoes Card */}
+              <div className="flex-1 min-w-0 flex justify-center items-center gap-2.5">
+                {ensemble.shoes ? (
+                  <div className="relative w-32 h-40 sm:w-40 sm:h-48 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group shrink-0 shadow-md">
+                    <img 
+                      src={ensemble.shoes.imageUrl || createGarmentSvgPlaceholder('shoes', ensemble.shoes.name, ensemble.shoes.color)} 
+                      alt={ensemble.shoes.name}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = createGarmentSvgPlaceholder('shoes', ensemble.shoes.name, ensemble.shoes.color);
+                      }}
+                      onClick={() => openLightbox([ensemble.shoes], 0, ensemble.shoes.name)}
+                      className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                    />
+                    {/* Floating Corner Actions */}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveShoes(); }}
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                      title="Cipő törlése"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleOpenPicker('lower'); }}
-                      className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                      title="Nadrág cseréje"
+                      onClick={(e) => { e.stopPropagation(); handleOpenPicker('shoes'); }}
+                      className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                      title="Cipő cseréje"
                     >
                       <RefreshCw className="w-3 h-3" />
                     </button>
@@ -898,193 +1080,79 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 ) : (
                   <button
                     type="button"
-                    onClick={() => handleOpenPicker('lower')}
-                    className="flex-1 h-44 sm:h-52 border border-dashed border-slate-700 hover:border-slate-400 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/50 group"
+                    onClick={() => handleOpenPicker('shoes')}
+                    className="w-32 h-40 sm:w-40 sm:h-48 border border-dashed border-slate-700 hover:border-slate-400 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/50 group cursor-pointer"
                   >
                     <div className="w-9 h-9 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300">
                       <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     </div>
-                    <span className="text-xs font-semibold">+ Nadrág vagy Szoknya</span>
-                  </button>
-                )}
-
-                {/* Waist / Belt Slot */}
-                {ensemble.accessories.some(a => (a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv'))) ? (
-                  (() => {
-                    const belt = ensemble.accessories.find(a => a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv'));
-                    const beltIdx = ensemble.accessories.indexOf(belt);
-                    return (
-                      <div className="relative w-24 sm:w-32 h-44 sm:h-52 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group">
-                        <img 
-                          src={belt.imageUrl || createGarmentSvgPlaceholder('accessories', belt.name, belt.color)} 
-                          alt={belt.name}
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = createGarmentSvgPlaceholder('accessories', belt.name, belt.color);
-                          }}
-                          onClick={() => openLightbox([belt], 0, belt.name)}
-                          className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleRemoveAccessory(beltIdx); }}
-                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                          title="Öv törlése"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleOpenPicker('belt', beltIdx); }}
-                          className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                          title="Öv cseréje"
-                        >
-                          <RefreshCw className="w-3 h-3" />
-                        </button>
-                      </div>
-                    );
-                  })()
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenPicker('belt')}
-                    className="w-20 sm:w-24 h-44 sm:h-52 border border-dashed border-slate-800 hover:border-slate-600 bg-[#090d15]/30 hover:bg-[#090d15] rounded-2xl flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 shrink-0 transition-colors group"
-                    title="Öv hozzáadása"
-                  >
-                    <Plus className="w-4 h-4 mb-1 group-hover:scale-110 transition-transform" />
-                    <span className="text-[10px] font-medium">+ Öv</span>
+                    <span className="text-xs font-semibold text-center px-2">+ Cipő / Csizma</span>
                   </button>
                 )}
               </div>
-            )}
 
-            {/* 3. LÁBBELI & ZOKNI ZÓNA (Footwear & Socks tightly beside it) */}
-            <div className="flex items-center gap-2">
-              {/* Shoes Card */}
-              {ensemble.shoes ? (
-                <div className="relative flex-1 h-36 sm:h-44 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 group">
-                  <img 
-                    src={ensemble.shoes.imageUrl || createGarmentSvgPlaceholder('shoes', ensemble.shoes.name, ensemble.shoes.color)} 
-                    alt={ensemble.shoes.name}
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = createGarmentSvgPlaceholder('shoes', ensemble.shoes.name, ensemble.shoes.color);
-                    }}
-                    onClick={() => openLightbox([ensemble.shoes], 0, ensemble.shoes.name)}
-                    className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
-                  />
-                  {/* Floating Corner Actions directly on the photo */}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handleRemoveShoes(); }}
-                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                    title="Cipő törlése"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handleOpenPicker('shoes'); }}
-                    className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                    title="Cipő cseréje"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleOpenPicker('shoes')}
-                  className="flex-1 h-36 sm:h-44 border border-dashed border-slate-700 hover:border-slate-400 rounded-2xl flex flex-col items-center justify-center gap-2 text-slate-400 hover:text-slate-200 transition-all bg-[#090d15]/50 group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-slate-800/80 group-hover:bg-slate-700 flex items-center justify-center text-slate-300">
-                    <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  </div>
-                  <span className="text-xs font-semibold">+ Cipő vagy Csizma</span>
-                </button>
-              )}
-
-              {/* Socks / Tights Slot */}
-              {ensemble.socks ? (
-                <div className="relative w-24 sm:w-32 h-36 sm:h-44 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group">
-                  <img 
-                    src={ensemble.socks.imageUrl || createGarmentSvgPlaceholder('accessories', ensemble.socks.name, ensemble.socks.color)} 
-                    alt={ensemble.socks.name}
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = createGarmentSvgPlaceholder('accessories', ensemble.socks.name, ensemble.socks.color);
-                    }}
-                    onClick={() => openLightbox([ensemble.socks], 0, ensemble.socks.name)}
-                    className="w-full h-full object-contain p-2 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
-                  />
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handleRemoveSocks(); }}
-                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                    title="Zokni törlése"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); handleOpenPicker('socks'); }}
-                    className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                    title="Zokni cseréje"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                  </button>
-                </div>
-              ) : (
+              {/* Right rail: Borderless (+) Zokni button */}
+              <div className="w-14 sm:w-16 shrink-0 flex flex-col items-center justify-center">
                 <button
                   type="button"
                   onClick={() => handleOpenPicker('socks')}
-                  className="w-20 sm:w-24 h-36 sm:h-44 border border-dashed border-slate-800 hover:border-slate-600 bg-[#090d15]/30 hover:bg-[#090d15] rounded-2xl flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 shrink-0 transition-colors group"
-                  title="Zokni vagy harisnya hozzáadása"
+                  className="w-10 h-10 rounded-full bg-slate-800/90 hover:bg-slate-700 text-sky-400 hover:text-sky-300 border border-slate-700 shadow-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                  title="Zokni vagy harisnya hozzáadása vagy cseréje"
                 >
-                  <Plus className="w-4 h-4 mb-1 group-hover:scale-110 transition-transform" />
-                  <span className="text-[10px] font-medium">+ Zokni</span>
+                  <Plus className="w-4 h-4" />
                 </button>
-              )}
+                <span className="text-[10px] text-slate-400 mt-1 font-medium text-center leading-tight">+ Zokni</span>
+              </div>
             </div>
 
-            {/* 4. KIEGÉSZÍTŐK ZÓNA (Accessories: Watch, Bag, etc.) */}
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1">
-              {ensemble.accessories
-                .filter(a => !(a.subCategory === 'belt' || (a.name || '').toLowerCase().includes('öv')))
-                .map((acc, idx) => {
-                  const originalIdx = ensemble.accessories.indexOf(acc);
+            {/* 4. KIEGÉSZÍTŐK ZÓNA (Accessories: Öv, Zokni, Óra, Ékszer, Táska - Smaller Cards) */}
+            <div className="flex items-center gap-3 pt-1">
+              {/* Left area: Centered compact accessory cards */}
+              <div className="flex-1 min-w-0 flex justify-center items-center gap-2 flex-wrap">
+                {allAccessories.map((accEntry) => {
+                  const { item, type, key, originalIndex } = accEntry;
                   return (
                     <div 
-                      key={acc.id || idx}
-                      className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 shrink-0 group"
+                      key={key}
+                      className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-[#070a12] border border-slate-700 group shrink-0 shadow"
                     >
                       <img 
-                        src={acc.imageUrl || createGarmentSvgPlaceholder('accessories', acc.name, acc.color)} 
-                        alt={acc.name}
+                        src={item.imageUrl || createGarmentSvgPlaceholder('accessories', item.name, item.color)} 
+                        alt={item.name} 
                         referrerPolicy="no-referrer"
                         onError={(e) => {
                           e.currentTarget.onerror = null;
-                          e.currentTarget.src = createGarmentSvgPlaceholder('accessories', acc.name, acc.color);
+                          e.currentTarget.src = createGarmentSvgPlaceholder('accessories', item.name, item.color);
                         }}
-                        onClick={() => openLightbox([acc], 0, acc.name)}
-                        className="w-full h-full object-contain p-1.5 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+                        onClick={() => openLightbox([item], 0, item.name)}
+                        className="w-full h-full object-contain p-1 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
                       />
+                      <span className="absolute bottom-0.5 left-1 px-1 py-0.2 rounded bg-black/75 text-[8px] sm:text-[9px] text-slate-300 pointer-events-none truncate max-w-[85%]">
+                        {type === 'socks' ? 'Zokni' : type === 'belt' ? 'Öv' : 'Kieg'}
+                      </span>
+                      {/* Floating Actions */}
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); handleRemoveAccessory(originalIdx); }}
-                        className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (type === 'socks') handleRemoveSocks();
+                          else handleRemoveAccessory(originalIndex); 
+                        }}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
                         title="Törlés"
                       >
                         <X className="w-3 h-3" />
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); handleOpenPicker('accessory', originalIdx); }}
-                        className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow"
-                        title="Kiegészítő cseréje"
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (type === 'socks') handleOpenPicker('socks');
+                          else if (type === 'belt') handleOpenPicker('belt', originalIndex);
+                          else handleOpenPicker('accessory', originalIndex); 
+                        }}
+                        className="absolute top-1 left-1 w-5 h-5 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+                        title="Csere"
                       >
                         <RefreshCw className="w-2.5 h-2.5" />
                       </button>
@@ -1092,18 +1160,27 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                   );
                 })}
 
-              {/* 1 single compact [+] button for accessories */}
-              {ensemble.accessories.length < 4 && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenPicker('accessory')}
-                  className="w-16 h-20 sm:h-24 rounded-2xl border border-dashed border-slate-800 hover:border-slate-600 bg-[#090d15]/30 hover:bg-[#090d15] flex flex-col items-center justify-center text-slate-500 hover:text-slate-300 shrink-0 transition-colors group"
-                  title="Kiegészítő hozzáadása (óra, táska, sál)"
-                >
-                  <Plus className="w-4 h-4 mb-1 group-hover:scale-110 transition-transform" />
-                  <span className="text-[10px] font-mono opacity-80">+ Ékszer</span>
-                </button>
-              )}
+                {allAccessories.length === 0 && (
+                  <span className="text-[11px] text-slate-500 italic py-1">
+                    Kiegészítők (öv, zokni, ékszer) a jobb oldali gombokkal adhatók hozzá
+                  </span>
+                )}
+              </div>
+
+              {/* Right rail: Borderless (+) Kiegészítő button */}
+              <div className="w-14 sm:w-16 shrink-0 flex flex-col items-center justify-center">
+                {ensemble.accessories.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPicker('accessory')}
+                    className="w-10 h-10 rounded-full bg-slate-800/90 hover:bg-slate-700 text-sky-400 hover:text-sky-300 border border-slate-700 shadow-md flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                    title="Egyéb kiegészítő hozzáadása (óra, táska, sál, ékszer)"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                )}
+                <span className="text-[10px] text-slate-400 mt-1 font-medium text-center leading-tight">+ Kieg</span>
+              </div>
             </div>
 
             {/* ========================================================================= */}
@@ -1251,6 +1328,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               <div>
                 <h3 className="text-base font-serif font-bold text-slate-100">
                   {pickerConfig.type === 'upper' && 'Felsőtest Réteg Kiválasztása'}
+                  {pickerConfig.type === 'coat' && 'Kabát Kiválasztása'}
                   {pickerConfig.type === 'dress' && 'Egyberuha Kiválasztása'}
                   {pickerConfig.type === 'lower' && 'Alsótest (Nadrág / Szoknya) Kiválasztása'}
                   {pickerConfig.type === 'shoes' && 'Lábbeli Kiválasztása'}

@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.16` (Production Build)
+- **Aktuális Verzió:** `v1.7.17` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,13 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.16)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.17)
+- [x] **Középre Rendezett Lookbook Flatlay Vászon, Dedikált Jobb Oldali Plusz Gomb Sáv & Automatikus Kabát Sor (v1.7.17):**
+  - **Középre Rendezés & Szimmetria (`StylistView.jsx`):** A bal oldali ruhatér minden sorban azonos szélességű (`flex-1`) és vízszintesen középre zárt (`justify-center`). Ennek köszönhetően 2 felső réteg és 1 nadrág esetén a nadrág függőleges felezővonala pixelre pontosan a két felső közötti elválasztó vonalra esik; ugyanez a szimmetria érvényes a cipőre és a kabátra is.
+  - **Kategóriák Méretezése:** A fő ruhadarabok (kabát, felsők, nadrág, cipő) egységes, nagyméretű kártyákon jelennek meg (`w-32 h-44 sm:w-40 sm:h-52`), míg a kiegészítők (öv, zokni, ékszerek, óra, táska) kifejezetten kompakt méretet kaptak (`w-16 h-16 sm:w-20 sm:h-20`).
+  - **Jobb Oldali Dedikált Sáv & Keret Nélküli Gombok:** A vászon jobb szélén egy keskeny sávban (`w-14 sm:w-16`) egyetlen szabályos, egyenes oszlopot alkotnak a keret nélküli (nincs szaggatott téglalap), jól látható kör alakú `(+)` gombok (`+ Réteg`, `+ Öv`, `+ Zokni`, `+ Kieg`).
+  - **Automatikus Kabát Sor a Felső Gombból:** A felső melletti `(+) Réteg` gombbal választott kabát / dzseki / szövetkabát automatikusan felismerésre kerül (`isCoatGarment`), és a felsők felett megjelenő külön kabát sorba kerül, így nem zsúfolja össze a felsőket.
+  - **A „felöltő” kifejezés 100%-os mellőzése.**
 - [x] **Értékelő és Mentés Sáv Vászon Aljára Helyezése & Lookbook Gomb Eltávolítása (v1.7.16):**
   - **In-Flow Műveleti Sáv (`StylistView.jsx`):** A korábbi `fixed bottom-24...` lebegő pozíció megszüntetve; az állapotjelző, elemzés indító és mentő gombok közvetlenül a vászon természetes aljára (a kiegészítők alá) kerültek. Ezzel megszűnt a mobilos kettős lebegő sáv zsúfoltsága és a ruhák (cipő, öv, zokni) kitakarása görgetés közben.
   - **Lookbook Gomb Törlése a Részletek Fiókból:** A felesleges `[ Lookbook Nézet ]` gomb eltávolítva a Részletek Fiók láblécéből; a felületen kizárólag a letisztult, fókuszált `[ Szett Mentése a Kedvencekhez ]` gomb maradt.
