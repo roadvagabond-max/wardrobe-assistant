@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.14` (Production Build)
+- **Aktuális Verzió:** `v1.7.15` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,9 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.14)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.15)
+- [x] **CI Build Szintaktikai Hiba Javítása (`AuthContext.jsx`, v1.7.15):**
+  - A `getInitialWardrobe` függvény lezáró kapcsos zárójelének (`};`) pótlása a 65. sorban, megszüntetve a Vite `Unexpected "export"` fordítási hibáját a GitHub Actions munkafolyamatban.
 - [x] **Szett Mentési Deduplikáció & Info Súgó Oldalon Maradás (v1.7.14):**
   - **Szett Mentési Deduplikáció (`AuthContext.jsx`):** A ruhaelemek ujjlenyomata (`getOutfitSignature`) alapján a `saveOutfit` intelligensen felismeri, ha egy pontosan azonos szett már létezik. Új duplikátum létrehozása helyett az eredeti ID megőrzésével frissíti a meglévőt, és diszkrét értesítést ad: *„ℹ️ Ez a szett már szerepel a mentett szettjeid között (frissítve)!”*.
   - **Múltbéli Duplikátumok Tisztítása (`deduplicateOutfitsList`):** Az inicializáláskor és a Firestore `onSnapshot` szinkronizációkor automatikusan összevonja és kitisztítja a korábban esetlegesen többször elmentett szetteket.

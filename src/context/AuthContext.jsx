@@ -62,6 +62,8 @@ const getInitialWardrobe = () => {
     localStorage.removeItem('sartorial_last_anchor_items');
   } catch (_) {}
   return SAMPLE_SHOWCASE_WARDROBE;
+};
+
 // Deduplicate outfits list based on unique item combinations and ID
 export const getOutfitSignature = (outfit) => {
   if (!outfit) return '';
