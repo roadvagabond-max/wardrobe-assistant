@@ -611,21 +611,37 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
         </div>
       </div>
 
-      {/* Collapsible First-time Guidance (Only visible on toggle or first view) */}
+      {/* Collapsible Guidance (Context-aware based on active tab) */}
       {showGuide && (
         <ModuleFirstTimeGuide 
-          moduleId="stylist"
-          title="Hogyan működik a Stylist Modul?"
-          subtitle="Személyes mester stylist konzultáció és anatómiai szettépítő"
-          description="A Stylist közvetlen kapcsolatban áll veled, és teljes mélységében ismeri a ruhatáradat, stílusodat és szabályaidat."
-          points={[
-            "A Szettépítő felületén anatómiai sorrendben válogathatod össze a darabokat.",
-            "Az AI az esztétikai összhangot, a színeket, textúrákat és a helyi időjárást értékeli.",
-            "Az esemény megadása opcionális: ha üres, a szett önálló stílusát vizsgálja."
-          ]}
+          moduleId={activeMode === 'manual-builder' ? 'mix_match' : 'ai_stylist'}
+          title={activeMode === 'manual-builder' ? 'Hogyan működik a Mix & Match?' : 'Hogyan működik az AI Stylist?'}
+          subtitle={activeMode === 'manual-builder' ? 'Interaktív szettépítő és azonnali AI stíluselemzés' : 'Személyes AI Stylist konzultáció'}
+          description={
+            activeMode === 'manual-builder'
+              ? 'Válogasd össze saját szettjeidet a ruhatáradból rétegenként, és kérj azonnali szakértői elemzést az esztétikai harmóniáról és az alkalomhoz való illeszkedésről.'
+              : 'Közvetlen beszélgetés a mesterséges intelligenciával, aki teljes mélységében ismeri a ruhatárad minden darabját, a stílusprofilodat, kedvenc színeidet és egyéni szabályaidat.'
+          }
+          points={
+            activeMode === 'manual-builder'
+              ? [
+                  "Kattints a ruhahelyekre (felső, nadrág, lábbeli, zakó/kabát, öv) a darabok kiválasztásához vagy cseréjéhez.",
+                  "Az alkalom beírása opcionális: ha üresen hagyod, az AI a szett önálló stilisztikai harmóniáját értékeli.",
+                  "Az „AI Elemzés Futtatása” gombbal azonnali értékelést kapsz a színharmóniáról, anyagokról, textúrákról és rétegezésről.",
+                  "A kész összeállítást a „Mentés” gombra kattintva elmentheted a Mentett szettek közé."
+                ]
+              : [
+                  "Kérdezz bármit: eseményre komplett szettjavaslatot, rétegezési tanácsot vagy színpárosításokat.",
+                  "Az AI kifejezetten a meglévő ruháidból építkezik, és interaktív kártyákkal hivatkozik rájuk.",
+                  "A ruhák fotóira kattintva azonnal megnyílik a nagyfelbontású kép és ruhaadatlap.",
+                  "A javasolt szetteket közvetlenül elmentheted a kedvenceid közé."
+                ]
+          }
           actionLabel="Irány a Gardrób"
           onAction={() => { window.location.hash = '#wardrobe'; }}
           wardrobeCount={wardrobe?.length || 0}
+          forceOpen={true}
+          onClose={() => setShowGuide(false)}
         />
       )}
 

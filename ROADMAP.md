@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.12` (Production Build)
+- **Aktuális Verzió:** `v1.7.13` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,15 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.12)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.13)
+- [x] **Dinamikus Kontextus-Érzékeny Info (i) Gomb & Obsidian-Titán Súgó Rendszer (v1.7.13):**
+  - **Permanens Elrejtés Javítása (`ModuleFirstTimeGuide.jsx`):** Az info gomb megnyomásakor a korábbi `localStorage` bezárási állapot (`isDismissed`) blokkolta a megjelenést. Az új `forceOpen={true}` prop bevezetésével a fejléc `(i)` gombjára kattintva a súgó mindig megbízhatóan és azonnal megjelenik.
+  - **Kétirányú Bezárási Szinkronizáció (`onClose`):** A súgó panel bezárásakor (az „X” vagy az „Értem, bezárás” gombbal) az `onClose` callback automatikusan visszaállítja a fejléc gomb állapotát (`setShowGuide(false)`), megszüntetve a beragadt kijelölést.
+  - **Dinamikus, Kontextus-Érzékeny Szövegezés:** A súgó tartalma automatikusan alkalmazkodik az éppen aktív fülhöz:
+    - **🧩 Mix & Match módban:** Interaktív szettépítő és azonnali AI stíluselemzés (darabok rétegenkénti kiválasztása, esemény megadása, színharmónia és textúra értékelés, szettmentés).
+    - **💬 AI Stylist módban:** Személyes AI Stylist konzultáció (közvetlen csevegés a ruhatár darabjaival, interaktív ruha-kártyák, nagyméretű fotó Lightbox és azonnali szettmentés).
+  - **Obsidian & Titanium Prémium Megjelenés:** Régi arany színek helyett elegáns sötét pala / titán üvegkártya, letisztult badge, modern kontrasztos akciógombok és diszkrét pala fénycsóva.
+  - **Tisztítás:** Nem használt `ModuleFirstTimeGuide` import eltávolítva az `OutfitsView.jsx`-ből.
 - [x] **Ikonok Egységesítése (🧩 / 💬), Fejléc Szettek Keret & AI Stylist Letisztítás (v1.7.12):**
   - **Ikonok & Emojik Egységesítése:** A Mix & Match fülön kizárólag a puzzle emoji (`🧩`), az AI Stylist fülön kizárólag a beszéd-buborék emoji (`💬`) jelenik meg a dupla Lucide ikonok helyett. Az alsó lebegő navigációs sávon (`BottomNav.jsx`) és a felső asztali fülsoron (`DesktopTabs.jsx`) is a puzzle emoji (`🧩`) váltja a SlidersHorizontal ikont.
   - **Fejléc Szettek Keret Mobilos Lelógásának Felszámolása (`StylistView.jsx`):** A dupla ikonok törlésével és a `Szettek` gomb mobilos reszponzív optimalizálásával (`<Bookmark />` + számláló jelvény mobilon, teljes szöveg desktopon) a fejléc szélessége ~260px-re csökkent, kizárva a keret lelógását.
