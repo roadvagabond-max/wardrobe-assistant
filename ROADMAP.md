@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.15` (Production Build)
+- **Aktuális Verzió:** `v1.7.16` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,10 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.15)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.16)
+- [x] **Értékelő és Mentés Sáv Vászon Aljára Helyezése & Lookbook Gomb Eltávolítása (v1.7.16):**
+  - **In-Flow Műveleti Sáv (`StylistView.jsx`):** A korábbi `fixed bottom-24...` lebegő pozíció megszüntetve; az állapotjelző, elemzés indító és mentő gombok közvetlenül a vászon természetes aljára (a kiegészítők alá) kerültek. Ezzel megszűnt a mobilos kettős lebegő sáv zsúfoltsága és a ruhák (cipő, öv, zokni) kitakarása görgetés közben.
+  - **Lookbook Gomb Törlése a Részletek Fiókból:** A felesleges `[ Lookbook Nézet ]` gomb eltávolítva a Részletek Fiók láblécéből; a felületen kizárólag a letisztult, fókuszált `[ Szett Mentése a Kedvencekhez ]` gomb maradt.
 - [x] **CI Build Szintaktikai Hiba Javítása (`AuthContext.jsx`, v1.7.15):**
   - A `getInitialWardrobe` függvény lezáró kapcsos zárójelének (`};`) pótlása a 65. sorban, megszüntetve a Vite `Unexpected "export"` fordítási hibáját a GitHub Actions munkafolyamatban.
 - [x] **Szett Mentési Deduplikáció & Info Súgó Oldalon Maradás (v1.7.14):**

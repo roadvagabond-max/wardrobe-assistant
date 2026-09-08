@@ -1106,132 +1106,130 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
               )}
             </div>
 
-          </div>
+            {/* ========================================================================= */}
+            {/* IN-FLOW CANVAS STATUS & ACTION BAR (Bottom of Canvas) */}
+            {/* ========================================================================= */}
+            <div className="pt-3 pb-8 w-full max-w-lg mx-auto">
+              
+              {/* STATE A: Loading / Auditing */}
+              {isAuditing && (
+                <div className="w-full px-5 py-3.5 rounded-2xl bg-[#0d121c]/95 border border-slate-500 shadow-2xl backdrop-blur-md flex items-center justify-center gap-3 text-slate-100 text-xs font-semibold score-glow-titanium">
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-300 shrink-0" />
+                  <span className="truncate">Az AI elemzi a szettet és az összhangot...</span>
+                </div>
+              )}
 
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* FLOATING STATUS SCORE PILL (Bottom Fixed) */}
-      {/* ========================================================================= */}
-      {activeMode === 'manual-builder' && (
-        <div className="fixed bottom-24 sm:bottom-6 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-full sm:max-w-lg z-40">
-          
-          {/* STATE A: Loading / Auditing */}
-          {isAuditing && (
-            <div className="w-full px-5 py-3.5 rounded-2xl bg-[#0d121c]/95 border border-slate-500 shadow-2xl backdrop-blur-md flex items-center justify-center gap-3 text-slate-100 text-xs font-semibold score-glow-titanium">
-              <Loader2 className="w-4 h-4 animate-spin text-slate-300 shrink-0" />
-              <span className="truncate">Az AI elemzi a szettet és az összhangot...</span>
-            </div>
-          )}
-
-          {/* STATE B: Already Audited (Click opens Details Drawer - Direct Save on right) */}
-          {!isAuditing && manualAuditResult && scoreBadgeConfig && (
-            <div className="flex items-center gap-2 w-full min-w-0">
-              <div 
-                onClick={() => setIsDrawerOpen(true)}
-                className={`flex-1 min-w-0 px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-2xl border backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 cursor-pointer transition-all hover:brightness-110 shadow-2xl ${scoreBadgeConfig.glowClass}`}
-              >
-                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                  <span className="text-base sm:text-xl shrink-0">{scoreBadgeConfig.icon}</span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                      <span className="text-sm sm:text-base font-bold font-serif shrink-0">{manualAuditResult.score}%</span>
-                      <span className="text-xs font-medium opacity-90 truncate min-w-0">{scoreBadgeConfig.title}</span>
+              {/* STATE B: Already Audited (Click opens Details Drawer - Direct Save on right) */}
+              {!isAuditing && manualAuditResult && scoreBadgeConfig && (
+                <div className="flex items-center gap-2 w-full min-w-0">
+                  <div 
+                    onClick={() => setIsDrawerOpen(true)}
+                    className={`flex-1 min-w-0 px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-2xl border backdrop-blur-md flex items-center justify-between gap-2 sm:gap-3 cursor-pointer transition-all hover:brightness-110 shadow-2xl ${scoreBadgeConfig.glowClass}`}
+                  >
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <span className="text-base sm:text-xl shrink-0">{scoreBadgeConfig.icon}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                          <span className="text-sm sm:text-base font-bold font-serif shrink-0">{manualAuditResult.score}%</span>
+                          <span className="text-xs font-medium opacity-90 truncate min-w-0">{scoreBadgeConfig.title}</span>
+                        </div>
+                        <span className="text-[10px] opacity-75 block truncate">
+                          {cleanSartorialText(manualAuditResult.verdict)}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-[10px] opacity-75 block truncate">
-                      {cleanSartorialText(manualAuditResult.verdict)}
+
+                    <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold shrink-0 whitespace-nowrap pl-1.5 sm:pl-2 border-l border-white/10">
+                      <span className="hidden xs:inline sm:inline">Részletek</span>
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleDirectSaveOutfit}
+                    className={`px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl border backdrop-blur-md flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-2xl shrink-0 cursor-pointer ${
+                      isManualSaved
+                        ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50'
+                        : 'bg-slate-200 hover:bg-white text-slate-950 border-white'
+                    }`}
+                    title="Szett mentése a kedvencekhez"
+                  >
+                    {isManualSaved ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span className="hidden sm:inline">Elmentve</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-4 h-4" />
+                        <span>Mentés</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* STATE C: Ready to Audit (Minimum is met) */}
+              {!isAuditing && !manualAuditResult && validationState.isComplete && (
+                <div className="flex items-center gap-2 w-full min-w-0">
+                  <button
+                    type="button"
+                    onClick={handleRunManualAudit}
+                    className="flex-1 min-w-0 px-3.5 sm:px-5 py-3.5 rounded-2xl bg-slate-200 hover:bg-white text-slate-900 font-serif font-bold text-xs sm:text-sm shadow-2xl transition-all flex items-center justify-center gap-2 score-glow-titanium truncate cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-slate-900 shrink-0" />
+                    <span className="truncate">🎯 Összhang Elemzése ({selectedItems.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDirectSaveOutfit}
+                    className={`px-3.5 sm:px-4 py-3.5 rounded-2xl border backdrop-blur-md flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-2xl shrink-0 cursor-pointer ${
+                      isManualSaved
+                        ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50'
+                        : 'bg-[#0f1420]/90 hover:bg-slate-800 text-slate-200 border-slate-700'
+                    }`}
+                    title="Szett mentése azonnal"
+                  >
+                    {isManualSaved ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400" />
+                        <span className="hidden sm:inline">Elmentve</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-4 h-4 text-slate-400" />
+                        <span>Mentés</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* STATE D: Incomplete (Minimum NOT met - Guides the user) */}
+              {!isAuditing && !manualAuditResult && !validationState.isComplete && (
+                <div 
+                  onClick={handleRunManualAudit}
+                  className="w-full px-4 sm:px-5 py-3 rounded-2xl bg-[#090d15]/90 border border-slate-700/80 backdrop-blur-md shadow-xl flex items-center justify-between cursor-pointer text-slate-400 hover:text-slate-200 text-xs transition-colors gap-2"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="w-2 h-2 rounded-full bg-slate-600 animate-pulse shrink-0" />
+                    <span className="truncate">
+                      {validationState.missing === 'upper' && 'Válassz legalább egy felsőt a kezdéshez'}
+                      {validationState.missing === 'lower' && 'Válassz egy nadrágot vagy szoknyát'}
+                      {validationState.missing === 'shoes' && 'Válassz egy cipőt a befejezéshez'}
                     </span>
                   </div>
+                  <span className="text-[11px] font-mono text-slate-500 shrink-0">
+                    {validationState.readyCount}/{validationState.totalNeeded} kész
+                  </span>
                 </div>
+              )}
 
-                <div className="flex items-center gap-1 text-[11px] sm:text-xs font-semibold shrink-0 whitespace-nowrap pl-1.5 sm:pl-2 border-l border-white/10">
-                  <span className="hidden xs:inline sm:inline">Részletek</span>
-                  <ChevronUp className="w-3.5 h-3.5" />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleDirectSaveOutfit}
-                className={`px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl border backdrop-blur-md flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-2xl shrink-0 ${
-                  isManualSaved
-                    ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50'
-                    : 'bg-slate-200 hover:bg-white text-slate-950 border-white'
-                }`}
-                title="Szett mentése a kedvencekhez"
-              >
-                {isManualSaved ? (
-                  <>
-                    <Check className="w-4 h-4 text-emerald-400" />
-                    <span className="hidden sm:inline">Elmentve</span>
-                  </>
-                ) : (
-                  <>
-                    <Bookmark className="w-4 h-4" />
-                    <span>Mentés</span>
-                  </>
-                )}
-              </button>
             </div>
-          )}
 
-          {/* STATE C: Ready to Audit (Minimum is met) */}
-          {!isAuditing && !manualAuditResult && validationState.isComplete && (
-            <div className="flex items-center gap-2 w-full min-w-0">
-              <button
-                type="button"
-                onClick={handleRunManualAudit}
-                className="flex-1 min-w-0 px-3.5 sm:px-5 py-3.5 rounded-2xl bg-slate-200 hover:bg-white text-slate-900 font-serif font-bold text-xs sm:text-sm shadow-2xl transition-all flex items-center justify-center gap-2 score-glow-titanium truncate"
-              >
-                <Sparkles className="w-4 h-4 text-slate-900 shrink-0" />
-                <span className="truncate">🎯 Összhang Elemzése ({selectedItems.length})</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDirectSaveOutfit}
-                className={`px-3.5 sm:px-4 py-3.5 rounded-2xl border backdrop-blur-md flex items-center justify-center gap-1.5 text-xs font-bold transition-all shadow-2xl shrink-0 ${
-                  isManualSaved
-                    ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500/50'
-                    : 'bg-[#0f1420]/90 hover:bg-slate-800 text-slate-200 border-slate-700'
-                }`}
-                title="Szett mentése azonnal"
-              >
-                {isManualSaved ? (
-                  <>
-                    <Check className="w-4 h-4 text-emerald-400" />
-                    <span className="hidden sm:inline">Elmentve</span>
-                  </>
-                ) : (
-                  <>
-                    <Bookmark className="w-4 h-4 text-slate-400" />
-                    <span>Mentés</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* STATE D: Incomplete (Minimum NOT met - Guides the user) */}
-          {!isAuditing && !manualAuditResult && !validationState.isComplete && (
-            <div 
-              onClick={handleRunManualAudit}
-              className="w-full px-4 sm:px-5 py-3 rounded-2xl bg-[#090d15]/90 border border-slate-700/80 backdrop-blur-md shadow-xl flex items-center justify-between cursor-pointer text-slate-400 hover:text-slate-200 text-xs transition-colors gap-2"
-            >
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span className="w-2 h-2 rounded-full bg-slate-600 animate-pulse shrink-0" />
-                <span className="truncate">
-                  {validationState.missing === 'upper' && 'Válassz legalább egy felsőt a kezdéshez'}
-                  {validationState.missing === 'lower' && 'Válassz egy nadrágot vagy szoknyát'}
-                  {validationState.missing === 'shoes' && 'Válassz egy cipőt a befejezéshez'}
-                </span>
-              </div>
-              <span className="text-[11px] font-mono text-slate-500 shrink-0">
-                {validationState.readyCount}/{validationState.totalNeeded} kész
-              </span>
-            </div>
-          )}
+          </div>
 
         </div>
       )}
@@ -1487,25 +1485,12 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
             </div>
 
             {/* Drawer Footer Actions */}
-            <div className="p-3.5 sm:p-4 border-t border-slate-800 bg-[#090d15] flex items-center justify-between gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDrawerOpen(false);
-                  openLightbox(selectedItems, 0, manualAuditResult.verdict);
-                }}
-                className="px-2.5 sm:px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-                <span>Lookbook</span>
-                <span className="hidden sm:inline">Nézet</span>
-              </button>
-
+            <div className="p-3.5 sm:p-4 border-t border-slate-800 bg-[#090d15] flex items-center justify-end gap-2 shrink-0">
               <button
                 type="button"
                 onClick={handleSaveManualAuditedOutfit}
                 disabled={isManualSaved}
-                className={`px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shrink-0 ${
+                className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0 cursor-pointer ${
                   isManualSaved
                     ? 'bg-emerald-600 text-white cursor-default'
                     : 'bg-slate-200 hover:bg-white text-slate-950'
@@ -1519,8 +1504,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                 ) : (
                   <>
                     <Bookmark className="w-4 h-4" />
-                    <span>Mentés</span>
-                    <span className="hidden sm:inline">a Kedvencekhez</span>
+                    <span>Szett Mentése a Kedvencekhez</span>
                   </>
                 )}
               </button>
