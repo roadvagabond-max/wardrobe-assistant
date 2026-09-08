@@ -136,6 +136,18 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
+- [ ] ⚖️ **Értékelés Szigorúságának Felülvizsgálata (Harmónia & Pontozási Kalibráció):**
+  - **Cél:** A Mix & Match manuális szettépítő és az AI Stylist audit pontozási rendszerének, skálájának és szigorúságának átfogó felülvizsgálata.
+  - **Részletek:**
+    - A pontszámok (0–100%) és minősítési sávok újrakalibrálása, hogy a jól összeállított szettek ne kapjanak indokolatlanul alacsony, a stilárisan vagy színben ütköző kombinációk pedig indokolatlanul magas pontszámot.
+    - A különböző stílusarchetipusok (klasszikus elegancia vs. laza smart casual vs. streetwear) eltérő formai szabályainak differenciáltabb súlyozása.
+    - Opcionálisan konfigurálható vagy adaptív szigorúsági szint a beállításokban/profilban (pl. *Megengedő / Kiegyensúlyozott / Mester Szabászati Szigor*).
+- [ ] 🛍️ **Vásárlási Kedv Csúszka (Buy or Skip Modul):**
+  - **Cél:** Egy interaktív „Vásárlási kedv / Kívánság intenzitás” csúszka (slider) integrálása a **Buy or Skip** vásárlási döntéstámogató nézetbe az új darab vizsgálatakor.
+  - **Részletek:**
+    - Intuitív csúszka skála (pl. 1–10 vagy *„Csak nézelődöm” ➔ „Tetszik, de nem létszükséglet” ➔ „Azonnal meg akarom venni / Erős érzelmi impulzus”*).
+    - **Impulzusvédelmi AI logika:** Ha a vásárlási kedv maximális vagy impulzív, az AI kíméletlenül őszinte, szigorúbb ellenőrzést hajt végre (kiemelve a már ruhatárban lévő funkcionális hasonlóságokat, a gyenge anyagösszetételt és a valós hordási esélyeket, megelőzve a megbánt vásárlást).
+    - Alacsonyabb vagy megfontolt kedvnél objektív, kapszula-gap és kombinálhatósági fókuszú elemzést nyújt.
 - [ ] 🎨 **Felugró Ablakok Teljes Minimalista Újratervezése (Minimalist Modal Redesign):**
   - **Cél:** Az alkalmazás összes felugró ablakának (profil szerkesztés, súgó, ruha hozzáadása, onboarding, szettrészletek, képnézegető) átfogó letisztítása: minimális vizuális zaj, szellős és prémium tipográfia, egyszerűsített kártyák és űrlapok.
   - **Irányelvek:** Felesleges vizuális elemek, túldíszített keretek és háttéreffektek tompítása; átláthatóbb mező-csoportosítás; egységes, kompakt és fix fejléc/lábléc struktúra; zavartalan fókusz a lényegi műveleteken és adatokon.
