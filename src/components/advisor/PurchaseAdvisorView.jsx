@@ -5,7 +5,7 @@ import {
   Layers, Compass, CloudSun, Info
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
+import { evaluateAndExtractPrePurchaseItem, isCoatGarment, isDress } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { optimizeImageForUpload, getSmartGarmentImage, ensureBase64Image } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
@@ -21,6 +21,43 @@ function cleanSartorialText(text) {
     .replace(/\bsartoriális\b/gi, 'stílusos')
     .replace(/\bsartorial\b/gi, 'stílusos')
     .replace(/\bSartorial\b/gi, 'Stílus');
+}
+
+function getOutfitLayers(items = []) {
+  const upperItems = [];
+  let dressItem = null;
+  let lowerItem = null;
+  let beltItem = null;
+  let shoeItem = null;
+  let socksItem = null;
+  const accessories = [];
+
+  items.forEach(item => {
+    if (!item) return;
+    const cat = (item.category || '').toLowerCase();
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+
+    if (cat === 'dresses' || isDress(item)) {
+      dressItem = item;
+    } else if (sub === 'belt' || name.includes('öv')) {
+      beltItem = item;
+    } else if (sub === 'socks' || sub === 'tights' || name.includes('zokni') || name.includes('harisnya')) {
+      socksItem = item;
+    } else if (cat === 'shoes' || sub === 'loafers' || sub === 'sneakers' || sub === 'boots' || name.includes('cipő') || name.includes('loafer')) {
+      shoeItem = item;
+    } else if (cat === 'bottoms' || cat === 'skirts' || sub === 'trousers' || sub === 'jeans' || sub === 'skirt' || name.includes('nadrág') || name.includes('szoknya')) {
+      lowerItem = item;
+    } else if (cat === 'outerwear' || cat === 'knitwear' || cat === 'tops' || isCoatGarment(item)) {
+      upperItems.push(item);
+    } else if (cat === 'accessories') {
+      accessories.push(item);
+    } else {
+      upperItems.push(item);
+    }
+  });
+
+  return { upperItems, dressItem, lowerItem, beltItem, shoeItem, socksItem, accessories };
 }
 
 export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefill }) {
@@ -819,10 +856,102 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
               </div>
             </div>
 
-            {/* Structured Analysis Cards */}
+            {/* Structured Analysis Cards (Mix & Match Parity) */}
             <div className="space-y-2 pt-1 text-xs">
 
-              {/* 1. Stilisztikai Lefedettség & Redundancia Overlap */}
+              {/* 1. Színharmónia & Kontraszt */}
+              {evaluationResult.colorHarmony && (
+                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                    <Sparkles className="w-4 h-4 text-slate-300" />
+                    <span>🎨 Színharmónia & Kontraszt:</span>
+                  </div>
+                  <p className="leading-relaxed text-slate-300">
+                    {cleanSartorialText(evaluationResult.colorHarmony)}
+                  </p>
+                </div>
+              )}
+
+              {/* 2. Anyagok & Textúrák Találkozása */}
+              {(evaluationResult.fabricSynergy || evaluationResult.fabricWarning) && (
+                <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
+                  evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                    ? 'bg-[#150e0a] border-amber-500/30 text-amber-200'
+                    : 'bg-[#070a12] border-slate-800 text-slate-300'
+                }`}>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                      {evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7) ? (
+                        <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                      ) : (
+                        <Feather className="w-4 h-4 text-slate-300 shrink-0" />
+                      )}
+                      <span>🧵 Anyagok & Textúrák Találkozása:</span>
+                    </div>
+
+                    {evaluationResult.item?.material && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                        evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                          ? 'bg-amber-500/20 border-amber-500/30 text-amber-300'
+                          : 'bg-slate-800 border-slate-700 text-slate-300'
+                      }`}>
+                        {evaluationResult.item.material}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="leading-relaxed text-slate-300">
+                    {cleanSartorialText(evaluationResult.fabricSynergy || evaluationResult.fabricWarning)}
+                  </p>
+                </div>
+              )}
+
+              {/* 3. Rétegezés & Sziluett Harmónia */}
+              {evaluationResult.layeringEvaluation && (
+                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                    <Layers className="w-4 h-4 text-slate-300" />
+                    <span>🧥 Rétegezés & Sziluett Harmónia:</span>
+                  </div>
+                  <p className="leading-relaxed text-slate-300">
+                    {cleanSartorialText(evaluationResult.layeringEvaluation)}
+                  </p>
+                </div>
+              )}
+
+              {/* 4. Szabás & Testalkat Illeszkedés */}
+              {(evaluationResult.bodyFitVerdict || evaluationResult.fitMismatchWarning) && (
+                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                    <Compass className="w-4 h-4 text-slate-300" />
+                    <span>📐 Szabás & Testalkat Illeszkedés:</span>
+                  </div>
+                  <p className="leading-relaxed text-slate-300">
+                    {cleanSartorialText(evaluationResult.fitMismatchWarning || evaluationResult.bodyFitVerdict)}
+                  </p>
+                  {evaluationResult.sizingAdvice && (
+                    <div className="pt-1.5 border-t border-slate-800 text-[11px] text-slate-200 font-medium flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span><strong>Méretválasztási javaslat:</strong> {cleanSartorialText(evaluationResult.sizingAdvice)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 5. Alkalmi Összhang & Stílus DNS */}
+              {evaluationResult.eventAlignment && (
+                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                    <Sparkles className="w-4 h-4 text-slate-300" />
+                    <span>🎯 Alkalmi Sokoldalúság & Stílus DNS:</span>
+                  </div>
+                  <p className="leading-relaxed text-slate-300">
+                    {cleanSartorialText(evaluationResult.eventAlignment)}
+                  </p>
+                </div>
+              )}
+
+              {/* 6. Stilisztikai Lefedettség & Redundancia Overlap */}
               {evaluationResult.aestheticOverlap && (
                 <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
                   evaluationResult.aestheticOverlap.isRedundant
@@ -832,7 +961,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-1.5 font-bold text-slate-200">
                       <Compass className="w-4 h-4 text-slate-300" />
-                      <span>Stilisztikai Lefedettség & Kapszula Skála:</span>
+                      <span>⚖️ Stilisztikai Lefedettség & Kapszula Skála:</span>
                     </div>
                     {evaluationResult.aestheticOverlap.isRedundant ? (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -863,64 +992,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 </div>
               )}
 
-              {/* 2. Anyagminőség & Szövet Elemzés */}
-              {evaluationResult.fabricWarning && (
-                <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
-                  evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
-                    ? 'bg-[#150e0a] border-amber-500/30 text-amber-200'
-                    : 'bg-[#070a12] border-emerald-500/30 text-emerald-200'
-                }`}>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className={`flex items-center gap-1.5 font-bold ${
-                      evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
-                        ? 'text-amber-300'
-                        : 'text-emerald-300'
-                    }`}>
-                      {evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7) ? (
-                        <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-                      ) : (
-                        <Feather className="w-4 h-4 text-emerald-400 shrink-0" />
-                      )}
-                      <span>Anyagösszetétel & Szövetminőség:</span>
-                    </div>
-
-                    {evaluationResult.item?.material && (
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
-                        evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
-                          ? 'bg-amber-500/20 border-amber-500/30 text-amber-300'
-                          : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
-                      }`}>
-                        {evaluationResult.item.material}
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="leading-relaxed text-slate-300">
-                    {cleanSartorialText(evaluationResult.fabricWarning)}
-                  </p>
-                </div>
-              )}
-
-              {/* 3. Szabás & Testalkat Illeszkedés */}
-              {evaluationResult.fitMismatchWarning && (
-                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                    <Layers className="w-4 h-4 text-slate-300" />
-                    <span>⚖️ Szabás & Testalkat Illeszkedés (Fit Intelligence):</span>
-                  </div>
-                  <p className="leading-relaxed text-slate-300">
-                    {cleanSartorialText(evaluationResult.fitMismatchWarning)}
-                  </p>
-                  {evaluationResult.sizingAdvice && (
-                    <div className="pt-1.5 border-t border-slate-800 text-[11px] text-slate-200 font-medium flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span><strong>Méretválasztási javaslat:</strong> {cleanSartorialText(evaluationResult.sizingAdvice)}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 4. Szezonális Dinamika */}
+              {/* 7. Szezonális Dinamika */}
               {evaluationResult.targetSeason && (
                 <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
                   <div className="flex items-center gap-1.5 font-bold text-slate-200">
@@ -933,7 +1005,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 </div>
               )}
 
-              {/* 5. Pros & Cons */}
+              {/* 8. Pros & Cons */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                 <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-1">
                   <h4 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
@@ -965,7 +1037,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
           </div>
 
           {/* ========================================================================= */}
-          {/* 6. 3 GUARANTEED OUTFITS FLAT-LAY CANVASES (MIX & MATCH LOOKBOOK STYLE) */}
+          {/* 6. 3 GUARANTEED OUTFITS ANATOMICAL FLAT-LAY CANVASES (MIX & MATCH STYLE) */}
           {/* ========================================================================= */}
           <div className="space-y-3 pt-1">
             <div>
@@ -973,97 +1045,326 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 ✨ A 3 Garantált Outfit a Ruhatáradból
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Így kombinálhatod azonnal a szekrényedben lévő minőségi darabjaiddal:
+                A kiszemelt új ruhadarab köré felépített komplett összeállítások anatómiai flat-lay elrendezésben:
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {evaluationResult.outfits?.map((outfit, idx) => (
-                <div 
-                  key={idx} 
-                  className="p-3.5 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-2xl flex flex-col justify-between space-y-2.5"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 border border-slate-700 text-slate-300">
-                        {outfit.styleType || 'Klasszikus'}
-                      </span>
-                      <span className="text-[11px] text-slate-400 font-medium truncate">
-                        {outfit.occasion}
-                      </span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {evaluationResult.outfits?.map((outfit, idx) => {
+                const { upperItems, dressItem, lowerItem, beltItem, shoeItem, socksItem, accessories } = getOutfitLayers(outfit.items || []);
+
+                return (
+                  <div 
+                    key={idx} 
+                    className="p-3.5 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-2xl flex flex-col justify-between space-y-3"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 border border-slate-700 text-slate-300 truncate max-w-[55%]">
+                          {outfit.styleType || 'Klasszikus'}
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-medium truncate max-w-[42%] text-right">
+                          {outfit.occasion}
+                        </span>
+                      </div>
+
+                      <h4 className="font-serif font-bold text-slate-100 text-sm sm:text-base leading-snug">
+                        {outfit.title}
+                      </h4>
+
+                      {/* Visual Anatomical Flat-lay Garment Canvas (Mix & Match Pattern) */}
+                      <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800/90 space-y-2.5">
+                        
+                        {/* 1. Felsőtest Zóna (Zakó / Kabát / Pulóver / Ing) */}
+                        {upperItems.length > 0 && (
+                          <div className="flex justify-center items-center gap-2 flex-wrap sm:flex-nowrap">
+                            {upperItems.map((item, iIdx) => {
+                              const isCand = item.id === 'candidate-item' || item.name === evaluationResult.extractedItem?.name;
+                              const isCoat = isCoatGarment(item) || item.category === 'outerwear';
+                              const isKnit = item.category === 'knitwear';
+
+                              return (
+                                <div 
+                                  key={item.id || iIdx}
+                                  onClick={() => setLightboxData({
+                                    isOpen: true,
+                                    items: outfit.items || [],
+                                    initialIndex: outfit.items.indexOf(item) >= 0 ? outfit.items.indexOf(item) : 0,
+                                    outfitTitle: outfit.title || 'Outfit Részletek'
+                                  })}
+                                  className={`relative flex-1 min-w-[95px] max-w-[150px] aspect-[4/3] rounded-xl overflow-hidden bg-[#05070c] border flex items-center justify-center p-1.5 group cursor-pointer transition-all ${
+                                    isCand
+                                      ? 'border-amber-400/90 ring-1 ring-amber-400/50 shadow-md shadow-amber-400/10'
+                                      : 'border-slate-800 hover:border-slate-600'
+                                  }`}
+                                  title={item.name}
+                                >
+                                  <img 
+                                    src={item.imageUrl} 
+                                    alt={item.name}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
+                                  />
+                                  {isCand && (
+                                    <span className="absolute top-1 right-1 bg-amber-400 text-black text-[9px] font-bold px-1.5 py-0.2 rounded shadow">
+                                      ÚJ
+                                    </span>
+                                  )}
+                                  <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.2 rounded text-slate-200 font-medium border border-white/10">
+                                    {isCoat ? '🧥 Zakó/Kabát' : isKnit ? '🧶 Pulóver' : '👔 Felső'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* 2. Egyberuha Zóna (ha dressItem van) */}
+                        {dressItem && (
+                          <div className="flex justify-center items-center gap-2">
+                            {(() => {
+                              const isCand = dressItem.id === 'candidate-item' || dressItem.name === evaluationResult.extractedItem?.name;
+                              return (
+                                <div 
+                                  onClick={() => setLightboxData({
+                                    isOpen: true,
+                                    items: outfit.items || [],
+                                    initialIndex: outfit.items.indexOf(dressItem) >= 0 ? outfit.items.indexOf(dressItem) : 0,
+                                    outfitTitle: outfit.title || 'Outfit Részletek'
+                                  })}
+                                  className={`relative w-28 sm:w-32 h-36 sm:h-40 rounded-xl overflow-hidden bg-[#05070c] border flex items-center justify-center p-1.5 group cursor-pointer transition-all ${
+                                    isCand
+                                      ? 'border-amber-400/90 ring-1 ring-amber-400/50 shadow-md shadow-amber-400/10'
+                                      : 'border-slate-800 hover:border-slate-600'
+                                  }`}
+                                  title={dressItem.name}
+                                >
+                                  <img 
+                                    src={dressItem.imageUrl} 
+                                    alt={dressItem.name}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
+                                  />
+                                  {isCand && (
+                                    <span className="absolute top-1 right-1 bg-amber-400 text-black text-[9px] font-bold px-1.5 py-0.2 rounded shadow">
+                                      ÚJ
+                                    </span>
+                                  )}
+                                  <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.2 rounded text-slate-200 font-medium border border-white/10">
+                                    👗 Ruha
+                                  </span>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Deréköv mellette kicsiben */}
+                            {beltItem && (
+                              <div 
+                                onClick={() => setLightboxData({
+                                  isOpen: true,
+                                  items: outfit.items || [],
+                                  initialIndex: outfit.items.indexOf(beltItem) >= 0 ? outfit.items.indexOf(beltItem) : 0,
+                                  outfitTitle: outfit.title || 'Outfit Részletek'
+                                })}
+                                className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-[#05070c] border border-slate-800 hover:border-slate-600 flex items-center justify-center p-1 group cursor-pointer shrink-0"
+                                title={beltItem.name}
+                              >
+                                <img 
+                                  src={beltItem.imageUrl} 
+                                  alt={beltItem.name} 
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <span className="absolute bottom-0.5 left-1 text-[7px] text-slate-300 bg-black/80 px-1 py-0.2 rounded">
+                                  Öv
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 3. Alsótest Zóna (Nadrág / Szoknya + Öv mellette mint a Mix & Match-ben) */}
+                        {!dressItem && lowerItem && (
+                          <div className="flex justify-center items-center gap-2">
+                            {(() => {
+                              const isCand = lowerItem.id === 'candidate-item' || lowerItem.name === evaluationResult.extractedItem?.name;
+                              return (
+                                <div 
+                                  onClick={() => setLightboxData({
+                                    isOpen: true,
+                                    items: outfit.items || [],
+                                    initialIndex: outfit.items.indexOf(lowerItem) >= 0 ? outfit.items.indexOf(lowerItem) : 0,
+                                    outfitTitle: outfit.title || 'Outfit Részletek'
+                                  })}
+                                  className={`relative w-28 sm:w-32 h-36 sm:h-40 rounded-xl overflow-hidden bg-[#05070c] border flex items-center justify-center p-1.5 group cursor-pointer transition-all ${
+                                    isCand
+                                      ? 'border-amber-400/90 ring-1 ring-amber-400/50 shadow-md shadow-amber-400/10'
+                                      : 'border-slate-800 hover:border-slate-600'
+                                  }`}
+                                  title={lowerItem.name}
+                                >
+                                  <img 
+                                    src={lowerItem.imageUrl} 
+                                    alt={lowerItem.name}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
+                                  />
+                                  {isCand && (
+                                    <span className="absolute top-1 right-1 bg-amber-400 text-black text-[9px] font-bold px-1.5 py-0.2 rounded shadow">
+                                      ÚJ
+                                    </span>
+                                  )}
+                                  <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.2 rounded text-slate-200 font-medium border border-white/10">
+                                    {lowerItem.category === 'skirts' || lowerItem.name?.toLowerCase().includes('szoknya') ? '👗 Szoknya' : '👖 Nadrág'}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Öv közvetlenül a nadrág mellett kicsiben */}
+                            {beltItem && (
+                              <div 
+                                onClick={() => setLightboxData({
+                                  isOpen: true,
+                                  items: outfit.items || [],
+                                  initialIndex: outfit.items.indexOf(beltItem) >= 0 ? outfit.items.indexOf(beltItem) : 0,
+                                  outfitTitle: outfit.title || 'Outfit Részletek'
+                                })}
+                                className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-[#05070c] border border-slate-800 hover:border-slate-600 flex items-center justify-center p-1 group cursor-pointer shrink-0"
+                                title={beltItem.name}
+                              >
+                                <img 
+                                  src={beltItem.imageUrl} 
+                                  alt={beltItem.name} 
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <span className="absolute bottom-0.5 left-1 text-[7px] text-slate-300 bg-black/80 px-1 py-0.2 rounded">
+                                  Öv
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 4. Lábbeli Zóna (Cipő + Zokni mellette mint a Mix & Match-ben) */}
+                        {shoeItem && (
+                          <div className="flex justify-center items-center gap-2">
+                            {(() => {
+                              const isCand = shoeItem.id === 'candidate-item' || shoeItem.name === evaluationResult.extractedItem?.name;
+                              return (
+                                <div 
+                                  onClick={() => setLightboxData({
+                                    isOpen: true,
+                                    items: outfit.items || [],
+                                    initialIndex: outfit.items.indexOf(shoeItem) >= 0 ? outfit.items.indexOf(shoeItem) : 0,
+                                    outfitTitle: outfit.title || 'Outfit Részletek'
+                                  })}
+                                  className={`relative w-28 sm:w-32 h-24 sm:h-28 rounded-xl overflow-hidden bg-[#05070c] border flex items-center justify-center p-1.5 group cursor-pointer transition-all ${
+                                    isCand
+                                      ? 'border-amber-400/90 ring-1 ring-amber-400/50 shadow-md shadow-amber-400/10'
+                                      : 'border-slate-800 hover:border-slate-600'
+                                  }`}
+                                  title={shoeItem.name}
+                                >
+                                  <img 
+                                    src={shoeItem.imageUrl} 
+                                    alt={shoeItem.name}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" 
+                                  />
+                                  {isCand && (
+                                    <span className="absolute top-1 right-1 bg-amber-400 text-black text-[9px] font-bold px-1.5 py-0.2 rounded shadow">
+                                      ÚJ
+                                    </span>
+                                  )}
+                                  <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.2 rounded text-slate-200 font-medium border border-white/10">
+                                    👞 Lábbeli
+                                  </span>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Zokni / Harisnya mellette kicsiben ha van */}
+                            {socksItem && (
+                              <div 
+                                onClick={() => setLightboxData({
+                                  isOpen: true,
+                                  items: outfit.items || [],
+                                  initialIndex: outfit.items.indexOf(socksItem) >= 0 ? outfit.items.indexOf(socksItem) : 0,
+                                  outfitTitle: outfit.title || 'Outfit Részletek'
+                                })}
+                                className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-[#05070c] border border-slate-800 hover:border-slate-600 flex items-center justify-center p-1 group cursor-pointer shrink-0"
+                                title={socksItem.name}
+                              >
+                                <img 
+                                  src={socksItem.imageUrl} 
+                                  alt={socksItem.name} 
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <span className="absolute bottom-0.5 left-1 text-[7px] text-slate-300 bg-black/80 px-1 py-0.2 rounded">
+                                  Zokni
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 5. Egyéb kiegészítők (ha vannak) */}
+                        {accessories.length > 0 && (
+                          <div className="flex justify-center items-center gap-1.5 pt-1 border-t border-slate-800/50 flex-wrap">
+                            {accessories.map((acc, aIdx) => (
+                              <div 
+                                key={acc.id || aIdx}
+                                onClick={() => setLightboxData({
+                                  isOpen: true,
+                                  items: outfit.items || [],
+                                  initialIndex: outfit.items.indexOf(acc) >= 0 ? outfit.items.indexOf(acc) : 0,
+                                  outfitTitle: outfit.title || 'Outfit Részletek'
+                                })}
+                                className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-lg overflow-hidden bg-[#05070c] border border-slate-800 hover:border-slate-600 flex items-center justify-center p-1 group cursor-pointer"
+                                title={acc.name}
+                              >
+                                <img 
+                                  src={acc.imageUrl} 
+                                  alt={acc.name} 
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <span className="absolute bottom-0.5 left-0.5 text-[6px] text-slate-300 bg-black/80 px-0.5 rounded">
+                                  Kieg
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <h4 className="font-serif font-bold text-slate-100 text-sm sm:text-base">
-                      {outfit.title}
-                    </h4>
-
-                    {/* Visual Flat-lay Garment Grid */}
-                    <div className="grid grid-cols-2 gap-2 p-2 rounded-2xl bg-[#070a12] border border-slate-800">
-                      {outfit.items?.map((item, iIdx) => {
-                        const isCandidateItem = item.id === 'candidate-item' || item.name === evaluationResult.extractedItem?.name;
-
-                        return (
-                          <div 
-                            key={iIdx} 
-                            onClick={() => setLightboxData({
-                              isOpen: true,
-                              items: outfit.items || [],
-                              initialIndex: iIdx,
-                              outfitTitle: outfit.title || 'Vásárlási Outfit Teszt'
-                            })}
-                            className="space-y-1 group relative cursor-pointer"
-                          >
-                            <div className={`relative aspect-[4/3] rounded-xl overflow-hidden bg-[#0a0e17] p-1 flex items-center justify-center border transition-all ${
-                              isCandidateItem
-                                ? 'border-amber-400/80 ring-1 ring-amber-400/40 shadow-lg shadow-amber-400/10'
-                                : 'border-slate-800 group-hover:border-slate-600'
-                            }`}>
-                              <img
-                                src={item.imageUrl}
-                                alt={item.name}
-                                loading="lazy"
-                                decoding="async"
-                                className="w-full h-full object-contain p-1 rounded-lg group-hover:scale-105 transition-transform duration-300"
-                              />
-                              {isCandidateItem && (
-                                <span className="absolute top-1 right-1 bg-amber-400 text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
-                                  ÚJ
-                                </span>
-                              )}
-                              <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-slate-200 font-medium border border-white/10">
-                                {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') 
-                                  ? '🎗️ Öv' 
-                                  : item.category === 'tops' 
-                                    ? '👔 Bázis' 
-                                    : item.category === 'knitwear' 
-                                      ? '🧶 Köztes' 
-                                      : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) 
-                                        ? '🧥 Kabát' 
-                                        : item.category === 'outerwear' 
-                                          ? '🧥 Zakó' 
-                                          : item.category === 'bottoms' 
-                                            ? '👖 Alsó' 
-                                            : item.category === 'shoes' 
-                                              ? '👞 Cipő' 
-                                              : '✦ Kieg'}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-slate-400 line-clamp-1 font-medium px-0.5 group-hover:text-slate-200 transition-colors">
-                              {item.name}
-                            </p>
-                          </div>
-                        );
-                      })}
+                    <div className="space-y-1.5 pt-1 border-t border-slate-800/80">
+                      {outfit.stylingTip && (
+                        <p className="text-[11px] text-slate-300 italic leading-relaxed">
+                          💡 {cleanSartorialText(outfit.stylingTip)}
+                        </p>
+                      )}
+                      {outfit.whyItWorks && (
+                        <p className="text-[10px] text-slate-400 leading-normal">
+                          ✨ <strong className="text-slate-300">Összhang:</strong> {cleanSartorialText(outfit.whyItWorks)}
+                        </p>
+                      )}
                     </div>
                   </div>
-
-                  {outfit.stylingTip && (
-                    <div className="pt-2 border-t border-slate-800/80 text-[11px] text-slate-400 italic">
-                      💡 {cleanSartorialText(outfit.stylingTip)}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

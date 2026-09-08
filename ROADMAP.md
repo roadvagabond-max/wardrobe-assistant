@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.21` (Production Build)
+- **Aktuális Verzió:** `v1.7.24` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -28,7 +28,14 @@ Az alkalmazás 5 főlapja egységes, professzionális és letisztult nemzetközi
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.21)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.24)
+- [x] **Buy or Skip (Vásárlási Tanácsadó) Nagyjavítás & Mix & Match Dizájn-Paritás (v1.7.24):**
+  - **Méret-Hallucináció Védelem (Zero-Size Hallucination):** Mind a képfelvitelnél (`analyzeClothingImage`), mind a vásárlás előtti elemzésnél (`evaluateAndExtractPrePurchaseItem`) a méret mező szigorúan üres marad, hacsak a címkén nem olvasható vagy a felhasználói szövegben/linkben nem szerepel konkrét méret. A modell találgatása tilos és automatikusan törlésre kerül.
+  - **Kiszemelt Ruha Immunitás (`candidate-item` védelem):** Az anatómiai rétegezési motorban (`enforceAnatomicalOutfitLayers`) a kiszemelt darab (`isCand`) abszolút védettséget kap: a deduplikáció és rétegütközés feloldása sosem cserélheti le vagy dobhatja ki a kiszemelt ruhát.
+  - **Szöveg-Kép Lábbeli Szinkronizáció:** Megszűnt a szöveg és kártya eltérése (pl. barna cipő leírásban, de fekete sneaker a kártyán). Az AI kötelezően a kiválasztott darabok pontos ID-jét adja vissza, véletlenszerű lábbeli-fallback helyett a darab formalitásához illő stílusos cipőválasztás történik.
+  - **Dinamikus Stílusspektrum (Nem Fix Sablonok):** A 3 szett nem kényszerített fix sablonokból (1 casual, 1 smart casual, 1 formal) épül, hanem a kiszemelt ruha valós eleganciaszintje és stílusa vezérli. Női egyberuhák, szoknyák és különleges darabok teljes spektrumát támogatja.
+  - **Mix & Match Diagnosztikai Elemző Kártyák:** 5 strukturált szempontkártya (Színharmónia, Textúra & Anyag-Szinergia, Anatómiai Rétegezés & Sziluett, Testalkat & Proporciók, Esemény & Stílus DNS Összhang).
+  - **Mix & Match Flat-Lay Canvas Lookbook:** A korábbi egyszerű 2 oszlopos rács helyett a teljes Mix & Match anatómiai flat-lay elrendezés (Felsők sora, Nadrág + mellette Öv, Cipő + mellette Zokni, Kiegészítők, kattintható Lightbox modal és arany `✨ ÚJ DARAB` kiemelés).
 - [x] **Szettek Oldali Renderelési Hiba Javítása (`ModuleFirstTimeGuide`, v1.7.21):**
   - A hiányzó `import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';` pótlása az `OutfitsView.jsx`-ben, azonnal elhárítva a `ReferenceError`-t és a megjelenítési hibát.
 - [x] **Fő Modulok Átnevezése & Nemzetközi Nómenklatúra (v1.7.21):**

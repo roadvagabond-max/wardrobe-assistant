@@ -194,10 +194,10 @@ SZABÁLYOK:
      * GYERMEK ÉS BABA RUHÁKNÁL: Pulóver vagy kötöttáru alá KIZÁRÓLAG puha pamut bodyt, pamut pólót vagy hosszú ujjú pamut alsót javasolj! SOHA NE javasolj merev galléros inget a gyerekpulóver alá!
      * FELNŐTT NŐI RUHÁKNÁL: Nőies szabások, finom rétegek, dekoltázs és lágy esésű anyagok harmóniája.
      * FELNŐTT FÉRFI RUHÁKNÁL: Férfi szabások és a választott stílusirányzatnak megfelelő rétegek.
-   - "whenToWear": Mikor és milyen alkalmakkor érdemes viselni? (Események, napszakok, hőmérsékleti sáv).
-   - "colorHarmony": Hogyan harmonizál a darab színe a felhasználó bőrtónusával / színtípusával?
-   - "bodyFitAdvice": Hogyan áll a szabás a felhasználó testalkatán és életkorában?
-   - "stylingAdvice": Szakértői stílusjellemzés a darabról.
+   - "whenToWear": Mikor és milyen a    - "stylingAdvice": Szakértői stílusjellemzés a darabról.
+
+SZIGORÚ ZERO-MÉRET HALLUCINÁCIÓS SZABÁLY:
+SOHA NE TIPPELJ ÉS NE TALÁLJ KI MÉRETET! KIZÁRÓLAG akkor adj meg méretet (pl. 'M', 'L', '40', '32/32'), ha a fotón szereplő címkén OLVASHATÓAN látszik a méretjelölés, VAGY ha a webshop bemenet ezt konkrétan megadja! Ha a fotón csak maga a ruha látható címke nélkül, a "size" KÖTELEZŐEN üres string: ""!
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
@@ -208,7 +208,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "colorHex": "#hex_színkód",
   "material": "Részletes anyag és szövés (pl. 100% Organikus Pamut)",
   "brand": "Márkanév / Gyártó ha felismerhető (pl. Massimo Dutti, Zara, Next Direct)",
-  "size": "Méretjelölés ha kivehető vagy webshopból kinyerhető (pl. 'M', 'L', '104/110', '4-5 év', '32/32')",
+  "size": "Méretjelölés KIZÁRÓLAG ha olvasható a címkén vagy szövegben szerepel (különben: '')",
   "qualityScore": 9.2,
   "season": ["tavasz", "nyar", "osz", "tel"],
   "formality": "Casual (Laza)",
@@ -217,6 +217,12 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "stylingTip": "Mivel hordd: Konkrét kombinációs javaslatok a korosztálynak megfelelő rétegezési szabályok szerint",
   "whenToWear": "Mikor hordd: Események és hőmérséklet",
   "colorHarmony": "A szín és tónus harmóniája a felhasználóval",
+  "bodyFitAdvice": "Hogyan áll a szabás a felhasználó testalkatán és életkorában",
+  "stylingAdvice": "Karakteres, kényelmes és praktikus darab.",
+  "personalMatchScore": 95,
+  "imageUrl": "Ha a Google Keresési találatokban találsz közvetlen termékfotó URL-t, add meg, különben hagyd üresen",
+  "tags": ["alapdarab", "pamut", "kényelmes"]
+}al",
   "bodyFitAdvice": "Hogyan áll a szabás a felhasználó testalkatán és életkorában",
   "stylingAdvice": "Karakteres, kényelmes és praktikus darab.",
   "personalMatchScore": 95,
@@ -247,6 +253,14 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
       });
       if (result && result.brand) {
         result.brand = normalizeBrandName(result.brand) || result.brand;
+      }
+      // Zero size hallucination guarantee for pure image upload without webshop text
+      if (result && result.size) {
+        const fullInputText = `${webshopContext.rawInput || ''} ${webshopContext.title || ''} ${webshopContext.description || ''} ${webshopContext.rawText || ''}`.toLowerCase();
+        const hasExplicitTextSize = /\b(méret|size|xs|s|m|l|xl|xxl|36|38|40|42|44|46|48|50|52|54|30\/32|32\/32|34\/32)\b/i.test(fullInputText);
+        if (!hasExplicitTextSize && !webshopContext.productCode && !webshopContext.url) {
+          result.size = '';
+        }
       }
       return result;
     } catch (err) {
@@ -559,6 +573,9 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     return candidates[randIdx];
   };
 
+  // Helper: Is this item the candidate item? (Immunity check)
+  const isCand = (item) => Boolean(candidateItem && item && (item.id === candidateItem.id || item.name === candidateItem.name));
+
   // 1. SARTORIAL HARMONY RESOLUTION: Stand collar, Turtleneck & Sleeve rules
   const hasStandCollarShirt = items.some(i => isBaseTop(i) && isStandCollar(i));
   const hasClosedSweater = items.some(i => isClosedSweater(i));
@@ -569,35 +586,37 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   // A. Stand Collar Shirt vs Closed Sweaters & Classic Blazers
   if (hasStandCollarShirt) {
     if (hasClosedSweater) {
-      if (candidateItem && isStandCollar(candidateItem)) {
+      if (isCand(candidateItem) && isStandCollar(candidateItem)) {
+        // Candidate item is stand collar: remove the closed sweater from wardrobe
         items = items.filter(i => !isClosedSweater(i));
       } else {
         const classicShirtCandidates = getCandidateItems(w => isBaseTop(w) && !isStandCollar(w));
         const classicShirt = pickSmartFallbackGarment(classicShirtCandidates);
         if (classicShirt) {
-          items = items.map(i => isStandCollar(i) && isBaseTop(i) ? classicShirt : i);
+          items = items.map(i => isCand(i) ? i : (isStandCollar(i) && isBaseTop(i) ? classicShirt : i));
         } else {
-          items = items.filter(i => !isClosedSweater(i));
+          items = items.filter(i => isCand(i) || !isClosedSweater(i));
         }
       }
     }
 
     if (hasClassicBlazer) {
-      if (candidateItem && isStandCollar(candidateItem)) {
+      if (isCand(candidateItem) && isStandCollar(candidateItem)) {
+        // Candidate item is stand collar: remove the classic blazer from wardrobe
         items = items.filter(i => !isClassicBlazer(i));
-      } else if (candidateItem && isClassicBlazer(candidateItem)) {
+      } else if (isCand(candidateItem) && isClassicBlazer(candidateItem)) {
         const classicShirtCandidates = getCandidateItems(w => isBaseTop(w) && !isStandCollar(w));
         const classicShirt = pickSmartFallbackGarment(classicShirtCandidates);
         if (classicShirt) {
-          items = items.map(i => isStandCollar(i) && isBaseTop(i) ? classicShirt : i);
+          items = items.map(i => isCand(i) ? i : (isStandCollar(i) && isBaseTop(i) ? classicShirt : i));
         }
       } else {
         const classicShirtCandidates = getCandidateItems(w => isBaseTop(w) && !isStandCollar(w));
         const classicShirt = pickSmartFallbackGarment(classicShirtCandidates);
         if (classicShirt) {
-          items = items.map(i => isStandCollar(i) && isBaseTop(i) ? classicShirt : i);
+          items = items.map(i => isCand(i) ? i : (isStandCollar(i) && isBaseTop(i) ? classicShirt : i));
         } else {
-          items = items.filter(i => !isClassicBlazer(i));
+          items = items.filter(i => isCand(i) || !isClassicBlazer(i));
         }
       }
     }
@@ -605,24 +624,37 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
 
   // B. Turtleneck Resolution
   if (hasTurtleneckKnit) {
-    items = items.filter(i => !isBaseTop(i) || isTurtleneck(i));
+    if (isCand(candidateItem) && isBaseTop(candidateItem) && !isTurtleneck(candidateItem)) {
+      // Candidate item is the base top (shirt): remove the turtleneck from wardrobe, do NOT delete candidate shirt!
+      items = items.filter(i => !isTurtleneck(i));
+    } else {
+      items = items.filter(i => isCand(i) || !isBaseTop(i) || isTurtleneck(i));
+    }
   }
 
   // C. Short Sleeve Knitwear Resolution
   if (hasShortSleeveKnit) {
-    items = items.filter(i => !(isBaseTop(i) && isShortSleeve(i) && i.category !== 'knitwear'));
+    items = items.filter(i => isCand(i) || !(isBaseTop(i) && isShortSleeve(i) && i.category !== 'knitwear'));
   }
 
   // D. Shacket / Overshirt Resolution
   const hasShacket = items.some(i => isShacket(i));
   const hasCollaredShirt = items.some(i => isCollaredShirt(i));
   if (hasShacket && hasCollaredShirt) {
-    const tShirtCandidates = getCandidateItems(w => !isCollaredShirt(w) && !isShacket(w) && (isBaseTop(w) || isTurtleneck(w)));
-    const tShirtOrKnit = pickSmartFallbackGarment(tShirtCandidates);
-    if (tShirtOrKnit) {
-      items = items.map(i => isCollaredShirt(i) ? tShirtOrKnit : i);
-    } else {
+    if (isCand(candidateItem) && isCollaredShirt(candidateItem)) {
+      // Candidate item is the collared shirt: remove the shacket from wardrobe, do NOT replace the shirt!
+      items = items.filter(i => !isShacket(i));
+    } else if (isCand(candidateItem) && isShacket(candidateItem)) {
+      // Candidate item is the shacket: remove the collared shirt from wardrobe!
       items = items.filter(i => !isCollaredShirt(i));
+    } else {
+      const tShirtCandidates = getCandidateItems(w => !isCollaredShirt(w) && !isShacket(w) && (isBaseTop(w) || isTurtleneck(w)));
+      const tShirtOrKnit = pickSmartFallbackGarment(tShirtCandidates);
+      if (tShirtOrKnit) {
+        items = items.map(i => isCand(i) ? i : (isCollaredShirt(i) ? tShirtOrKnit : i));
+      } else {
+        items = items.filter(i => isCand(i) || !isCollaredShirt(i));
+      }
     }
   }
 
@@ -648,21 +680,57 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   }
 
-  // 4. Check if the outfit has Shoes (lábbeli) & Enforce Temperature Appropriateness
+  // 4. Check if the outfit has Shoes (lábbeli) & Enforce Temperature & Formality Appropriateness
   const currentShoeIndex = items.findIndex(i => isShoe(i));
   if (currentShoeIndex !== -1) {
     const currentShoe = items[currentShoeIndex];
     if (isWarmWeather && isHeavyBoot(currentShoe)) {
       const summerCandidates = getCandidateItems(w => isShoe(w) && !isHeavyBoot(w));
       const summerAlternative = pickSmartFallbackGarment(summerCandidates);
-      if (summerAlternative) {
+      if (summerAlternative && !isCand(currentShoe)) {
         items[currentShoeIndex] = summerAlternative;
       }
     }
   } else {
-    const shoeCandidates = isWarmWeather
+    // Determine outfit formality to pick a matching footwear fallback (no random sneakers for formal suits)
+    const isFormalOutfit = items.some(i => 
+      (i.formality || '').includes('Formal') || 
+      (i.formality || '').includes('Business') ||
+      (i.name || '').toLowerCase().includes('zakó') ||
+      (i.name || '').toLowerCase().includes('blézer') ||
+      (i.name || '').toLowerCase().includes('öltöny')
+    );
+    const isCasualOutfit = items.some(i =>
+      (i.formality || '').includes('Casual') ||
+      (i.name || '').toLowerCase().includes('farmer') ||
+      (i.name || '').toLowerCase().includes('melegítő')
+    );
+
+    let shoeCandidates = isWarmWeather
       ? getCandidateItems(w => isShoe(w) && !isHeavyBoot(w))
       : getCandidateItems(isShoe);
+
+    if (isFormalOutfit) {
+      const formalShoes = shoeCandidates.filter(s => 
+        (s.formality || '').includes('Formal') ||
+        (s.formality || '').includes('Smart') ||
+        (s.subCategory || '').includes('oxford') ||
+        (s.subCategory || '').includes('derby') ||
+        (s.subCategory || '').includes('loafer') ||
+        (s.name || '').toLowerCase().includes('bőrcipő') ||
+        (s.name || '').toLowerCase().includes('loafer') ||
+        (s.name || '').toLowerCase().includes('félcipő')
+      );
+      if (formalShoes.length > 0) shoeCandidates = formalShoes;
+    } else if (isCasualOutfit) {
+      const casualShoes = shoeCandidates.filter(s =>
+        (s.subCategory || '').includes('sneaker') ||
+        (s.name || '').toLowerCase().includes('sneaker') ||
+        (s.name || '').toLowerCase().includes('mokaszin') ||
+        (s.name || '').toLowerCase().includes('cipő')
+      );
+      if (casualShoes.length > 0) shoeCandidates = casualShoes;
+    }
 
     const existingBelt = items.find(i => isBelt(i));
     const beltColorFamily = existingBelt?.color ? (existingBelt.color.toLowerCase().includes('barna') ? 'barna' : (existingBelt.color.toLowerCase().includes('fekete') ? 'fekete' : null)) : null;
@@ -696,14 +764,15 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     }
   }
 
-  // 6. Strictly ensure AT MOST ONE item of each core type:
+  // 6. Strictly ensure AT MOST ONE item of each core type (Immunity: candidateItem is always preserved):
   // - Exactly 1 Belt
   const beltIndices = [];
   items.forEach((item, idx) => {
     if (isBelt(item)) beltIndices.push(idx);
   });
   if (beltIndices.length > 1) {
-    const keepIdx = beltIndices[0];
+    const candIdx = beltIndices.find(idx => isCand(items[idx]));
+    const keepIdx = candIdx !== undefined ? candIdx : beltIndices[0];
     items = items.filter((_, idx) => !beltIndices.includes(idx) || idx === keepIdx);
   }
 
@@ -713,7 +782,8 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     if (isBottom(item)) bottomIndices.push(idx);
   });
   if (bottomIndices.length > 1) {
-    const keepIdx = bottomIndices[0];
+    const candIdx = bottomIndices.find(idx => isCand(items[idx]));
+    const keepIdx = candIdx !== undefined ? candIdx : bottomIndices[0];
     items = items.filter((_, idx) => !bottomIndices.includes(idx) || idx === keepIdx);
   }
 
@@ -723,7 +793,8 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     if (isShoe(item)) shoeIndices.push(idx);
   });
   if (shoeIndices.length > 1) {
-    const keepIdx = shoeIndices[0];
+    const candIdx = shoeIndices.find(idx => isCand(items[idx]));
+    const keepIdx = candIdx !== undefined ? candIdx : shoeIndices[0];
     items = items.filter((_, idx) => !shoeIndices.includes(idx) || idx === keepIdx);
   }
 
@@ -733,8 +804,14 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     if (isBaseTop(item)) topIndices.push(idx);
   });
   if (topIndices.length > 1) {
-    const keepIdx = topIndices[0];
+    const candIdx = topIndices.find(idx => isCand(items[idx]));
+    const keepIdx = candIdx !== undefined ? candIdx : topIndices[0];
     items = items.filter((_, idx) => !topIndices.includes(idx) || idx === keepIdx);
+  }
+
+  // Absolute Final Guarantee: candidateItem must NEVER be dropped
+  if (candidateItem && !items.some(i => isCand(i))) {
+    items.unshift(candidateItem);
   }
 
   // 7. Sort in natural anatomical layering order:
@@ -824,41 +901,38 @@ SZIGORÚ VALÓS ADAT ELV ÉS ANTI-HALLUCINÁCIÓS SZABÁLYOK:
 1. KIZÁRÓLAG AZOKAT AZ ADATOKAT ADD MEG, AMIKET A WEBSHOP LEÍRÁSA, CÍME VAGY FOTÓJA TÉNYLEGESEN TARTALMAZ!
 2. HA A FOTÓ, LINK VAGY BEMENET ALAPJÁN A TERMÉK EGYÁLTALÁN NEM AZONOSÍTHATÓ BE (pl. hibás vagy elérhetetlen link, üres kép, nem ruházati termék):
    - Állítsd be: "isUnknown": true, "unknownReason": "Konkrét indoklás, miért nem sikerült azonosítani", és kérd meg a felhasználót valós terméknév vagy fotó megadására! SOHA NE TALÁLJ KI FANTOMRUHÁT!
-3. HA EGY KONKRÉT ADAT (PL. SZABÁS, ANYAGÖSSZETÉTEL, MÉRET) NEM SZEREPEL A WEBSHOPBAN VAGY NEM ÁLL RENDELKEZÉSRE:
-   - SOHA NE TALÁLJ KI SEMMIT, NE TIPPELJ ÉS NE ERŐLTESS RÁ SEMMIT A FELHASZNÁLÓ PROFILJÁBÓL!
-   - Ha a szabás nincs megadva: "fit": "Nem ismert szabás" (vagy null), és a szabásbeli elemzésnél jelezd, hogy a webshop nem közölte a szabást.
-   - Ha az anyagösszetétel nincs megadva: "material": "Nem ismert anyagösszetétel".
-   - Ha a méret nincs megadva: "size": "".
-4. SOHA NE ÁLLÍTSD EGY TERMÉKRŐL, HOGY SLIM FIT VAGY REGULAR FIT, HA EZT A WEBSHOP NEM ÍRJA KIFEJEZETTEN!
+3. SZIGORÚ ZERO-MÉRET HALLUCINÁCIÓS SZABÁLY:
+   - SOHA NE TIPPELJ ÉS NE TALÁLJ KI MÉRETET! KIZÁRÓLAG akkor adj meg méretet (pl. 'M', 'L', '40', '32/32'), ha a fotón szereplő címkén OLVASHATÓAN látszik a méretjelölés, VAGY ha a webshop bemenet ezt kifejezetten tartalmazza! Ha a fotón csak maga a ruha látható címke nélkül, a "size" KÖTELEZŐEN üres string: ""!
+4. HA A SZABÁS NINCS KIFEJEZETTEN LEÍRVA: "fit": "Nem ismert szabás" (vagy null). SOHA NE ÁLLÍTSD EGY TERMÉKRŐL, HOGY SLIM FIT VAGY REGULAR FIT, HA EZT A WEBSHOP NEM ÍRJA KIFEJEZETTEN!
+5. HA AZ ANYAGÖSSZETÉTEL NINCS MEGADVA: "material": "Nem ismert anyagösszetétel".
 
-4 DÖNTÉSI PILLÉR & SARTORIAL LOGIKA:
+SZETTAJÁNLÓ KÖTELEZŐ KULCSDARAB (ANCHOR ITEM) & SZERVEZÉSI ELVEK:
+A kiszemelt új ruhadarab ID-ja: "candidate-item".
+MIND a 3 szett KÖTELEZŐEN e köré a kiszemelt kulcsdarab ("candidate-item") köré épül!
+1. A szettek jellegét, alkalmát ('occasion') és stílusát ('styleType') a kiszemelt darab saját természetes karaktere, formalitása, szabása, anyaga és női/férfi/gyermek rendeltetése határozza meg dinamikusan a divatvilág teljes spektrumában (női ruhák, szoknyák, nadrágok, zakók, sportos vagy elegáns darabok)! TILOS merev sablonokat ráerőltetni!
+   - Egyberuha esetén az egyberuha egyrészes bázisdarab: SZIGORÚAN TILOS külön nadrágot vagy szoknyát rendelni hozzá! Helyette elegáns felöltő réteg (blézer, kardigán, kabát), cipő és deréköv társítható hozzá!
+   - Ha a kiszemelt darab egy felső (ing/póló/garbó), az maga a bázisfelső; ne válassz mellé másik bázisinget a gardróbból!
+   - Ha a kiszemelt darab zakó/kabát, válassz hozzá bázisfelsőt, nadrágot/szoknyát, cipőt!
+   - Ha a kiszemelt darab nadrág/szoknya, válassz hozzá felsőt, cipőt, övet!
+   - Ha a kiszemelt darab cipő, válassz hozzá felsőt, nadrágot, övet/kiegészítőt!
+2. A 'matchedItemIds' listába KÖTELEZŐEN TEDD BE a "candidate-item"-et, és válassz mellé a ruhatár katalógusából tökéletesen harmonizáló darabokat (alsó/felső, lábbeli, öv, opc. rétegek)!
+3. SZIGORÚ SZÖVEG- ÉS ID-SZINKRONIZÁCIÓ (ZERO MISMATCH):
+   - A leírásban ('stylingTip') és indoklásban megnevezett darabok (különösen a lábbeli, mint pl. barna bőrcipő, fekete loafer vagy fehér sneaker) ID-ja 100%-ban megegyezik a 'matchedItemIds' listába betett gardrób-elemek ID-jával!
+   - Tilos barna cipőt írni, ha fekete sneaker ID-ját adod meg, és fordítva!
+   - A lábbeli formalitása és stílusa 100%-ban passzoljon az összeállítás jellegéhez!
 
-1. 👔 KOMBINÁLHATÓSÁG & 3 KOMPLETT OUTFIT:
-   - Készíts 3 különböző komplett, hordható outfitet a kiszemelt darab és a meglévő ruhatár elemeiből, a cél-szezonnak és stílusnak megfelelő anatómiai rétegezéssel!
-   - KÖTELEZŐ ELEMEK:
-     * 👔 Bázis felső ('tops' - ${demographics.isChild ? 'puha pamut póló, pamut body vagy kényelmes hosszú ujjú felső közvetlenül a bőrön' : 'ing vagy minőségi pamut póló közvetlenül a bőrön; ha a céltermék garbó vagy kötött felső, az maga a bázis'}).
-     * 👖 Alsó ('bottoms' - nadrág vagy szoknya a ruhatárból).
-     * 👞 Lábbeli ('shoes' - cipő / csizma / loafer / sneaker a ruhatárból).
-     * 🎗️ Öv ('accessories' - elegáns/smart nadrágoknál öv a ruhatárból; gyermeknél vagy gumis derekú/szoknya viseletnél elhagyható).
-   - OPCIONÁLIS RÉTEGEK: Köztes réteg ('knitwear' - pulóver/kardigán), Zakó/Blézer ('outerwear' / 'blazer'), Télikabát ('coat' / 'overcoat'), egyéb kiegészítők.
-   - A 'matchedItemIds' listába KÖTELEZŐEN TEDD BE az összes olyan darab pontos 'id'-ját, amit a szetthez és a leírásban ('stylingTip') felhasználsz!
-
-2. ⚖️ VÁLTOZATOSSÁG & STILISZTIKAI LEFEDETTSÉG (Aesthetic Overlap):
-   - Ha a ruhatárban már van azonos szerepkörű/megjelenésű darab, töltsd ki az 'aestheticOverlap' objektumot.
-
-3. 📐 SZEMÉLYES ILLESZKEDÉS & SZABÁS:
-   - Csak a valós adatok alapján értékeld a termék illeszkedését a stílus DNS-hez.
-
-4. 🧶 ANYAGMINŐSÉG ÉS MŰSZÁL BÍRÁLAT:
-   - A kinyert valós anyagösszetétel alapján értékeld az anyagminőséget.
-   - Ha a termék jelentős arányban olcsó szintetikus szálat (100% poliészter, akril, PU műbőr) tartalmaz:
-     * Vonj le 5–15 pontot a minőségi pontszámból ('fabricScore' és 'qualityScore').
-     * A 'fabricWarning' mezőben és a 'cons' (Gondold át) listában konkrétan nevezd meg a szintetikus összetevőt és annak kompromisszumait (pl. alacsonyabb légáteresztés, fokozott izzadásérzet, bolyhosodási hajlam).
-     * UGYANAKKOR NE BÜNTESD TÚL MEREVEN AZ ÖSSZPONTSZÁMOT ('compatibilityScore'): ha a darab fazonja, stílusa és ruhatári kombinálhatósága kiváló (3 remek outfit építhető), a darab megkaphatja a 70–80+ pontot is ('Érdemes Megfontolni'), miközben a leírásban tisztán és őszintén szerepel a minőségi aggály.
-
-🚫 CSENDES SZABÁLYBETARTÁS (Silent Rule Enforcement):
-- A felhasználó egyéni stílusszabályait és tiltásait KÖTELEZŐEN A HÁTTÉRBEN, CSENDBEN TARTSD BE a szettek és tanácsok generálásakor!
-- SZIGORÚAN TILOS a szövegben megemlíteni vagy magyarázni a felhasználó saját szabályait (pl. TILOS leírni, hogy "a szabályod szerint nem választottunk pólóinget")! A leírás kizárólag a darabok valódi eleganciájára, esztétikájára és kombinálhatóságára fókuszáljon!
+MIX & MATCH STRUKTURÁLT SZAKMAI AUDIT:
+- "colorHarmony": Színharmónia, kontraszt, hideg/meleg tónusok és a 3-szín szabály érvényesülése a meglévő darabjaiddal.
+- "fabricSynergy": Anyagok és textúrák találkozása a meglévő darabokkal (természetes szálak, esés, légáteresztés).
+- "layeringEvaluation": Anatómiai rétegezés, gallér- és ujj-harmónia, arányok és sziluett.
+- "bodyFitVerdict": Testalkat, magasság és személyes proporciók értékelése a profilod alapján.
+- "eventAlignment": Sokoldalúság és stílus DNS illeszkedés a darab valódi hordhatósági tartományában.
+- "aestheticOverlap": Stilisztikai lefedettség & redundancia vizsgálat (ha már van hasonló a ruhatárban).
+- "pros": Konkrét valós érvek a vásárlás mellett.
+- "cons": Megfontolandó szempontok.
+- "fitMismatchWarning": Szabásbeli vagy testalkati figyelmeztetés (ha nincs: null).
+- "fabricWarning": Anyagminőségi észrevétel (műszál, légáteresztés; ha kiváló természetes anyag: pozitív értékelés).
+- "sizingAdvice": Gyártói és méretválasztási tanács a márka és a ruhatár méretei alapján.
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
@@ -867,12 +941,12 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "item": {
     "name": "${itemName || 'Valós magyar terméknév'}",
     "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "dresses" | "skirts" | "accessories",
-    "subCategory": "blazer" | "knitwear" | "shirt" | "t-shirt" | "polo" | "trousers" | "jeans" | "loafers" | "sneakers" | "boots" | "coat" | "overcoat" | "jacket" | "other",
+    "subCategory": "blazer" | "knitwear" | "shirt" | "t-shirt" | "polo" | "trousers" | "jeans" | "loafers" | "sneakers" | "boots" | "dress" | "skirt" | "coat" | "overcoat" | "jacket" | "other",
     "color": "Webshopban talált szín magyarul",
     "colorHex": "#hex",
     "material": "Webshopban talált valós anyag (ha nem ismert: 'Nem ismert anyagösszetétel')",
     "brand": "${webshopBrand || 'Márkanév ha ismert'}",
-    "size": "Méret ha kinyerhető",
+    "size": "Méretjelölés KIZÁRÓLAG ha a címkén olvasható vagy szövegben szerepel (különben: '')",
     "fit": "Webshopban megadott szabás ha szerepel (ha nincs megadva: 'Nem ismert szabás')",
     "qualityScore": 9.0,
     "formality": "Smart Casual",
@@ -884,9 +958,14 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
     "bodyFitAdvice": "Szabás és testalkat indoklás",
     "tags": ["alapdarab"]
   },
-  "compatibilityScore": 94,
+  "compatibilityScore": 92,
   "verdict": "Erősen Ajánlott" | "Érdemes Megfontolni" | "Gondold Át",
   "verdictSummary": "Részletes szakmai összefoglaló a valós adatok alapján",
+  "colorHarmony": "A kiszemelt darab színének kölcsönhatása a ruhatárad palettájával és színtípusoddal",
+  "fabricSynergy": "Az anyagok és szövés találkozása a gardróbodban meglévő textúrákkal",
+  "layeringEvaluation": "Anatómiai rétegezés, gallér- és ujj-harmónia, arányok elemzése",
+  "bodyFitVerdict": "Szakvélemény a testalkatodhoz és magasságodhoz való illeszkedésről",
+  "eventAlignment": "Alkalmi sokoldalúság és a stílus DNS-eddel való összecsengés a darab formalitásán",
   "pros": [
     "Konkrét valós érvek a vásárlás mellett"
   ],
@@ -901,23 +980,24 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
     "reason": "Miért fedi le már ez a darab a megjelenést",
     "alternativeRecommendation": "Mit érdemes inkább venni helyette"
   },
-  "fitMismatchWarning": "Szabásbeli észrevétel (ha a webshop nem közölte a szabást, vagy ha nincs hiba: null)",
-  "fabricWarning": "Anyagminőségi észrevétel",
+  "fitMismatchWarning": null,
+  "fabricWarning": null,
   "fabricScore": 9.0,
   "isSynthetic": false,
-  "sizingAdvice": "Méretválasztási tanács",
+  "sizingAdvice": "Méretválasztási tanács a márka és profil alapján",
   "targetSeason": "Tél" | "Nyár" | "Ősz" | "Tavasz" | "Négyévszakos",
   "outfits": [
     {
       "title": "Szett 1 Neve",
-      "occasion": "Alkalom",
+      "occasion": "A darab formalitásához illeszkedő alkalom",
       "styleType": "Stílusirányzat",
-      "matchedItemIds": ["bázis_ing_id", "nadrág_id", "cipő_id", "opcionális_zakó_id"],
-      "stylingTip": "Részletes rétegezési és viselési leírás",
-      "whyItWorks": "Miért harmonizál a darabokkal"
+      "matchedItemIds": ["candidate-item", "nadrag_vagy_felsorasz_id", "cipo_id", "opcionalis_ov_vagy_zako_id"],
+      "stylingTip": "Részletes rétegezési és viselési leírás a szinkronizált darabokkal",
+      "whyItWorks": "Miért harmonizálnak ezek a darabok"
     }
   ]
-}`;
+}
+`;
 
       const parts = [{ text: prompt }];
 
@@ -953,6 +1033,13 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
           // If not explicitly stated in webshop text, DO NOT guess Slim Fit!
           parsed.item.fit = 'Nem ismert szabás';
         }
+
+        // Zero size hallucination guarantee: if no explicit size in text input, clear hallucinated size
+        const fullInputText = `${webshopContext.rawInput || ''} ${webshopContext.title || ''} ${webshopContext.description || ''} ${itemName || ''}`.toLowerCase();
+        const hasExplicitSizeInInput = /\b(méret|size|xs|s|m|l|xl|xxl|36|38|40|42|44|46|48|50|52|54|30\/32|32\/32|34\/32)\b/i.test(fullInputText);
+        if (!hasExplicitSizeInInput && !webshopContext.productCode && !webshopContext.url) {
+          parsed.item.size = '';
+        }
       }
 
       const candidateCat = parsed.item?.category || (parsed.item?.subCategory === 'knitwear' || (parsed.item?.name || '').toLowerCase().includes('pulóver') ? 'knitwear' : 'tops');
@@ -968,7 +1055,17 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 
       if (parsed && Array.isArray(parsed.outfits)) {
         parsed.outfits = parsed.outfits.map(o => {
-          const matchedItems = (o.matchedItemIds || []).map(id => wardrobe.find(w => w.id === id)).filter(Boolean);
+          const rawIds = o.matchedItemIds || o.itemIds || [];
+          let matchedItems = rawIds.map(id => {
+            if (id === 'candidate-item') return extractedItem;
+            return wardrobe.find(w => w.id === id);
+          }).filter(Boolean);
+
+          // Absolute guarantee: candidate item is in the outfit
+          if (!matchedItems.some(i => i.id === 'candidate-item' || i.name === extractedItem.name)) {
+            matchedItems.unshift(extractedItem);
+          }
+
           const fullEnforcedItems = enforceAnatomicalOutfitLayers(matchedItems, wardrobe, extractedItem, weather, targetSeason);
 
           return {
