@@ -1,5 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, XCircle, ShoppingBag, ArrowRight, Loader2, RefreshCw, Plus, Check, Heart, Clipboard, Feather, ShieldAlert, Layers, Compass, Maximize2, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { 
+  Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, 
+  Loader2, RefreshCw, Plus, Check, Clipboard, Feather, ShieldAlert, 
+  Layers, Compass, ChevronDown, ChevronUp, CloudSun, AlertCircle, Info, Bookmark, X
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
@@ -7,10 +11,30 @@ import { optimizeImageForUpload, getSmartGarmentImage, ensureBase64Image } from 
 import confetti from 'canvas-confetti';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
 
-export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
+const TARGET_SEASONS = [
+  { id: 'auto', label: '✨ Automatikus', desc: 'A ruha természetes szezonja alapján' },
+  { id: 'winter', label: '❄️ Tél', desc: 'Hideg idő, meleg szövetek & csizmák' },
+  { id: 'autumn', label: '🍂 Ősz', desc: 'Hűvös idő, rétegezés & átmeneti kabátok' },
+  { id: 'spring', label: '🌸 Tavasz', desc: 'Enyhe idő, könnyed zakók & félcipők' },
+  { id: 'summer', label: '☀️ Nyár', desc: 'Meleg idő, lenvászon & szellős darabok' }
+];
+
+function cleanSartorialText(text) {
+  if (!text || typeof text !== 'string') return text;
+  return text
+    .replace(/\bsartorial\s+szempontb[oó]l\b/gi, 'stílusszempontból')
+    .replace(/\bsartorial\s+eleganci[aá][t]?\b/gi, 'klasszikus eleganciát')
+    .replace(/\bsartorialis\b/gi, 'stílusos')
+    .replace(/\bsartoriális\b/gi, 'stílusos')
+    .replace(/\bsartorial\b/gi, 'stílusos')
+    .replace(/\bSartorial\b/gi, 'Stílus');
+}
+
+export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefill }) {
   const { wardrobe, profile, addItem } = useAuth();
 
   const [activeTab, setActiveTab] = useState('camera'); // 'camera', 'clipboard', 'upload', 'link'
+  const [targetSeason, setTargetSeason] = useState('auto');
   const [imagePreview, setImagePreview] = useState(null);
   const [webshopUrl, setWebshopUrl] = useState('');
   const [webshopContext, setWebshopContext] = useState(null);
@@ -69,6 +93,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
       if (data.price) setItemPrice(data.price);
     } catch (err) {
       console.warn('Webshop link auto-kinyerés hiba:', err);
+      setAnalysisError('Nem sikerült automatikusan kinyerni a képet a linkből. Kérlek másold be a fotót vágólapról (Ctrl+V) vagy töltsd fel!');
     } finally {
       setIsAnalyzing(false);
     }
@@ -212,7 +237,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
       setEvaluationResult(null);
     } catch (err) {
       console.error('Webshop link hiba:', err);
-      setAnalysisError(err.message || 'A link feldolgozása nem sikerült. Próbáld közvetlen képcímmel vagy fotóval!');
+      setAnalysisError(err.message || 'A link feldolgozása nem sikerült. Próbáld közvetlen képcímmel vagy vágólapról!');
     } finally {
       setIsAnalyzing(false);
     }
@@ -224,14 +249,15 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
     setIsAnalyzing(true);
     setAnalysisError(null);
     try {
-      // Single unified fast 1-shot Gemini 3.7 evaluation & extraction
       const result = await evaluateAndExtractPrePurchaseItem({
         imageBase64OrUrl: imagePreview,
         webshopContext: webshopContext || {},
         itemName,
         itemPrice,
         wardrobe,
-        styleProfile: profile
+        styleProfile: profile,
+        targetSeason,
+        weather
       });
 
       if (result?.item) {
@@ -250,7 +276,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
             particleCount: 60,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ['#d4af37', '#10b981', '#ffffff']
+            colors: ['#e2e8f0', '#10b981', '#d4af37']
           });
         } catch (_) {}
       }
@@ -262,9 +288,11 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
     }
   };
 
+  // Firestore ID fix: strip candidate-item ID so addItem generates a unique timestamp-based ID
   const handleAddToWardrobe = () => {
     if (!evaluationResult?.extractedItem) return;
-    addItem(evaluationResult.extractedItem);
+    const { id, ...itemToSave } = evaluationResult.extractedItem;
+    addItem(itemToSave);
     setAddedToWardrobe(true);
   };
 
@@ -280,76 +308,121 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
     if (onClearPrefill) onClearPrefill();
   };
 
+  // Score badge configuration matching the Mix & Match design system
+  const scoreBadgeConfig = useMemo(() => {
+    if (!evaluationResult) return null;
+    const s = evaluationResult.compatibilityScore;
+    if (s >= 80) {
+      return {
+        glowClass: 'score-glow-emerald border-emerald-500/50 bg-[#061810]/95 text-emerald-300',
+        badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+        scoreColor: 'text-emerald-400',
+        icon: '✨',
+        title: evaluationResult.verdict || 'Erősen Ajánlott'
+      };
+    }
+    if (s >= 65) {
+      return {
+        glowClass: 'score-glow-amber border-amber-500/50 bg-[#1a1408]/95 text-amber-300',
+        badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+        scoreColor: 'text-amber-300',
+        icon: '🟡',
+        title: evaluationResult.verdict || 'Érdemes Megfontolni'
+      };
+    }
+    return {
+      glowClass: 'score-glow-rose border-rose-500/50 bg-[#1a080c]/95 text-rose-300',
+      badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+      scoreColor: 'text-rose-400',
+      icon: '⚠️',
+      title: evaluationResult.verdict || 'Gondold Át'
+    };
+  }, [evaluationResult]);
+
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-4 pb-32 animate-fade-in">
       
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2">
-          <span className="badge badge-gold">Vásárlási Tanácsadó</span>
-          <span className="badge badge-emerald">4 Döntési Pillér</span>
+      {/* Top Header Bar */}
+      <div className="p-3.5 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 border border-slate-700 text-slate-300">
+                🛍️ Vásárlási Tanácsadó
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800/80 border border-slate-700/80 text-sky-400">
+                4 Döntési Pillér
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-serif font-bold text-slate-100">
+              Buy or Skip
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+              Tudatos döntés vásárlás előtt: teszteld a kiszemelt darabot 3 komplett szettel, szabás- és minőségellenőrzéssel!
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowPillarsGuide(!showPillarsGuide)}
+            className="self-start sm:self-center px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Info className="w-3.5 h-3.5 text-slate-400" />
+            <span>Hogyan segít az AI?</span>
+            {showPillarsGuide ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text mt-1">
-          Buy or Skip
-        </h2>
-        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
-          Nézzük meg, mennyire érdemes megvenned a kiszemelt darabot! Fotózd le a próbafülkében vagy illeszd be a webshop linket a minőségi és kombinálhatósági elemzéshez.
-        </p>
-      </div>
 
-      {/* Collapsible 4-Pillar Guidance Accordion */}
-      <div className="rounded-xl border border-amber-500/25 bg-gradient-to-r from-amber-500/10 via-black/40 to-transparent overflow-hidden text-xs transition-all">
-        <button
-          type="button"
-          onClick={() => setShowPillarsGuide(!showPillarsGuide)}
-          className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-2 text-left text-amber-200 font-serif font-bold text-xs hover:bg-white/5 transition-colors cursor-pointer"
-        >
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
-            <span>Hogyan segít az AI megelőzni a rossz vásárlási döntéseket?</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[var(--accent-gold-light)] font-sans font-normal shrink-0">
-            <span>{showPillarsGuide ? 'Kevesebb' : 'Részletek'}</span>
-            {showPillarsGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </div>
-        </button>
-
+        {/* Collapsible Guidance Accordion */}
         {showPillarsGuide && (
-          <div className="px-3.5 pb-3.5 sm:px-4 sm:pb-4 pt-1 border-t border-amber-500/15 animate-fade-in">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-[11px] text-[var(--text-secondary)]">
-              <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 space-y-0.5">
-                <strong className="text-white block font-medium">1. 3 komplett szett:</strong>
-                <span>Megmutatja, hogyan tudod viselni a már meglévő darabjaiddal.</span>
+          <div className="mt-3 pt-3 border-t border-slate-800 animate-slide-down">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+                <span className="font-bold text-slate-200 block">1. 3 komplett outfit:</span>
+                <span className="text-slate-400 text-[11px]">A meglévő ruhatáradból azonnal hordható szetteket kombinál.</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 space-y-0.5">
-                <strong className="text-white block font-medium">2. Duplikáció szűrés:</strong>
-                <span>Figyelmeztet, ha már van hasonló darabod a ruhatáradban.</span>
+              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+                <span className="font-bold text-slate-200 block">2. Stilisztikai lefedettség:</span>
+                <span className="text-slate-400 text-[11px]">Kiszűri a felesleges duplikációkat és hiánypótló darabokat javasol.</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 space-y-0.5">
-                <strong className="text-white block font-medium">3. Szabás & Méret:</strong>
-                <span>Ellenőrzi a méretet és szabást (pl. Slim vs Regular).</span>
+              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+                <span className="font-bold text-slate-200 block">3. Szabás & Méretprofil:</span>
+                <span className="text-slate-400 text-[11px]">Összeveti a szabást (Slim vs Regular) és gyártói méretet.</span>
               </div>
-              <div className="p-2.5 rounded-lg bg-black/50 border border-white/5 space-y-0.5">
-                <strong className="text-white block font-medium">4. Anyagminőség:</strong>
-                <span>Kiszűri a rossz műszálakat (100% poliészter, PU műbőr).</span>
+              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+                <span className="font-bold text-slate-200 block">4. Anyagminőség & Műszál:</span>
+                <span className="text-slate-400 text-[11px]">Elemzi a szövetet és őszintén jelzi a műszálas kompromisszumokat.</span>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Input Stage */}
+      {/* Small Wardrobe Guidance note */}
+      {wardrobe.length < 3 && (
+        <div className="p-3 rounded-2xl bg-[#0f1420]/70 border border-slate-800 flex items-center gap-2.5 text-xs text-slate-300">
+          <Info className="w-4 h-4 text-sky-400 shrink-0" />
+          <span>
+            A ruhatáradban jelenleg <strong>{wardrobe.length} db</strong> ruha található. A 3 garantált szett építéséhez érdemes még néhány alapdarabot (ing, nadrág, cipő) felvenni a Gardrób menüpontban!
+          </span>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* INPUT STAGE: OBSIDIAN & TITANIUM LUXURY DESIGN */}
+      {/* ========================================================================= */}
       {!evaluationResult && (
-        <div className="glass-card p-5 sm:p-6 space-y-5">
+        <div className="p-4 sm:p-5 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-4 shadow-2xl">
           
           {/* Source Tabs */}
           {!imagePreview && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-[#090d15] rounded-2xl border border-slate-800">
               <button
                 type="button"
                 onClick={() => setActiveTab('camera')}
-                className={`py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                  activeTab === 'camera' ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' : 'text-[var(--text-secondary)] hover:text-white'
+                disabled={isAnalyzing}
+                className={`py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'camera' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Camera className="w-4 h-4" />
@@ -359,8 +432,9 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
               <button
                 type="button"
                 onClick={() => setActiveTab('clipboard')}
-                className={`py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                  activeTab === 'clipboard' ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' : 'text-[var(--text-secondary)] hover:text-white'
+                disabled={isAnalyzing}
+                className={`py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'clipboard' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Clipboard className="w-4 h-4" />
@@ -370,8 +444,9 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
               <button
                 type="button"
                 onClick={() => setActiveTab('upload')}
-                className={`py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                  activeTab === 'upload' ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' : 'text-[var(--text-secondary)] hover:text-white'
+                disabled={isAnalyzing}
+                className={`py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'upload' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <Upload className="w-4 h-4" />
@@ -381,8 +456,9 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
               <button
                 type="button"
                 onClick={() => setActiveTab('link')}
-                className={`py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                  activeTab === 'link' ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' : 'text-[var(--text-secondary)] hover:text-white'
+                disabled={isAnalyzing}
+                className={`py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'link' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <LinkIcon className="w-4 h-4" />
@@ -395,7 +471,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           {activeTab === 'camera' && !imagePreview && (
             <div
               onClick={() => cameraInputRef.current?.click()}
-              className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3 bg-[var(--accent-gold-glow)]"
+              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 bg-[#070a12] group"
             >
               <input
                 type="file"
@@ -408,12 +484,12 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <div className="w-14 h-14 rounded-full bg-[var(--accent-gold)]/20 flex items-center justify-center text-[var(--accent-gold)]">
-                <Camera className="w-7 h-7" />
+              <div className="w-14 h-14 rounded-full bg-slate-800/90 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 transition-all">
+                <Camera className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Fotózd le a ruhát a tükörben vagy a próbafülkében</p>
-                <p className="text-xs text-[var(--text-secondary)] mt-1">Azonnali elemzés és ruhatár-összevetés</p>
+                <p className="text-sm font-semibold text-slate-100">Fotózd le a ruhát a tükörben vagy próbafülkében</p>
+                <p className="text-xs text-slate-400 mt-1">Azonnali elemzés és ruhatár-összevetés</p>
               </div>
             </div>
           )}
@@ -422,20 +498,20 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           {activeTab === 'clipboard' && !imagePreview && (
             <div
               onClick={handleClipboardButtonClick}
-              className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3 bg-[var(--accent-gold-glow)] group"
+              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 bg-[#070a12] group"
             >
-              <div className="w-14 h-14 rounded-full bg-[var(--accent-gold)]/20 flex items-center justify-center text-[var(--accent-gold)] group-hover:scale-110 transition-transform">
-                <Clipboard className="w-7 h-7" />
+              <div className="w-14 h-14 rounded-full bg-slate-800/90 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 group-hover:scale-105 transition-transform">
+                <Clipboard className="w-6 h-6" />
               </div>
               <div className="space-y-1 max-w-sm">
-                <p className="text-sm font-semibold text-white">
+                <p className="text-sm font-semibold text-slate-100">
                   Kattints ide a vágólap beillesztéséhez
                 </p>
-                <p className="text-xs text-[var(--accent-gold-light)] font-medium">
-                  Vagy nyomj <kbd className="px-1.5 py-0.5 rounded bg-black border border-white/20 text-white font-mono text-[11px]">Ctrl + V</kbd>-t bárhol!
+                <p className="text-xs text-slate-300 font-medium">
+                  Vagy nyomj <kbd className="px-1.5 py-0.5 rounded bg-black border border-slate-700 text-slate-200 font-mono text-[11px]">Ctrl + V</kbd>-t bárhol!
                 </p>
-                <p className="text-[11px] text-[var(--text-muted)] pt-1">
-                  Másold ki a termékfotót a webshopból (Jobb klikk ➔ Kép másolása) és illeszd be ide!
+                <p className="text-[11px] text-slate-500 pt-1">
+                  Másold ki a termékfotót a böngészőből (Jobb klikk ➔ Kép másolása) és illeszd be!
                 </p>
               </div>
             </div>
@@ -445,7 +521,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           {activeTab === 'upload' && !imagePreview && (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center cursor-pointer hover:border-[var(--border-gold)] hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3"
+              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 bg-[#070a12] group"
             >
               <input
                 type="file"
@@ -457,12 +533,12 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-[var(--text-secondary)]">
-                <Upload className="w-7 h-7" />
+              <div className="w-14 h-14 rounded-full bg-slate-800/90 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 transition-all">
+                <Upload className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Válassz fotót a galériádból</p>
-                <p className="text-xs text-[var(--text-secondary)] mt-1">Elmentett fotó vagy képernyőkép</p>
+                <p className="text-sm font-semibold text-slate-100">Válassz fotót a galériádból</p>
+                <p className="text-xs text-slate-400 mt-1">Elmentett fotó vagy képernyőkép a webshopból</p>
               </div>
             </div>
           )}
@@ -471,10 +547,10 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
           {activeTab === 'link' && !imagePreview && (
             <form onSubmit={handleLinkInput} className="space-y-3">
               <div className="flex items-center justify-between">
-                <label htmlFor="advisor-webshop-url-input" className="block text-xs font-medium text-[var(--text-secondary)]">
+                <label htmlFor="advisor-webshop-url-input" className="block text-xs font-medium text-slate-300">
                   Webshop terméklink VAGY Cikkszám / Termékkód (Next, Zara, Reserved stb.):
                 </label>
-                <span className="text-[10px] text-[var(--accent-gold)] font-medium">SKU Keresés Aktív</span>
+                <span className="text-[10px] text-sky-400 font-semibold">SKU Keresés Aktív</span>
               </div>
               <div className="flex gap-2">
                 <input
@@ -483,33 +559,34 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                   name="advisorWebshopUrl"
                   aria-label="Webshop terméklink vagy cikkszám"
                   required
+                  disabled={isAnalyzing}
                   placeholder="pl. https://www.nextdirect.com/... VAGY csak cikkszám pl. AA6536"
                   value={webshopUrl}
                   onChange={(e) => {
                     setWebshopUrl(e.target.value);
                     if (analysisError) setAnalysisError(null);
                   }}
-                  className="custom-input text-xs"
+                  className="flex-1 bg-[#0a0e17] border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400"
                 />
                 <button 
                   type="submit" 
                   disabled={isAnalyzing || !webshopUrl.trim()}
-                  className="btn-gold px-5 text-xs whitespace-nowrap flex items-center gap-1.5 shrink-0"
+                  className="px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-white text-slate-900 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all disabled:opacity-50 cursor-pointer shadow-md"
                 >
                   {isAnalyzing ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       <span>Kinyerés...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-4 h-4" />
+                      <Sparkles className="w-3.5 h-3.5" />
                       <span>Betöltés</span>
                     </>
                   )}
                 </button>
               </div>
-              <p className="text-[11px] text-[var(--text-muted)]">
+              <p className="text-[11px] text-slate-500">
                 💡 <em>Tipp: Akár csak a ruha termékkódját is megadhatod (pl. <strong>AA6536</strong>, <strong>SU458397</strong>, <strong>512HR-09M</strong>), az AI megkeresi a képet és az adatokat a neten!</em>
               </p>
             </form>
@@ -517,7 +594,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
 
           {/* Error Message if any */}
           {analysisError && (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 animate-slide-up">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 animate-slide-up">
               <div className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <span>{analysisError}</span>
@@ -525,7 +602,7 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
               <button
                 type="button"
                 onClick={handleClipboardButtonClick}
-                className="btn-gold py-1 px-2.5 text-[11px] shrink-0 flex items-center gap-1.5 self-end sm:self-auto shadow"
+                className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 self-end sm:self-auto border border-slate-700 transition-colors"
               >
                 <Clipboard className="w-3.5 h-3.5" />
                 <span>Kép Beillesztése (Ctrl+V)</span>
@@ -533,24 +610,25 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
             </div>
           )}
 
-          {/* Preview & Evaluation trigger */}
+          {/* Preview & Evaluation Stage */}
           {(imagePreview || webshopContext) && (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fade-in">
+              
+              {/* Photo Card with Floating Actions */}
               {imagePreview ? (
-                <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
+                <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#070a12] border border-slate-700 p-2 flex items-center justify-center shadow-lg">
                   <img 
                     src={imagePreview} 
                     alt="Preview" 
-                    width="400"
-                    height="300"
                     onError={() => setImagePreview(null)}
-                    className="max-h-full max-w-full object-contain rounded-xl shadow-lg" 
+                    className="max-h-full max-w-full object-contain rounded-xl" 
                   />
-                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={handleClipboardButtonClick}
-                      className="p-2 rounded-full bg-black/80 text-[var(--accent-gold)] hover:bg-black border border-white/10"
+                      disabled={isAnalyzing}
+                      className="p-2 rounded-full bg-black/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 backdrop-blur-sm transition-colors cursor-pointer"
                       title="Kép cseréje vágólapról (Ctrl+V)"
                     >
                       <Clipboard className="w-4 h-4" />
@@ -558,7 +636,8 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                     <button
                       type="button"
                       onClick={() => setImagePreview(null)}
-                      className="p-2 rounded-full bg-black/80 text-white hover:bg-black border border-white/10"
+                      disabled={isAnalyzing}
+                      className="p-2 rounded-full bg-black/80 hover:bg-rose-600 text-slate-300 hover:text-white border border-slate-700 backdrop-blur-sm transition-colors cursor-pointer"
                       title="Kép törlése"
                     >
                       <RefreshCw className="w-4 h-4" />
@@ -566,12 +645,14 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                   </div>
                 </div>
               ) : (
-                <div className="p-4 rounded-2xl bg-[var(--accent-gold-glow)] border border-[var(--border-gold)] text-center space-y-2">
-                  <span className="badge badge-gold text-[11px]">Webshop Termék / SKU Felismerve</span>
-                  <h4 className="font-serif font-bold text-white text-base">
+                <div className="p-4 rounded-2xl bg-[#070a12] border border-slate-700 text-center space-y-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                    Webshop Termék / SKU Felismerve
+                  </span>
+                  <h4 className="font-serif font-bold text-slate-100 text-base">
                     {itemName || webshopContext?.title || webshopContext?.productCode || 'Kiszemelt Termék'}
                   </h4>
-                  <p className="text-xs text-[var(--text-secondary)]">
+                  <p className="text-xs text-slate-400">
                     {webshopContext?.brand ? `Márka: ${webshopContext.brand}` : ''} {webshopContext?.productCode ? `• SKU: ${webshopContext.productCode}` : ''}
                   </p>
                   
@@ -579,7 +660,8 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                     <button
                       type="button"
                       onClick={handleClipboardButtonClick}
-                      className="btn-gold py-1.5 px-3 text-xs flex items-center gap-1.5 shadow"
+                      disabled={isAnalyzing}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
                     >
                       <Clipboard className="w-4 h-4" />
                       <span>Fotó Beillesztése Vágólapról (Ctrl+V)</span>
@@ -588,9 +670,39 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                 </div>
               )}
 
+              {/* Target Season Selection Chip Bar */}
+              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                    <CloudSun className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Melyik szezonra vásárolsz? (Cél-szezon):</span>
+                  </label>
+                  <span className="text-[10px] text-slate-500 italic">Off-season vásárlás támogatva</span>
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                  {TARGET_SEASONS.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setTargetSeason(s.id)}
+                      disabled={isAnalyzing}
+                      className={`px-3 py-1.5 rounded-xl text-[11px] font-medium transition-all shrink-0 cursor-pointer ${
+                        targetSeason === s.id
+                          ? 'bg-slate-200 text-slate-950 font-bold shadow'
+                          : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/50'
+                      }`}
+                      title={s.desc}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Optional Name & Price inputs */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="advisor-item-name-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  <label htmlFor="advisor-item-name-input" className="block text-xs font-medium text-slate-400 mb-1">
                     Megnevezés (opcionális):
                   </label>
                   <input
@@ -598,15 +710,16 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                     id="advisor-item-name-input"
                     name="advisorItemName"
                     aria-label="Megnevezés"
+                    disabled={isAnalyzing}
                     placeholder="pl. Zöld Slim Fit Lenkeverék Zakó"
                     value={itemName}
                     onChange={(e) => setItemName(e.target.value)}
-                    className="custom-input text-xs"
+                    className="w-full bg-[#0a0e17] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="advisor-item-price-input" className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                  <label htmlFor="advisor-item-price-input" className="block text-xs font-medium text-slate-400 mb-1">
                     Ár (opcionális):
                   </label>
                   <input
@@ -614,27 +727,30 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                     id="advisor-item-price-input"
                     name="advisorItemPrice"
                     aria-label="Ár"
+                    disabled={isAnalyzing}
                     placeholder="pl. 38 000 Ft"
                     value={itemPrice}
                     onChange={(e) => setItemPrice(e.target.value)}
-                    className="custom-input text-xs"
+                    className="w-full bg-[#0a0e17] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400"
                   />
                 </div>
               </div>
 
+              {/* Primary Evaluation Trigger Button */}
               <button
+                type="button"
                 onClick={handleRunEvaluation}
                 disabled={isAnalyzing}
-                className="btn-gold w-full py-3.5 text-sm font-bold shadow-xl flex items-center justify-center gap-2"
+                className="w-full py-3.5 px-5 rounded-2xl bg-slate-200 hover:bg-white text-slate-900 font-serif font-bold text-xs sm:text-sm shadow-2xl transition-all flex items-center justify-center gap-2 score-glow-titanium disabled:opacity-50 cursor-pointer"
               >
                 {isAnalyzing ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-900" />
                     <span>Az AI elemzi a 4 Döntési Pillért és szetteket épít...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5" />
+                    <Sparkles className="w-4 h-4 text-slate-900" />
                     <span>Buy or Skip — Elemzés és Szett-ötletek Indítása</span>
                   </>
                 )}
@@ -645,261 +761,327 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
         </div>
       )}
 
-      {/* Result Presentation */}
-      {evaluationResult && (
-        <div className="space-y-6">
+      {/* ========================================================================= */}
+      {/* ANTI-HALLUCINATION WARNING STATE: Unknown Product */}
+      {/* ========================================================================= */}
+      {evaluationResult && evaluationResult.isUnknown && (
+        <div className="p-6 rounded-3xl bg-[#0a0e17] border border-amber-500/40 space-y-4 shadow-2xl animate-slide-up">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-semibold">Anti-Hallucináció Védelem</span>
+              <h3 className="text-base font-serif font-bold text-slate-100">Nem azonosítható ruhadarab</h3>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-300 leading-relaxed">
+            {evaluationResult.unknownReason || 'A megadott fotó vagy link alapján nem sikerült egyértelműen beazonosítani egy valós ruházati cikket.'} Rendszerünk a valós adatok elvét követi: szigorúan nem generál fantomruhákat kitalált adatokkal.
+          </p>
+
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Újrapróbálás egyértelmű fotóval vagy névvel</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* RESULT PRESENTATION: MIX & MATCH HERO SCORE BAR + DETAILS */}
+      {/* ========================================================================= */}
+      {evaluationResult && !evaluationResult.isUnknown && scoreBadgeConfig && (
+        <div className="space-y-4 animate-slide-up">
           
-          {/* Main Verdict Card */}
-          <div className="glass-card p-6 sm:p-7 border-[var(--border-gold)] space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+          {/* Main Hero Card */}
+          <div className="p-5 sm:p-6 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-4 shadow-2xl">
+            
+            {/* Top Row: Score + Verdict + Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
               
-              <div className="flex items-center gap-3">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg ${
-                  evaluationResult.compatibilityScore >= 80
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-emerald-500/10'
-                    : evaluationResult.compatibilityScore >= 65
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                }`}>
-                  {evaluationResult.compatibilityScore}%
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex flex-col items-center justify-center font-bold font-serif shadow-2xl shrink-0 border ${scoreBadgeConfig.glowClass}`}>
+                  <span className="text-xl sm:text-2xl leading-none">{evaluationResult.compatibilityScore}%</span>
+                  <span className="text-[8px] uppercase font-mono tracking-wider opacity-80 mt-1">Pont</span>
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold">Döntési Javaslat:</span>
-                    <span className={`badge ${
-                      evaluationResult.compatibilityScore >= 80 ? 'badge-emerald' : 'badge-gold'
-                    }`}>
-                      {evaluationResult.verdict}
+                    <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold">Döntési Javaslat:</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${scoreBadgeConfig.badgeClass}`}>
+                      {scoreBadgeConfig.title}
                     </span>
                   </div>
-                  <h3 className="text-xl font-serif font-bold text-white mt-0.5">
-                    Ruhatár-Kompatibilitási Eredmény
+                  <h3 className="text-lg sm:text-xl font-serif font-bold text-slate-100 truncate mt-0.5">
+                    {evaluationResult.item?.name || itemName || 'Ruhatár-Kompatibilitási Eredmény'}
                   </h3>
+                  <span className="text-[11px] text-slate-400 block truncate">
+                    {evaluationResult.item?.brand ? `${evaluationResult.item.brand} • ` : ''}
+                    {evaluationResult.item?.material ? `${evaluationResult.item.material} • ` : ''}
+                    {evaluationResult.item?.fit ? evaluationResult.item.fit : ''}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-start sm:self-center">
+              {/* Actions Right */}
+              <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
                 <button
+                  type="button"
                   onClick={handleReset}
-                  className="btn-secondary text-xs"
+                  className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Új teszt</span>
                 </button>
 
                 {addedToWardrobe ? (
-                  <span className="badge badge-emerald py-2 px-3 flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" />
+                  <span className="px-3.5 py-2.5 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Hozzáadva a Gardróbhoz</span>
                   </span>
                 ) : (
                   <button
+                    type="button"
                     onClick={handleAddToWardrobe}
-                    className="btn-gold text-xs py-2 px-3 font-bold flex items-center gap-1.5 shadow-lg"
+                    className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                     <span>Hozzáadás a Gardróbhoz</span>
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Verdict summary */}
-            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-              {evaluationResult.verdictSummary}
+            {/* Verdict Summary Text */}
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {cleanSartorialText(evaluationResult.verdictSummary)}
             </p>
 
-            {/* 3 Pillars Breakdown */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            {/* 3 Pillars Overview Tiles */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
               
-              {/* Pillar 1: Combinability */}
-              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
-                <span className="text-[11px] font-bold uppercase text-[var(--accent-gold)] block">
+              {/* Pillar 1 */}
+              <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-mono">
                   1. Kombinálhatóság
                 </span>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  Garantált 3 komplett outfit a meglévő ruháiddal.
+                <p className="text-xs text-slate-200 font-medium">
+                  3 garantált outfit a meglévő darabjaiddal.
                 </p>
               </div>
 
-              {/* Pillar 2: Versatility & Upgrade */}
-              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
-                <span className="text-[11px] font-bold uppercase text-sky-400 block">
+              {/* Pillar 2 */}
+              <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block font-mono">
                   2. Változatosság & Csere
                 </span>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  {evaluationResult.duplicationWarning || 'Új szín és fazon kombinációkat hoz a ruhatáradba.'}
+                <p className="text-xs text-slate-300">
+                  {cleanSartorialText(evaluationResult.duplicationWarning || 'Új szín és fazon kombinációkat hoz a ruhatáradba.')}
                 </p>
               </div>
 
-              {/* Pillar 3: Personal Fit */}
-              <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-1">
-                <span className="text-[11px] font-bold uppercase text-emerald-400 block">
+              {/* Pillar 3 */}
+              <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block font-mono">
                   3. Személyes Illeszkedés
                 </span>
-                <p className="text-xs text-[var(--text-secondary)]">
-                  {evaluationResult.personalFitVerdict || 'Harmonizál a bőrtónusoddal és a testalkatoddal.'}
+                <p className="text-xs text-slate-300">
+                  {cleanSartorialText(evaluationResult.personalFitVerdict || 'Harmonizál a stílus DNS-eddel és a ruhatárad színeivel.')}
                 </p>
               </div>
 
             </div>
 
-            {/* Fit & Silhouette Mismatch / Sizing Alert Box */}
-            {evaluationResult.fitMismatchWarning && (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-black/40 border border-amber-500/30 text-xs space-y-2 animate-slide-up">
-                <div className="flex items-center gap-2 text-amber-300 font-bold">
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Szabás & Testalkat Illeszkedési Elemzés (Fit Intelligence):</span>
-                </div>
-                <p className="text-[var(--text-secondary)] leading-relaxed">
-                  {evaluationResult.fitMismatchWarning}
-                </p>
-                {evaluationResult.sizingAdvice && (
-                  <div className="pt-2 border-t border-amber-500/20 text-[11px] text-amber-200 font-medium flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0" />
-                    <span><strong>Méretválasztási javaslat:</strong> {evaluationResult.sizingAdvice}</span>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* ========================================================================= */}
+            {/* STRUCTURED ANALYSIS CARDS (MIX & MATCH AUDIT DRAWER STYLE) */}
+            {/* ========================================================================= */}
+            <div className="space-y-2.5 pt-1 text-xs">
 
-            {/* Fabric & Material Intelligence (Műszál / Anyagösszetétel Figyelmeztetés) */}
-            {evaluationResult.fabricWarning && (
-              <div className={`p-4 rounded-xl border text-xs space-y-2 animate-slide-up ${
-                evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
-                  ? 'bg-gradient-to-r from-rose-500/15 via-rose-950/20 to-black/40 border-rose-500/40 text-rose-200'
-                  : 'bg-gradient-to-r from-emerald-500/15 via-emerald-950/20 to-black/40 border-emerald-500/40 text-emerald-200'
-              }`}>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className={`flex items-center gap-2 font-bold ${
-                    evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
-                      ? 'text-rose-300'
-                      : 'text-emerald-300'
-                  }`}>
-                    {evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7) ? (
-                      <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
-                    ) : (
-                      <Feather className="w-4 h-4 text-emerald-400 shrink-0" />
-                    )}
-                    <span>Anyagösszetétel & Anyagminőség Elemzés (Fabric Intelligence):</span>
-                  </div>
-                  {evaluationResult.item?.material && (
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
-                      evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
-                        ? 'bg-rose-500/20 border-rose-500/30 text-rose-300'
-                        : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
-                    }`}>
-                      {evaluationResult.item.material}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[var(--text-secondary)] leading-relaxed">
-                  {evaluationResult.fabricWarning}
-                </p>
-              </div>
-            )}
-
-            {/* Aesthetic Role & Redundancy Overlap Box */}
-            {evaluationResult.aestheticOverlap && (
-              <div className={`p-4 rounded-xl border text-xs space-y-2 animate-slide-up ${
-                evaluationResult.aestheticOverlap.isRedundant
-                  ? 'bg-gradient-to-r from-amber-500/15 via-amber-950/20 to-black/40 border-amber-500/40 text-amber-200'
-                  : 'bg-gradient-to-r from-emerald-500/10 to-black/40 border-emerald-500/30 text-emerald-200'
-              }`}>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2 font-bold text-white">
-                    <Compass className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
-                    <span>Stilisztikai Lefedettség & Kapszula Skála:</span>
-                  </div>
-                  {evaluationResult.aestheticOverlap.isRedundant ? (
-                    <span className="badge badge-gold text-[10px]">
-                      ⚠️ Lefedett Stílusszerepkör
-                    </span>
-                  ) : (
-                    <span className="badge badge-emerald text-[10px]">
-                      ✨ Új Stílusdimenzió
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-[var(--text-secondary)] leading-relaxed">
-                  {evaluationResult.aestheticOverlap.reason || 
-                    (evaluationResult.aestheticOverlap.isRedundant
-                      ? `A ruhatáradban lévő '${evaluationResult.aestheticOverlap.existingItemName}' már teljes mértékben lefedi ezt a megjelenést.`
-                      : 'Ez a darab valóban új stíluslehetőségeket és kombinációkat nyit meg a ruhatáradban.')}
-                </p>
-
-                {evaluationResult.aestheticOverlap.alternativeRecommendation && (
-                  <div className="pt-2 border-t border-white/10 text-[11px] text-[var(--accent-gold-light)] flex items-start gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)] shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-white">Mit érdemes inkább venni helyette?</strong> {evaluationResult.aestheticOverlap.alternativeRecommendation}
+              {/* 1. Stilisztikai Lefedettség & Redundancia Overlap */}
+              {evaluationResult.aestheticOverlap && (
+                <div className={`p-4 rounded-2xl border space-y-2 ${
+                  evaluationResult.aestheticOverlap.isRedundant
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                    : 'bg-[#070a12] border-slate-800 text-slate-300'
+                }`}>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                      <Compass className="w-4 h-4 text-slate-300" />
+                      <span>Stilisztikai Lefedettség & Kapszula Skála:</span>
                     </div>
+                    {evaluationResult.aestheticOverlap.isRedundant ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ⚠️ Lefedett Stílusszerepkör
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        ✨ Új Stílusdimenzió
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
 
-            {/* Pros & Cons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div className="space-y-2 bg-black/30 p-4 rounded-xl border border-white/5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Miért éri meg megvenni:</span>
-                </h4>
-                <ul className="space-y-1 text-xs text-[var(--text-secondary)] list-disc list-inside">
-                  {evaluationResult.pros?.map((pro, idx) => (
-                    <li key={idx}>{pro}</li>
-                  ))}
-                </ul>
+                  <p className="leading-relaxed text-slate-300">
+                    {cleanSartorialText(evaluationResult.aestheticOverlap.reason || 
+                      (evaluationResult.aestheticOverlap.isRedundant
+                        ? `A ruhatáradban lévő '${evaluationResult.aestheticOverlap.existingItemName}' már teljes mértékben lefedi ezt a megjelenést.`
+                        : 'Ez a darab valóban új stíluslehetőségeket és kombinációkat nyit meg a ruhatáradban.'))}
+                  </p>
+
+                  {evaluationResult.aestheticOverlap.alternativeRecommendation && (
+                    <div className="pt-2 border-t border-white/10 text-[11px] text-slate-200 flex items-start gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="text-white">Mit érdemes inkább venni helyette?</strong> {cleanSartorialText(evaluationResult.aestheticOverlap.alternativeRecommendation)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 2. Anyagminőség & Műszál Elemzés (Proportional Penalty with Clear Warning) */}
+              {evaluationResult.fabricWarning && (
+                <div className={`p-4 rounded-2xl border space-y-2 ${
+                  evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                    ? 'bg-[#150e0a] border-amber-500/30 text-amber-200'
+                    : 'bg-[#070a12] border-emerald-500/30 text-emerald-200'
+                }`}>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className={`flex items-center gap-1.5 font-bold ${
+                      evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                        ? 'text-amber-300'
+                        : 'text-emerald-300'
+                    }`}>
+                      {evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7) ? (
+                        <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                      ) : (
+                        <Feather className="w-4 h-4 text-emerald-400 shrink-0" />
+                      )}
+                      <span>Anyagösszetétel & Szövetminőség:</span>
+                    </div>
+
+                    {evaluationResult.item?.material && (
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                        evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                          ? 'bg-amber-500/20 border-amber-500/30 text-amber-300'
+                          : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
+                      }`}>
+                        {evaluationResult.item.material}
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="leading-relaxed text-slate-300">
+                    {cleanSartorialText(evaluationResult.fabricWarning)}
+                  </p>
+                </div>
+              )}
+
+              {/* 3. Szabás & Testalkat Illeszkedési Elemzés */}
+              {evaluationResult.fitMismatchWarning && (
+                <div className="p-4 rounded-2xl bg-[#070a12] border border-slate-800 space-y-2">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                    <Layers className="w-4 h-4 text-slate-300" />
+                    <span>⚖️ Szabás & Testalkat Illeszkedés (Fit Intelligence):</span>
+                  </div>
+                  <p className="leading-relaxed text-slate-300">
+                    {cleanSartorialText(evaluationResult.fitMismatchWarning)}
+                  </p>
+                  {evaluationResult.sizingAdvice && (
+                    <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-200 font-medium flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span><strong>Méretválasztási javaslat:</strong> {cleanSartorialText(evaluationResult.sizingAdvice)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 4. Szezonális & Rétegezési Dinamika */}
+              <div className="p-4 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
+                <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                  <CloudSun className="w-4 h-4 text-slate-300" />
+                  <span>Szezonális Hordhatóság & Cél-Időjárás:</span>
+                </div>
+                <p className="leading-relaxed text-slate-400">
+                  {targetSeason === 'winter' && '❄️ Kifejezetten téli, hideg időre optimalizált rétegezés (vastag szövetek, meleg nadrágok és csizmák).'}
+                  {targetSeason === 'summer' && '☀️ Kifejezetten nyári, meleg időre hangolt összeállítások (szellős bázisok, lezser félcipők/loaferek).'}
+                  {targetSeason === 'autumn' && '🍂 Őszi, hűvös időre alkalmas összeállítások meleg rétegezéssel.'}
+                  {targetSeason === 'spring' && '🌸 Tavaszi, enyhe időjáráshoz illeszkedő kombinációk.'}
+                  {targetSeason === 'auto' && (evaluationResult.targetSeason ? `✨ Automatikusan felismert jelleg: ${evaluationResult.targetSeason}.` : '✨ A ruha saját jellege és anyaga szerint felépített kombinációk.')}
+                </p>
               </div>
 
-              <div className="space-y-2 bg-black/30 p-4 rounded-xl border border-white/5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Gondold át:</span>
-                </h4>
-                <ul className="space-y-1 text-xs text-[var(--text-secondary)] list-disc list-inside">
-                  {evaluationResult.cons?.map((con, idx) => (
-                    <li key={idx}>{con}</li>
-                  ))}
-                </ul>
+              {/* 5. Pros & Cons Lists */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-1.5">
+                  <h4 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>Miért éri meg megvenni:</span>
+                  </h4>
+                  <ul className="space-y-1 text-xs text-emerald-200/90 list-disc list-inside">
+                    {evaluationResult.pros?.map((pro, idx) => (
+                      <li key={idx}>{cleanSartorialText(pro)}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
+                  <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <span>Gondold át:</span>
+                  </h4>
+                  <ul className="space-y-1 text-xs text-amber-200/90 list-disc list-inside">
+                    {evaluationResult.cons?.map((con, idx) => (
+                      <li key={idx}>{cleanSartorialText(con)}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
+
             </div>
 
           </div>
 
-          {/* VISUAL FLAT-LAY OUTFIT COLLAGE OF 3 GUARANTEED OUTFITS */}
-          <div className="space-y-4">
+          {/* ========================================================================= */}
+          {/* 3 GUARANTEED OUTFITS FLAT-LAY CANVASES (MIX & MATCH STYLE) */}
+          {/* ========================================================================= */}
+          <div className="space-y-3 pt-2">
             <div>
-              <h3 className="text-xl font-serif font-bold gold-gradient-text">
-                ✨ A 3 Garantált Outfit a Meglévő Ruhatáradból (Képi Kollázs)
+              <h3 className="text-lg sm:text-xl font-serif font-bold text-slate-100">
+                ✨ A 3 Garantált Outfit a Ruhatáradból
               </h3>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5">
                 Így kombinálhatod azonnal a szekrényedben lévő minőségi darabjaiddal:
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {evaluationResult.outfits?.map((outfit, idx) => (
-                <div key={idx} className="glass-card p-4 space-y-3 flex flex-col justify-between border-white/10 hover:border-[var(--border-gold)] transition-all">
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="badge badge-gold text-[10px]">
+                <div 
+                  key={idx} 
+                  className="p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-2xl flex flex-col justify-between space-y-3"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 border border-slate-700 text-slate-300">
                         {outfit.styleType || 'Klasszikus & Kifinomult'}
                       </span>
-                      <span className="text-[11px] text-[var(--text-muted)]">
+                      <span className="text-[11px] text-slate-400 font-medium truncate">
                         {outfit.occasion}
                       </span>
                     </div>
 
-                    <h4 className="font-serif font-bold text-white text-base mb-3">
+                    <h4 className="font-serif font-bold text-slate-100 text-sm sm:text-base">
                       {outfit.title}
                     </h4>
 
-                    {/* Visual Flat-lay Photo Grid */}
-                    <div className="grid grid-cols-2 gap-2 p-2 rounded-xl bg-black/50 border border-white/5">
+                    {/* Visual Flat-lay Garment Grid */}
+                    <div className="grid grid-cols-2 gap-2 p-2 rounded-2xl bg-[#070a12] border border-slate-800">
                       {outfit.items?.map((item, iIdx) => {
                         const isCandidateItem = item.id === 'candidate-item' || item.name === evaluationResult.extractedItem?.name;
 
@@ -914,31 +1096,42 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                             })}
                             className="space-y-1 group relative cursor-pointer"
                           >
-                            <div className={`aspect-[4/3] rounded-lg overflow-hidden bg-[#07090e] p-1 flex items-center justify-center border relative transition-all ${
+                            <div className={`relative aspect-[4/3] rounded-xl overflow-hidden bg-[#0a0e17] p-1 flex items-center justify-center border transition-all ${
                               isCandidateItem
-                                ? 'border-[var(--accent-gold)] ring-1 ring-[var(--accent-gold-glow)] shadow-md shadow-[var(--accent-gold)]/10'
-                                : 'border-white/10 group-hover:border-[var(--accent-gold)]'
+                                ? 'border-amber-400/80 ring-1 ring-amber-400/40 shadow-lg shadow-amber-400/10'
+                                : 'border-slate-800 group-hover:border-slate-600'
                             }`}>
                               <img
                                 src={item.imageUrl}
                                 alt={item.name}
                                 loading="lazy"
                                 decoding="async"
-                                width="160"
-                                height="120"
-                                style={{ aspectRatio: '4 / 3' }}
-                                className="w-full h-full object-contain rounded group-hover:scale-105 transition-transform duration-300"
+                                className="w-full h-full object-contain p-1 rounded-lg group-hover:scale-105 transition-transform duration-300"
                               />
                               {isCandidateItem && (
-                                <span className="absolute top-1 right-1 bg-[var(--accent-gold)] text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+                                <span className="absolute top-1 right-1 bg-amber-400 text-black text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
                                   ÚJ
                                 </span>
                               )}
-                              <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-white/90 font-medium border border-white/10">
-                                {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') ? '🎗️ Öv' : item.category === 'tops' ? '👔 Bázis' : item.category === 'knitwear' ? '🧶 Köztes' : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) ? '🧥 Nagykabát' : item.category === 'outerwear' ? '🧥 Zakó' : item.category === 'bottoms' ? '👖 Alsó' : item.category === 'shoes' ? '👞 Cipő' : '✦ Kiegészítő'}
+                              <span className="absolute bottom-1 left-1 text-[8px] bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-slate-200 font-medium border border-white/10">
+                                {item.subCategory === 'belt' || item.name?.toLowerCase().includes('öv') 
+                                  ? '🎗️ Öv' 
+                                  : item.category === 'tops' 
+                                    ? '👔 Bázis' 
+                                    : item.category === 'knitwear' 
+                                      ? '🧶 Köztes' 
+                                      : (item.subCategory === 'overcoat' || item.subCategory === 'coat' || item.name?.toLowerCase().includes('kabát')) 
+                                        ? '🧥 Kabát' 
+                                        : item.category === 'outerwear' 
+                                          ? '🧥 Zakó' 
+                                          : item.category === 'bottoms' 
+                                            ? '👖 Alsó' 
+                                            : item.category === 'shoes' 
+                                              ? '👞 Cipő' 
+                                              : '✦ Kieg'}
                               </span>
                             </div>
-                            <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 font-medium px-0.5 group-hover:text-white transition-colors">
+                            <p className="text-[10px] text-slate-400 line-clamp-1 font-medium px-0.5 group-hover:text-slate-200 transition-colors">
                               {item.name}
                             </p>
                           </div>
@@ -947,9 +1140,11 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-white/5 text-[11px] text-[var(--text-muted)] italic">
-                    💡 {outfit.stylingTip}
-                  </div>
+                  {outfit.stylingTip && (
+                    <div className="pt-2 border-t border-slate-800/80 text-[11px] text-slate-400 italic">
+                      💡 {cleanSartorialText(outfit.stylingTip)}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -971,4 +1166,3 @@ export default function PurchaseAdvisorView({ prefillData, onClearPrefill }) {
     </div>
   );
 }
-

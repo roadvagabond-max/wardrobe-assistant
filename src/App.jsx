@@ -205,6 +205,7 @@ export default function App() {
 
           {activeTab === 'advisor' && (
             <PurchaseAdvisorView
+              weather={weather}
               prefillData={advisorPrefill}
               onClearPrefill={() => setAdvisorPrefill(null)}
             />

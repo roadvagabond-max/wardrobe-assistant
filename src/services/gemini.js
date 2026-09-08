@@ -411,7 +411,7 @@ export function isDress(item) {
 /**
  * Helper to ensure complete anatomical layering and strict sartorial harmony for an outfit across all modules
  */
-export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], candidateItem = null, weather = null) {
+export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], candidateItem = null, weather = null, targetSeason = 'auto') {
   let items = [...rawItems];
   if (candidateItem && !items.some(i => i.id === candidateItem.id)) {
     items.unshift(candidateItem);
@@ -475,8 +475,35 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     return sub === 'belt' || name.includes('öv') || name.includes('bőröv');
   };
 
-  const temperature = typeof weather?.temperature === 'number' ? weather.temperature : 22;
-  const isWarmWeather = temperature >= 19;
+  // Target season & Candidate garment cold/warm context detection (off-season shopping support)
+  const isCandidateColdItem = candidateItem && (
+    (candidateItem.subCategory || '').toLowerCase().includes('coat') ||
+    (candidateItem.subCategory || '').toLowerCase().includes('boot') ||
+    (candidateItem.category || '').toLowerCase() === 'outerwear' ||
+    isHeavyBoot(candidateItem) ||
+    isCoatGarment(candidateItem) ||
+    (candidateItem.material || '').toLowerCase().includes('gyapjú') ||
+    (candidateItem.material || '').toLowerCase().includes('flanel') ||
+    (candidateItem.material || '').toLowerCase().includes('kasmír') ||
+    (candidateItem.name || '').toLowerCase().includes('téli') ||
+    (candidateItem.name || '').toLowerCase().includes('kabát') ||
+    (candidateItem.name || '').toLowerCase().includes('csizma') ||
+    (candidateItem.name || '').toLowerCase().includes('bakancs')
+  );
+
+  const isExplicitColdSeason = targetSeason === 'winter' || targetSeason === 'autumn';
+  const isExplicitWarmSeason = targetSeason === 'summer' || targetSeason === 'spring';
+
+  let isWarmWeather;
+  if (isExplicitColdSeason || isCandidateColdItem) {
+    isWarmWeather = false;
+  } else if (isExplicitWarmSeason) {
+    isWarmWeather = true;
+  } else if (typeof weather?.temperature === 'number') {
+    isWarmWeather = weather.temperature >= 19;
+  } else {
+    isWarmWeather = false;
+  }
 
   // Helper: Smart, unbiased candidate picker for fallback layers to ensure fair wardrobe rotation
   const getCandidateItems = (matcher) => {
@@ -703,7 +730,7 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
 /**
  * 2. UNIFIED ULTRA-FAST Vásárlás Előtti Döntéstámogató
  */
-export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webshopContext = {}, itemName = '', itemPrice = '', wardrobe = [], styleProfile = {} }) {
+export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webshopContext = {}, itemName = '', itemPrice = '', wardrobe = [], styleProfile = {}, targetSeason = 'auto', weather = null }) {
   const apiKey = getGeminiApiKey();
 
   if (apiKey) {
@@ -742,9 +769,14 @@ export async function evaluateAndExtractPrePurchaseItem({ imageBase64OrUrl, webs
         ? 'Melegkedvelő alkat (a szellős pamut/len anyagokat és könnyed rétegeket részesíti előnyben)'
         : 'Kiegyensúlyozott / Normál hőérzet';
 
+      const seasonContextText = targetSeason && targetSeason !== 'auto'
+        ? `VÁSÁRLÁSI CÉL-SZEZON: ${targetSeason === 'winter' ? 'Tél / Hideg idő' : targetSeason === 'summer' ? 'Nyár / Meleg idő' : targetSeason === 'autumn' ? 'Ősz / Hűvös idő' : 'Tavasz / Enyhe idő'} (A felhasználó kifejezetten erre a cél-szezonra keres ruhadarabot, pl. leárazáson vagy előretervezve, függetlenül az aktuális külső időjárástól!)`
+        : `VÁSÁRLÁSI CÉL-SZEZON: Automatikus (A kiszemelt darab saját természetes rendeltetése és szezonja határozza meg a szetteket. Pl. téli kabát vagy csizma esetén őszi/téli rétegezést és téli darabokat építs köré a meglévő ruhatárból, míg nyári lenvászon ing esetén nyári lezser darabokat!)`;
+
       const prompt = `Te egy világklasszis személyi stylist, divatelemző és kapszula ruhatár döntéstámogató vagy.
 ELEMEZD A MEGADOTT RUHADARABOT KIZÁRÓLAG A WEBSHOPBAN / FOTÓN TALÁLT VALÓS ADATOK ALAPJÁN!
 ${itemName ? `Megadott név: "${itemName}"` : ''} ${itemPrice ? `Ár: "${itemPrice}"` : ''} ${webshopTextInfo ? `Webshop info: ${webshopTextInfo}` : ''}
+${seasonContextText}
 Felhasználó profilja: Név: ${styleProfile.name || 'Felhasználó'}, Nem: ${demographics.gender}, Életkor: ${demographics.age} év (${demographics.bracketDescription}), Magasság: ${styleProfile.height || 'Nem ismert'}, Testalkat: ${styleProfile.bodyType || 'Arányos'}, Színtípus: ${styleProfile.skinTone || 'Természetes'}, Hőtűrés: ${thermalDesc}, Stílusok: ${JSON.stringify(styleProfile.preferredStyles || [])}
 
 ${demographicRules}
@@ -760,17 +792,19 @@ ${formatWardrobeToCompactCatalog(shuffledEligible)}
 
 SZIGORÚ VALÓS ADAT ELV ÉS ANTI-HALLUCINÁCIÓS SZABÁLYOK:
 1. KIZÁRÓLAG AZOKAT AZ ADATOKAT ADD MEG, AMIKET A WEBSHOP LEÍRÁSA, CÍME VAGY FOTÓJA TÉNYLEGESEN TARTALMAZ!
-2. HA EGY ADAT (PL. SZABÁS, ANYAGÖSSZETÉTEL, MÉRET) NEM SZEREPEL A WEBSHOPBAN VAGY NEM ÁLL RENDELKEZÉSRE:
+2. HA A FOTÓ, LINK VAGY BEMENET ALAPJÁN A TERMÉK EGYÁLTALÁN NEM AZONOSÍTHATÓ BE (pl. hibás vagy elérhetetlen link, üres kép, nem ruházati termék):
+   - Állítsd be: "isUnknown": true, "unknownReason": "Konkrét indoklás, miért nem sikerült azonosítani", és kérd meg a felhasználót valós terméknév vagy fotó megadására! SOHA NE TALÁLJ KI FANTOMRUHÁT!
+3. HA EGY KONKRÉT ADAT (PL. SZABÁS, ANYAGÖSSZETÉTEL, MÉRET) NEM SZEREPEL A WEBSHOPBAN VAGY NEM ÁLL RENDELKEZÉSRE:
    - SOHA NE TALÁLJ KI SEMMIT, NE TIPPELJ ÉS NE ERŐLTESS RÁ SEMMIT A FELHASZNÁLÓ PROFILJÁBÓL!
    - Ha a szabás nincs megadva: "fit": "Nem ismert szabás" (vagy null), és a szabásbeli elemzésnél jelezd, hogy a webshop nem közölte a szabást.
    - Ha az anyagösszetétel nincs megadva: "material": "Nem ismert anyagösszetétel".
    - Ha a méret nincs megadva: "size": "".
-3. SOHA NE ÁLLÍTSD EGY TERMÉKRŐL, HOGY SLIM FIT VAGY REGULAR FIT, HA EZT A WEBSHOP NEM ÍRJA KIFEJEZETTEN!
+4. SOHA NE ÁLLÍTSD EGY TERMÉKRŐL, HOGY SLIM FIT VAGY REGULAR FIT, HA EZT A WEBSHOP NEM ÍRJA KIFEJEZETTEN!
 
 4 DÖNTÉSI PILLÉR & SARTORIAL LOGIKA:
 
 1. 👔 KOMBINÁLHATÓSÁG & 3 KOMPLETT OUTFIT:
-   - Készíts 3 különböző komplett, hordható outfitet a kiszemelt darab és a meglévő ruhatár elemeiből, szigorúan betartva a korosztálynak és stílusnak megfelelő rétegezési szabályokat!
+   - Készíts 3 különböző komplett, hordható outfitet a kiszemelt darab és a meglévő ruhatár elemeiből, a cél-szezonnak és stílusnak megfelelő anatómiai rétegezéssel!
    - KÖTELEZŐ ELEMEK:
      * 👔 Bázis felső ('tops' - ${demographics.isChild ? 'puha pamut póló, pamut body vagy kényelmes hosszú ujjú felső közvetlenül a bőrön' : 'ing vagy minőségi pamut póló közvetlenül a bőrön; ha a céltermék garbó vagy kötött felső, az maga a bázis'}).
      * 👖 Alsó ('bottoms' - nadrág vagy szoknya a ruhatárból).
@@ -785,15 +819,21 @@ SZIGORÚ VALÓS ADAT ELV ÉS ANTI-HALLUCINÁCIÓS SZABÁLYOK:
 3. 📐 SZEMÉLYES ILLESZKEDÉS & SZABÁS:
    - Csak a valós adatok alapján értékeld a termék illeszkedését a stílus DNS-hez.
 
-4. 🧶 ANYAGMINŐSÉG:
-   - A kinyert valós anyag alapján értékeld a minőséget. Ha nem ismert, jelezd az ismeretlen anyagot.
+4. 🧶 ANYAGMINŐSÉG ÉS MŰSZÁL BÍRÁLAT:
+   - A kinyert valós anyagösszetétel alapján értékeld az anyagminőséget.
+   - Ha a termék jelentős arányban olcsó szintetikus szálat (100% poliészter, akril, PU műbőr) tartalmaz:
+     * Vonj le 5–15 pontot a minőségi pontszámból ('fabricScore' és 'qualityScore').
+     * A 'fabricWarning' mezőben és a 'cons' (Gondold át) listában konkrétan nevezd meg a szintetikus összetevőt és annak kompromisszumait (pl. alacsonyabb légáteresztés, fokozott izzadásérzet, bolyhosodási hajlam).
+     * UGYANAKKOR NE BÜNTESD TÚL MEREVEN AZ ÖSSZPONTSZÁMOT ('compatibilityScore'): ha a darab fazonja, stílusa és ruhatári kombinálhatósága kiváló (3 remek outfit építhető), a darab megkaphatja a 70–80+ pontot is ('Érdemes Megfontolni'), miközben a leírásban tisztán és őszintén szerepel a minőségi aggály.
 
 🚫 CSENDES SZABÁLYBETARTÁS (Silent Rule Enforcement):
 - A felhasználó egyéni stílusszabályait és tiltásait KÖTELEZŐEN A HÁTTÉRBEN, CSENDBEN TARTSD BE a szettek és tanácsok generálásakor!
-- SZIGORÚAN TILOS a szövegben megemlíteni vagy magyarázni a felhasználó saját szabályait (pl. TILOS leírni, hogy "a szabályod szerint nem választottunk pólóinget", "mivel kérted az ing+jogger kerülését" stb.)! A leírás kizárólag a darabok valódi eleganciájára, esztétikájára és kombinálhatóságára fókuszáljon!
+- SZIGORÚAN TILOS a szövegben megemlíteni vagy magyarázni a felhasználó saját szabályait (pl. TILOS leírni, hogy "a szabályod szerint nem választottunk pólóinget")! A leírás kizárólag a darabok valódi eleganciájára, esztétikájára és kombinálhatóságára fókuszáljon!
 
 VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
 {
+  "isUnknown": false,
+  "unknownReason": null,
   "item": {
     "name": "${itemName || 'Valós magyar terméknév'}",
     "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "dresses" | "skirts" | "accessories",
@@ -836,6 +876,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "fabricScore": 9.0,
   "isSynthetic": false,
   "sizingAdvice": "Méretválasztási tanács",
+  "targetSeason": "Tél" | "Nyár" | "Ősz" | "Tavasz" | "Négyévszakos",
   "outfits": [
     {
       "title": "Szett 1 Neve",
@@ -898,7 +939,7 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
       if (parsed && Array.isArray(parsed.outfits)) {
         parsed.outfits = parsed.outfits.map(o => {
           const matchedItems = (o.matchedItemIds || []).map(id => wardrobe.find(w => w.id === id)).filter(Boolean);
-          const fullEnforcedItems = enforceAnatomicalOutfitLayers(matchedItems, wardrobe, extractedItem);
+          const fullEnforcedItems = enforceAnatomicalOutfitLayers(matchedItems, wardrobe, extractedItem, weather, targetSeason);
 
           return {
             ...o,
@@ -906,29 +947,6 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
           };
         });
       }
-
-      // Safe fallbacks for pros, cons, personalFitVerdict, aestheticOverlap
-      if (parsed) {
-        if (!Array.isArray(parsed.pros) || parsed.pros.length === 0) {
-          parsed.pros = [
-            `Kiválóan beilleszthető a(z) ${styleProfile.preferredStyles?.[0] || 'Klasszikus'} stílusprofilodba.`,
-            `Garantáltan több komplett összeállítást nyit meg a meglévő darabjaiddal.`
-          ];
-        }
-        if (!Array.isArray(parsed.cons)) {
-          parsed.cons = parsed.fitMismatchWarning
-            ? [parsed.fitMismatchWarning]
-            : ['Ügyelj az anyagösszetételnek megfelelő kímélő kezelésre és tisztításra.'];
-        }
-        if (!parsed.personalFitVerdict) {
-          parsed.personalFitVerdict = `Harmonizál a(z) ${styleProfile.bodyType || 'Atlétikus'} testalkatoddal és a meglévő ruhatárad színeivel.`;
-        }
-      }
-
-      return {
-        ...parsed,
-        extractedItem
-      };
 
       // Safe fallbacks for pros, cons, personalFitVerdict, aestheticOverlap
       if (parsed) {
