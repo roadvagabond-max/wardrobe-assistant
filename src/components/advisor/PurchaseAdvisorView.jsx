@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
-  Camera, Upload, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, 
+  Camera, Image, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, 
   Loader2, RefreshCw, Plus, Check, Clipboard, Feather, ShieldAlert, 
-  Layers, Compass, ChevronDown, ChevronUp, CloudSun, AlertCircle, Info, Bookmark, X
+  Layers, Compass, CloudSun, Info
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem } from '../../services/gemini';
@@ -10,14 +10,7 @@ import { extractWebshopData } from '../../services/webshop';
 import { optimizeImageForUpload, getSmartGarmentImage, ensureBase64Image } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
-
-const TARGET_SEASONS = [
-  { id: 'auto', label: '✨ Automatikus', desc: 'A ruha természetes szezonja alapján' },
-  { id: 'winter', label: '❄️ Tél', desc: 'Hideg idő, meleg szövetek & csizmák' },
-  { id: 'autumn', label: '🍂 Ősz', desc: 'Hűvös idő, rétegezés & átmeneti kabátok' },
-  { id: 'spring', label: '🌸 Tavasz', desc: 'Enyhe idő, könnyed zakók & félcipők' },
-  { id: 'summer', label: '☀️ Nyár', desc: 'Meleg idő, lenvászon & szellős darabok' }
-];
+import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 
 function cleanSartorialText(text) {
   if (!text || typeof text !== 'string') return text;
@@ -34,7 +27,6 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
   const { wardrobe, profile, addItem } = useAuth();
 
   const [activeTab, setActiveTab] = useState('camera'); // 'camera', 'clipboard', 'upload', 'link'
-  const [targetSeason, setTargetSeason] = useState('auto');
   const [imagePreview, setImagePreview] = useState(null);
   const [webshopUrl, setWebshopUrl] = useState('');
   const [webshopContext, setWebshopContext] = useState(null);
@@ -44,7 +36,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
   const [analysisError, setAnalysisError] = useState(null);
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [addedToWardrobe, setAddedToWardrobe] = useState(false);
-  const [showPillarsGuide, setShowPillarsGuide] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   // Lightbox Modal State
   const [lightboxData, setLightboxData] = useState({
@@ -93,7 +85,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
       if (data.price) setItemPrice(data.price);
     } catch (err) {
       console.warn('Webshop link auto-kinyerés hiba:', err);
-      setAnalysisError('Nem sikerült automatikusan kinyerni a képet a linkből. Kérlek másold be a fotót vágólapról (Ctrl+V) vagy töltsd fel!');
+      setAnalysisError('Nem sikerült automatikusan kinyerni a képet a linkből. Kérlek másold be a fotót vágólapról (Clipboard) vagy fotózd le!');
     } finally {
       setIsAnalyzing(false);
     }
@@ -237,7 +229,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
       setEvaluationResult(null);
     } catch (err) {
       console.error('Webshop link hiba:', err);
-      setAnalysisError(err.message || 'A link feldolgozása nem sikerült. Próbáld közvetlen képcímmel vagy vágólapról!');
+      setAnalysisError(err.message || 'A link feldolgozása nem sikerült. Próbáld vágólapról vagy fotóval!');
     } finally {
       setIsAnalyzing(false);
     }
@@ -256,7 +248,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
         itemPrice,
         wardrobe,
         styleProfile: profile,
-        targetSeason,
+        targetSeason: 'auto',
         weather
       });
 
@@ -288,7 +280,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
     }
   };
 
-  // Firestore ID fix: strip candidate-item ID so addItem generates a unique timestamp-based ID
+  // Strip candidate-item ID so Firestore generates a unique timestamp-based ID
   const handleAddToWardrobe = () => {
     if (!evaluationResult?.extractedItem) return;
     const { id, ...itemToSave } = evaluationResult.extractedItem;
@@ -316,7 +308,6 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
       return {
         glowClass: 'score-glow-emerald border-emerald-500/50 bg-[#061810]/95 text-emerald-300',
         badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-        scoreColor: 'text-emerald-400',
         icon: '✨',
         title: evaluationResult.verdict || 'Erősen Ajánlott'
       };
@@ -325,7 +316,6 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
       return {
         glowClass: 'score-glow-amber border-amber-500/50 bg-[#1a1408]/95 text-amber-300',
         badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-        scoreColor: 'text-amber-300',
         icon: '🟡',
         title: evaluationResult.verdict || 'Érdemes Megfontolni'
       };
@@ -333,136 +323,125 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
     return {
       glowClass: 'score-glow-rose border-rose-500/50 bg-[#1a080c]/95 text-rose-300',
       badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
-      scoreColor: 'text-rose-400',
       icon: '⚠️',
       title: evaluationResult.verdict || 'Gondold Át'
     };
   }, [evaluationResult]);
 
   return (
-    <div className="space-y-4 pb-32 animate-fade-in">
+    <div className="space-y-3 pb-32 animate-fade-in">
       
-      {/* Top Header Bar */}
-      <div className="p-3.5 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-2xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 border border-slate-700 text-slate-300">
-                🛍️ Vásárlási Tanácsadó
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800/80 border border-slate-700/80 text-sky-400">
-                4 Döntési Pillér
-              </span>
-            </div>
-            <h2 className="text-xl sm:text-2xl font-serif font-bold text-slate-100">
-              Buy or Skip
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
-              Tudatos döntés vásárlás előtt: teszteld a kiszemelt darabot 3 komplett szettel, szabás- és minőségellenőrzéssel!
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowPillarsGuide(!showPillarsGuide)}
-            className="self-start sm:self-center px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Info className="w-3.5 h-3.5 text-slate-400" />
-            <span>Hogyan segít az AI?</span>
-            {showPillarsGuide ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
+      {/* ========================================================================= */}
+      {/* 1. TOP HEADER BAR: EXACT 1-ROW MIX & MATCH HEADER DESIGN (STICKY TOP-0) */}
+      {/* ========================================================================= */}
+      <div className="sticky top-0 z-30 flex items-center justify-between px-3 sm:px-4 py-2.5 rounded-2xl bg-[#090d15]/95 border border-slate-800 shadow-xl backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-950 font-bold text-xs shadow-sm flex items-center gap-1.5">
+            <span>🛍️</span>
+            <span>Buy or Skip</span>
+          </span>
         </div>
 
-        {/* Collapsible Guidance Accordion */}
-        {showPillarsGuide && (
-          <div className="mt-3 pt-3 border-t border-slate-800 animate-slide-down">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
-              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
-                <span className="font-bold text-slate-200 block">1. 3 komplett outfit:</span>
-                <span className="text-slate-400 text-[11px]">A meglévő ruhatáradból azonnal hordható szetteket kombinál.</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
-                <span className="font-bold text-slate-200 block">2. Stilisztikai lefedettség:</span>
-                <span className="text-slate-400 text-[11px]">Kiszűri a felesleges duplikációkat és hiánypótló darabokat javasol.</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
-                <span className="font-bold text-slate-200 block">3. Szabás & Méretprofil:</span>
-                <span className="text-slate-400 text-[11px]">Összeveti a szabást (Slim vs Regular) és gyártói méretet.</span>
-              </div>
-              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
-                <span className="font-bold text-slate-200 block">4. Anyagminőség & Műszál:</span>
-                <span className="text-slate-400 text-[11px]">Elemzi a szövetet és őszintén jelzi a műszálas kompromisszumokat.</span>
-              </div>
-            </div>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => setShowGuide(!showGuide)}
+          className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+            showGuide
+              ? 'bg-slate-200 text-slate-900 border-white'
+              : 'bg-[#0d121c] text-slate-400 hover:text-white border-slate-800'
+          }`}
+          title="Súgó / Információ"
+          aria-label="Információ"
+        >
+          <Info className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Small Wardrobe Guidance note */}
+      {/* ========================================================================= */}
+      {/* 2. REFINED MODULE FIRST TIME GUIDE (OPENED BY INFO BUTTON) */}
+      {/* ========================================================================= */}
+      {showGuide && (
+        <ModuleFirstTimeGuide
+          moduleId="buy_or_skip"
+          title="Hogyan működik a Buy or Skip?"
+          subtitle="Vásárlási döntéstámogató és ruhatár-összhang teszt"
+          description="Mielőtt megvennél egy új ruhát a próbafülkében vagy egy webshopban, teszteld le, hogy mennyire illik a saját gardróbodba! A Wardrobe Assistant segít megelőzni a felesleges impulzusvásárlásokat és a melléfogásokat."
+          points={[
+            "1. Kombinálhatóság: Azonnal kapsz 3 komplett szettet a saját, már meglévő ruháidból összeállítva.",
+            "2. Stilisztikai lefedettség: Figyelmeztet, ha már van hasonló stílusú vagy szerepkörű darabod a szekrényben.",
+            "3. Szabás & Illeszkedés: Összeveti a ruha szabását a testalkatoddal és a meglévő darabjaid fazonjaival.",
+            "4. Anyagminőség: Elemzi a szövetet, és őszintén jelzi, ha a darab nem jó minőségű anyagból készült."
+          ]}
+          forceOpen={true}
+          onClose={() => setShowGuide(false)}
+        />
+      )}
+
+      {/* Small Wardrobe Info note if wardrobe has few items */}
       {wardrobe.length < 3 && (
         <div className="p-3 rounded-2xl bg-[#0f1420]/70 border border-slate-800 flex items-center gap-2.5 text-xs text-slate-300">
           <Info className="w-4 h-4 text-sky-400 shrink-0" />
           <span>
-            A ruhatáradban jelenleg <strong>{wardrobe.length} db</strong> ruha található. A 3 garantált szett építéséhez érdemes még néhány alapdarabot (ing, nadrág, cipő) felvenni a Gardrób menüpontban!
+            A ruhatáradban jelenleg <strong>{wardrobe.length} db</strong> ruha van. A 3 komplett szett építéséhez érdemes még néhány alapdarabot rögzíteni a Gardrób menüpontban!
           </span>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* INPUT STAGE: OBSIDIAN & TITANIUM LUXURY DESIGN */}
+      {/* 3. INPUT STAGE: 4-TAB SINGLE-ROW RESPONSIVE SELECTOR */}
       {/* ========================================================================= */}
       {!evaluationResult && (
-        <div className="p-4 sm:p-5 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-4 shadow-2xl">
+        <div className="p-3 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-3 shadow-2xl">
           
-          {/* Source Tabs */}
+          {/* Source Tabs: Strictly 1 single row on all mobile and desktop screens! */}
           {!imagePreview && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-[#090d15] rounded-2xl border border-slate-800">
+            <div className="grid grid-cols-4 gap-1 p-1 bg-[#090d15] rounded-2xl border border-slate-800">
               <button
                 type="button"
                 onClick={() => setActiveTab('camera')}
                 disabled={isAnalyzing}
-                className={`py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2.5 py-2 rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-semibold min-w-0 transition-all cursor-pointer ${
                   activeTab === 'camera' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Camera className="w-4 h-4" />
-                <span>Próbafülke Fotó</span>
+                <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Camera</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('clipboard')}
                 disabled={isAnalyzing}
-                className={`py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2.5 py-2 rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-semibold min-w-0 transition-all cursor-pointer ${
                   activeTab === 'clipboard' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Clipboard className="w-4 h-4" />
-                <span>Vágólap (Ctrl+V)</span>
+                <Clipboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Clipboard</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('upload')}
                 disabled={isAnalyzing}
-                className={`py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2.5 py-2 rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-semibold min-w-0 transition-all cursor-pointer ${
                   activeTab === 'upload' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Upload className="w-4 h-4" />
-                <span>Feltöltés</span>
+                <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Picture</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('link')}
                 disabled={isAnalyzing}
-                className={`py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2.5 py-2 rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-semibold min-w-0 transition-all cursor-pointer ${
                   activeTab === 'link' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <LinkIcon className="w-4 h-4" />
-                <span>Webshop Link</span>
+                <LinkIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                <span className="truncate">Link</span>
               </button>
             </div>
           )}
@@ -471,7 +450,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
           {activeTab === 'camera' && !imagePreview && (
             <div
               onClick={() => cameraInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 bg-[#070a12] group"
+              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-7 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2.5 bg-[#070a12] group"
             >
               <input
                 type="file"
@@ -484,44 +463,41 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <div className="w-14 h-14 rounded-full bg-slate-800/90 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 transition-all">
-                <Camera className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-full bg-slate-800/90 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 transition-all">
+                <Camera className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-100">Fotózd le a ruhát a tükörben vagy próbafülkében</p>
-                <p className="text-xs text-slate-400 mt-1">Azonnali elemzés és ruhatár-összevetés</p>
+                <p className="text-xs sm:text-sm font-semibold text-slate-100">Készíts fotót a próbafülkében</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Azonnali ruhatár-összevetés és szettelemzés</p>
               </div>
             </div>
           )}
 
-          {/* Tab 2: Clipboard Paste */}
+          {/* Tab 2: Clipboard */}
           {activeTab === 'clipboard' && !imagePreview && (
             <div
               onClick={handleClipboardButtonClick}
-              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 bg-[#070a12] group"
+              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-7 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 bg-[#070a12] group"
             >
-              <div className="w-14 h-14 rounded-full bg-slate-800/90 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 group-hover:scale-105 transition-transform">
-                <Clipboard className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-full bg-slate-800/90 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 group-hover:scale-105 transition-transform">
+                <Clipboard className="w-5 h-5" />
               </div>
-              <div className="space-y-1 max-w-sm">
-                <p className="text-sm font-semibold text-slate-100">
+              <div className="space-y-1">
+                <p className="text-xs sm:text-sm font-semibold text-slate-100">
                   Kattints ide a vágólap beillesztéséhez
                 </p>
-                <p className="text-xs text-slate-300 font-medium">
-                  Vagy nyomj <kbd className="px-1.5 py-0.5 rounded bg-black border border-slate-700 text-slate-200 font-mono text-[11px]">Ctrl + V</kbd>-t bárhol!
-                </p>
-                <p className="text-[11px] text-slate-500 pt-1">
-                  Másold ki a termékfotót a böngészőből (Jobb klikk ➔ Kép másolása) és illeszd be!
+                <p className="text-[11px] text-slate-400">
+                  Vagy nyomj <kbd className="px-1.5 py-0.5 rounded bg-black border border-slate-700 text-slate-200 font-mono text-[10px]">Ctrl + V</kbd>-t bárhol!
                 </p>
               </div>
             </div>
           )}
 
-          {/* Tab 3: Upload */}
+          {/* Tab 3: Picture (File Upload) */}
           {activeTab === 'upload' && !imagePreview && (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 bg-[#070a12] group"
+              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-7 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2.5 bg-[#070a12] group"
             >
               <input
                 type="file"
@@ -533,25 +509,19 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <div className="w-14 h-14 rounded-full bg-slate-800/90 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 transition-all">
-                <Upload className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-full bg-slate-800/90 group-hover:bg-slate-700 flex items-center justify-center text-slate-300 transition-all">
+                <Image className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-100">Válassz fotót a galériádból</p>
-                <p className="text-xs text-slate-400 mt-1">Elmentett fotó vagy képernyőkép a webshopból</p>
+                <p className="text-xs sm:text-sm font-semibold text-slate-100">Válassz fotót a galériádból</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Elmentett termékfotó vagy képernyőkép</p>
               </div>
             </div>
           )}
 
-          {/* Tab 4: Link or Product Code */}
+          {/* Tab 4: Link (Clean, Minimalist, No Clutter) */}
           {activeTab === 'link' && !imagePreview && (
-            <form onSubmit={handleLinkInput} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label htmlFor="advisor-webshop-url-input" className="block text-xs font-medium text-slate-300">
-                  Webshop terméklink VAGY Cikkszám / Termékkód (Next, Zara, Reserved stb.):
-                </label>
-                <span className="text-[10px] text-sky-400 font-semibold">SKU Keresés Aktív</span>
-              </div>
+            <form onSubmit={handleLinkInput} className="space-y-2">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -560,7 +530,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                   aria-label="Webshop terméklink vagy cikkszám"
                   required
                   disabled={isAnalyzing}
-                  placeholder="pl. https://www.nextdirect.com/... VAGY csak cikkszám pl. AA6536"
+                  placeholder="Webshop link (vagy Next termékkód)..."
                   value={webshopUrl}
                   onChange={(e) => {
                     setWebshopUrl(e.target.value);
@@ -571,12 +541,12 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 <button 
                   type="submit" 
                   disabled={isAnalyzing || !webshopUrl.trim()}
-                  className="px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-white text-slate-900 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all disabled:opacity-50 cursor-pointer shadow-md"
+                  className="px-4 sm:px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-white text-slate-900 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all disabled:opacity-50 cursor-pointer shadow-md"
                 >
                   {isAnalyzing ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Kinyerés...</span>
+                      <span className="hidden xs:inline">Kinyerés...</span>
                     </>
                   ) : (
                     <>
@@ -586,9 +556,6 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                   )}
                 </button>
               </div>
-              <p className="text-[11px] text-slate-500">
-                💡 <em>Tipp: Akár csak a ruha termékkódját is megadhatod (pl. <strong>AA6536</strong>, <strong>SU458397</strong>, <strong>512HR-09M</strong>), az AI megkeresi a képet és az adatokat a neten!</em>
-              </p>
             </form>
           )}
 
@@ -610,9 +577,9 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
             </div>
           )}
 
-          {/* Preview & Evaluation Stage */}
+          {/* Preview & Evaluation Launch */}
           {(imagePreview || webshopContext) && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-3 animate-fade-in">
               
               {/* Photo Card with Floating Actions */}
               {imagePreview ? (
@@ -645,73 +612,35 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                   </div>
                 </div>
               ) : (
-                <div className="p-4 rounded-2xl bg-[#070a12] border border-slate-700 text-center space-y-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
-                    Webshop Termék / SKU Felismerve
-                  </span>
-                  <h4 className="font-serif font-bold text-slate-100 text-base">
+                <div className="p-4 rounded-2xl bg-[#070a12] border border-slate-700 text-center space-y-1.5">
+                  <h4 className="font-serif font-bold text-slate-100 text-sm sm:text-base">
                     {itemName || webshopContext?.title || webshopContext?.productCode || 'Kiszemelt Termék'}
                   </h4>
-                  <p className="text-xs text-slate-400">
-                    {webshopContext?.brand ? `Márka: ${webshopContext.brand}` : ''} {webshopContext?.productCode ? `• SKU: ${webshopContext.productCode}` : ''}
+                  <p className="text-[11px] text-slate-400">
+                    {webshopContext?.brand ? `Márka: ${webshopContext.brand}` : ''} {webshopContext?.productCode ? `• Kód: ${webshopContext.productCode}` : ''}
                   </p>
-                  
-                  <div className="pt-2 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={handleClipboardButtonClick}
-                      disabled={isAnalyzing}
-                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
-                    >
-                      <Clipboard className="w-4 h-4" />
-                      <span>Fotó Beillesztése Vágólapról (Ctrl+V)</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClipboardButtonClick}
+                    disabled={isAnalyzing}
+                    className="mt-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
+                  >
+                    <Clipboard className="w-3.5 h-3.5" />
+                    <span>Fotó Beillesztése Vágólapról</span>
+                  </button>
                 </div>
               )}
 
-              {/* Target Season Selection Chip Bar */}
-              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                    <CloudSun className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Melyik szezonra vásárolsz? (Cél-szezon):</span>
-                  </label>
-                  <span className="text-[10px] text-slate-500 italic">Off-season vásárlás támogatva</span>
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-                  {TARGET_SEASONS.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setTargetSeason(s.id)}
-                      disabled={isAnalyzing}
-                      className={`px-3 py-1.5 rounded-xl text-[11px] font-medium transition-all shrink-0 cursor-pointer ${
-                        targetSeason === s.id
-                          ? 'bg-slate-200 text-slate-950 font-bold shadow'
-                          : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/50'
-                      }`}
-                      title={s.desc}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Optional Name & Price inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label htmlFor="advisor-item-name-input" className="block text-xs font-medium text-slate-400 mb-1">
-                    Megnevezés (opcionális):
-                  </label>
                   <input
                     type="text"
                     id="advisor-item-name-input"
                     name="advisorItemName"
                     aria-label="Megnevezés"
                     disabled={isAnalyzing}
-                    placeholder="pl. Zöld Slim Fit Lenkeverék Zakó"
+                    placeholder="Megnevezés (opcionális, pl. Lenkeverék Zakó)..."
                     value={itemName}
                     onChange={(e) => setItemName(e.target.value)}
                     className="w-full bg-[#0a0e17] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400"
@@ -719,16 +648,13 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 </div>
 
                 <div>
-                  <label htmlFor="advisor-item-price-input" className="block text-xs font-medium text-slate-400 mb-1">
-                    Ár (opcionális):
-                  </label>
                   <input
                     type="text"
                     id="advisor-item-price-input"
                     name="advisorItemPrice"
                     aria-label="Ár"
                     disabled={isAnalyzing}
-                    placeholder="pl. 38 000 Ft"
+                    placeholder="Ár (opcionális, pl. 38 000 Ft)..."
                     value={itemPrice}
                     onChange={(e) => setItemPrice(e.target.value)}
                     className="w-full bg-[#0a0e17] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400"
@@ -762,10 +688,10 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
       )}
 
       {/* ========================================================================= */}
-      {/* ANTI-HALLUCINATION WARNING STATE: Unknown Product */}
+      {/* 4. ANTI-HALLUCINATION WARNING STATE: Unknown Product */}
       {/* ========================================================================= */}
       {evaluationResult && evaluationResult.isUnknown && (
-        <div className="p-6 rounded-3xl bg-[#0a0e17] border border-amber-500/40 space-y-4 shadow-2xl animate-slide-up">
+        <div className="p-5 sm:p-6 rounded-3xl bg-[#0a0e17] border border-amber-500/40 space-y-3 shadow-2xl animate-slide-up">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
               <AlertTriangle className="w-6 h-6" />
@@ -777,10 +703,10 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
           </div>
 
           <p className="text-xs text-slate-300 leading-relaxed">
-            {evaluationResult.unknownReason || 'A megadott fotó vagy link alapján nem sikerült egyértelműen beazonosítani egy valós ruházati cikket.'} Rendszerünk a valós adatok elvét követi: szigorúan nem generál fantomruhákat kitalált adatokkal.
+            {evaluationResult.unknownReason || 'A megadott fotó vagy link alapján nem sikerült egyértelműen beazonosítani egy valós ruházati cikket.'} A Wardrobe Assistant a valós adatok elvét követi: szigorúan nem talál ki fantomruhákat.
           </p>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="pt-1">
             <button
               type="button"
               onClick={handleReset}
@@ -794,16 +720,16 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
       )}
 
       {/* ========================================================================= */}
-      {/* RESULT PRESENTATION: MIX & MATCH HERO SCORE BAR + DETAILS */}
+      {/* 5. RESULT PRESENTATION: MIX & MATCH HERO SCORE BAR + DETAILS */}
       {/* ========================================================================= */}
       {evaluationResult && !evaluationResult.isUnknown && scoreBadgeConfig && (
         <div className="space-y-4 animate-slide-up">
           
           {/* Main Hero Card */}
-          <div className="p-5 sm:p-6 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-4 shadow-2xl">
+          <div className="p-4 sm:p-6 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-4 shadow-2xl">
             
             {/* Top Row: Score + Verdict + Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
               
               <div className="flex items-center gap-3 min-w-0">
                 <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex flex-col items-center justify-center font-bold font-serif shadow-2xl shrink-0 border ${scoreBadgeConfig.glowClass}`}>
@@ -818,7 +744,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                       {scoreBadgeConfig.title}
                     </span>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-serif font-bold text-slate-100 truncate mt-0.5">
+                  <h3 className="text-base sm:text-lg font-serif font-bold text-slate-100 truncate mt-0.5">
                     {evaluationResult.item?.name || itemName || 'Ruhatár-Kompatibilitási Eredmény'}
                   </h3>
                   <span className="text-[11px] text-slate-400 block truncate">
@@ -834,25 +760,25 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Új teszt</span>
                 </button>
 
                 {addedToWardrobe ? (
-                  <span className="px-3.5 py-2.5 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5">
+                  <span className="px-3.5 py-2 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Hozzáadva a Gardróbhoz</span>
+                    <span>Hozzáadva</span>
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={handleAddToWardrobe}
-                    className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
+                    className="px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Hozzáadás a Gardróbhoz</span>
+                    <span>Hozzáadás</span>
                   </button>
                 )}
               </div>
@@ -864,10 +790,8 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
             </p>
 
             {/* 3 Pillars Overview Tiles */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
-              
-              {/* Pillar 1 */}
-              <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1">
+              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-0.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-mono">
                   1. Kombinálhatóság
                 </span>
@@ -876,36 +800,31 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 </p>
               </div>
 
-              {/* Pillar 2 */}
-              <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-0.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block font-mono">
                   2. Változatosság & Csere
                 </span>
                 <p className="text-xs text-slate-300">
-                  {cleanSartorialText(evaluationResult.duplicationWarning || 'Új szín és fazon kombinációkat hoz a ruhatáradba.')}
+                  {cleanSartorialText(evaluationResult.duplicationWarning || 'Új kombinációkat hoz a ruhatáradba.')}
                 </p>
               </div>
 
-              {/* Pillar 3 */}
-              <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-0.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block font-mono">
                   3. Személyes Illeszkedés
                 </span>
                 <p className="text-xs text-slate-300">
-                  {cleanSartorialText(evaluationResult.personalFitVerdict || 'Harmonizál a stílus DNS-eddel és a ruhatárad színeivel.')}
+                  {cleanSartorialText(evaluationResult.personalFitVerdict || 'Harmonizál a stílus DNS-eddel és színeiddel.')}
                 </p>
               </div>
-
             </div>
 
-            {/* ========================================================================= */}
-            {/* STRUCTURED ANALYSIS CARDS (MIX & MATCH AUDIT DRAWER STYLE) */}
-            {/* ========================================================================= */}
-            <div className="space-y-2.5 pt-1 text-xs">
+            {/* Structured Analysis Cards */}
+            <div className="space-y-2 pt-1 text-xs">
 
               {/* 1. Stilisztikai Lefedettség & Redundancia Overlap */}
               {evaluationResult.aestheticOverlap && (
-                <div className={`p-4 rounded-2xl border space-y-2 ${
+                <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
                   evaluationResult.aestheticOverlap.isRedundant
                     ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
                     : 'bg-[#070a12] border-slate-800 text-slate-300'
@@ -929,24 +848,24 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                   <p className="leading-relaxed text-slate-300">
                     {cleanSartorialText(evaluationResult.aestheticOverlap.reason || 
                       (evaluationResult.aestheticOverlap.isRedundant
-                        ? `A ruhatáradban lévő '${evaluationResult.aestheticOverlap.existingItemName}' már teljes mértékben lefedi ezt a megjelenést.`
-                        : 'Ez a darab valóban új stíluslehetőségeket és kombinációkat nyit meg a ruhatáradban.'))}
+                        ? `A ruhatáradban lévő '${evaluationResult.aestheticOverlap.existingItemName}' már lefedi ezt a szerepkört.`
+                        : 'Ez a darab valóban új kombinációkat nyit meg a ruhatáradban.'))}
                   </p>
 
                   {evaluationResult.aestheticOverlap.alternativeRecommendation && (
-                    <div className="pt-2 border-t border-white/10 text-[11px] text-slate-200 flex items-start gap-1.5">
+                    <div className="pt-1.5 border-t border-white/10 text-[11px] text-slate-200 flex items-start gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-0.5" />
                       <div>
-                        <strong className="text-white">Mit érdemes inkább venni helyette?</strong> {cleanSartorialText(evaluationResult.aestheticOverlap.alternativeRecommendation)}
+                        <strong className="text-white">Mit érdemes venni helyette?</strong> {cleanSartorialText(evaluationResult.aestheticOverlap.alternativeRecommendation)}
                       </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* 2. Anyagminőség & Műszál Elemzés (Proportional Penalty with Clear Warning) */}
+              {/* 2. Anyagminőség & Szövet Elemzés */}
               {evaluationResult.fabricWarning && (
-                <div className={`p-4 rounded-2xl border space-y-2 ${
+                <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
                   evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
                     ? 'bg-[#150e0a] border-amber-500/30 text-amber-200'
                     : 'bg-[#070a12] border-emerald-500/30 text-emerald-200'
@@ -966,7 +885,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                     </div>
 
                     {evaluationResult.item?.material && (
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
                         evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
                           ? 'bg-amber-500/20 border-amber-500/30 text-amber-300'
                           : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
@@ -982,9 +901,9 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 </div>
               )}
 
-              {/* 3. Szabás & Testalkat Illeszkedési Elemzés */}
+              {/* 3. Szabás & Testalkat Illeszkedés */}
               {evaluationResult.fitMismatchWarning && (
-                <div className="p-4 rounded-2xl bg-[#070a12] border border-slate-800 space-y-2">
+                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
                   <div className="flex items-center gap-1.5 font-bold text-slate-200">
                     <Layers className="w-4 h-4 text-slate-300" />
                     <span>⚖️ Szabás & Testalkat Illeszkedés (Fit Intelligence):</span>
@@ -993,7 +912,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                     {cleanSartorialText(evaluationResult.fitMismatchWarning)}
                   </p>
                   {evaluationResult.sizingAdvice && (
-                    <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-200 font-medium flex items-center gap-1.5">
+                    <div className="pt-1.5 border-t border-slate-800 text-[11px] text-slate-200 font-medium flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                       <span><strong>Méretválasztási javaslat:</strong> {cleanSartorialText(evaluationResult.sizingAdvice)}</span>
                     </div>
@@ -1001,24 +920,22 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 </div>
               )}
 
-              {/* 4. Szezonális & Rétegezési Dinamika */}
-              <div className="p-4 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                  <CloudSun className="w-4 h-4 text-slate-300" />
-                  <span>Szezonális Hordhatóság & Cél-Időjárás:</span>
+              {/* 4. Szezonális Dinamika */}
+              {evaluationResult.targetSeason && (
+                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                    <CloudSun className="w-4 h-4 text-slate-300" />
+                    <span>Szezonális Hordhatóság:</span>
+                  </div>
+                  <p className="leading-relaxed text-slate-400">
+                    ✨ Automatikusan felismert jelleg: <strong>{evaluationResult.targetSeason}</strong>. Az összeállítások ennek megfelelő rétegezéssel készültek a ruhatáradból.
+                  </p>
                 </div>
-                <p className="leading-relaxed text-slate-400">
-                  {targetSeason === 'winter' && '❄️ Kifejezetten téli, hideg időre optimalizált rétegezés (vastag szövetek, meleg nadrágok és csizmák).'}
-                  {targetSeason === 'summer' && '☀️ Kifejezetten nyári, meleg időre hangolt összeállítások (szellős bázisok, lezser félcipők/loaferek).'}
-                  {targetSeason === 'autumn' && '🍂 Őszi, hűvös időre alkalmas összeállítások meleg rétegezéssel.'}
-                  {targetSeason === 'spring' && '🌸 Tavaszi, enyhe időjáráshoz illeszkedő kombinációk.'}
-                  {targetSeason === 'auto' && (evaluationResult.targetSeason ? `✨ Automatikusan felismert jelleg: ${evaluationResult.targetSeason}.` : '✨ A ruha saját jellege és anyaga szerint felépített kombinációk.')}
-                </p>
-              </div>
+              )}
 
-              {/* 5. Pros & Cons Lists */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-1.5">
+              {/* 5. Pros & Cons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-1">
                   <h4 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     <span>Miért éri meg megvenni:</span>
@@ -1030,7 +947,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                   </ul>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-1.5">
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-1">
                   <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
                     <AlertTriangle className="w-4 h-4 text-amber-400" />
                     <span>Gondold át:</span>
@@ -1048,11 +965,11 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
           </div>
 
           {/* ========================================================================= */}
-          {/* 3 GUARANTEED OUTFITS FLAT-LAY CANVASES (MIX & MATCH STYLE) */}
+          {/* 6. 3 GUARANTEED OUTFITS FLAT-LAY CANVASES (MIX & MATCH LOOKBOOK STYLE) */}
           {/* ========================================================================= */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-1">
             <div>
-              <h3 className="text-lg sm:text-xl font-serif font-bold text-slate-100">
+              <h3 className="text-base sm:text-lg font-serif font-bold text-slate-100">
                 ✨ A 3 Garantált Outfit a Ruhatáradból
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
@@ -1060,16 +977,16 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {evaluationResult.outfits?.map((outfit, idx) => (
                 <div 
                   key={idx} 
-                  className="p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-2xl flex flex-col justify-between space-y-3"
+                  className="p-3.5 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-2xl flex flex-col justify-between space-y-2.5"
                 >
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 border border-slate-700 text-slate-300">
-                        {outfit.styleType || 'Klasszikus & Kifinomult'}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 border border-slate-700 text-slate-300">
+                        {outfit.styleType || 'Klasszikus'}
                       </span>
                       <span className="text-[11px] text-slate-400 font-medium truncate">
                         {outfit.occasion}

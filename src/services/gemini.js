@@ -408,6 +408,36 @@ export function isDress(item) {
   );
 }
 
+export function isCoatGarment(item) {
+  if (!item) return false;
+  const name = (item.name || '').toLowerCase();
+  const sub = (item.subCategory || '').toLowerCase();
+  const cat = (item.category || '').toLowerCase();
+  return (
+    name.includes('kabát') ||
+    name.includes('dzseki') ||
+    name.includes('overshirt') ||
+    name.includes('ingdzseki') ||
+    name.includes('shacket') ||
+    name.includes('trench') ||
+    name.includes('overcoat') ||
+    name.includes('parka') ||
+    name.includes('anorak') ||
+    name.includes('télikabát') ||
+    name.includes('szövetkabát') ||
+    name.includes('bőrdzseki') ||
+    name.includes('mellény') ||
+    sub === 'coat' ||
+    sub === 'overcoat' ||
+    sub === 'jacket' ||
+    sub === 'parka' ||
+    sub === 'trench' ||
+    sub === 'shacket' ||
+    sub === 'overshirt' ||
+    cat === 'outerwear'
+  );
+}
+
 /**
  * Helper to ensure complete anatomical layering and strict sartorial harmony for an outfit across all modules
  */
