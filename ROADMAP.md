@@ -200,6 +200,19 @@ Az alkalmazás 5 főlapja egységes, professzionális és letisztult nemzetközi
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
+- [ ] 🛍️ **Buy or Skip (Vásárlási Tanácsadó) Finomhangolások & Hiba-javítások (v1.7.25 Csomag):**
+  - **1. Egysoros Színes Értékelő Sáv & Lenyitható Elemek (Mix & Match Mintára):**
+    - A jelenlegi hosszú, görgetést igénylő 5 nagy kártya helyett a Mix & Match modulhoz hasonló, egysoros, elegáns színkódolt státuszsáv (zöld $\ge 85\%$, sárga $70–84\%$, piros $<70\%$) tömör, lényegretörő szakvéleménnyel.
+    - A részletes diagnosztikai kártyák (Színharmónia, Textúra, Rétegezés, Testalkat, Esemény) és a pro/con érvek alapértelmezetten összecsukott, lenyitható harmonika (accordion) dobozban kapjanak helyet a mobilos képernyőterület kímélése érdekében.
+  - **2. Szigorú Duplikáció- és Redundancia-Büntetés:**
+    - Hiba: 95%-ra értékelt egy olyan zakót, amely már most is benne van a ruhatárban.
+    - Javítás: Ha a ruhatárban már megtalálható egy azonos vagy funkcionálisan/megjelenésében szinte azonos darab (pl. meglévő sötétkék/len zakó), tilos 90%+ és „Erősen Ajánlott” értékelést adni! A kompatibilitási pontszám drasztikusan essen vissza (max. 40–55 pont / „Gondold Át” vagy „Kerülendő”), és az AI emelje ki határozottan: *„Ez a darab funkcionálisan és megjelenésében szinte azonos a már ruhatáradban lévő [Meglévő darab neve] daraboddal! Felesleges pénzkidobás és duplikáció.”*
+  - **3. Szett-Elrendezési Slot Hiba & Szöveg-Kártya Inkonzisztencia Kivizsgálása:**
+    - Hiba: A kártyákon az öv helyére került egy fekete póló, miközben a leírás fehér inget említett (de a szettben nem az szerepelt).
+    - Javítás: A `getOutfitLayers` kategorizálás felülvizsgálata (megakadályozni, hogy bármilyen felsőruházat az alsó sor öv slotjába kerüljön), valamint a Gemini prompt és utófeldolgozó motor szigorítása, hogy a leírásban (`stylingTip`) szereplő ruha-megnevezések 100%-ban megegyezzenek a kártyán megjelenített valós elemekkel.
+  - **4. Stílus- és Formalitási Szintek Harmóniája (Sartorial Stílustörések Kizárása):**
+    - Hiba: Kétsoros len zakóhoz casual farmert párosított a szettajánló.
+    - Javítás: A kétsoros fazonok, finom lenvászon és sartorial blézerek esetén szigorúbb stílusharmónia előírása a modellnek: a hétköznapi koptatott farmer kizárása elegáns kétsoros zakók mellé, helyette szellős pamut/len chino, finom gyapjú nadrág vagy elegáns sötét tónusú nadrág párosítása.
 - [ ] ⚖️ **Értékelés Szigorúságának Felülvizsgálata (Harmónia & Pontozási Kalibráció):**
   - **Cél:** A Mix & Match manuális szettépítő és az AI Stylist audit pontozási rendszerének, skálájának és szigorúságának átfogó felülvizsgálata.
   - **Részletek:**
