@@ -151,6 +151,11 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
+- [ ] 🐛 **Egy Szett Többszöri Elmentésének Megakadályozása (Szett Mentési Deduplikáció):**
+  - **Probléma:** Jelenleg egyazon szettet többször is el lehet menteni (a Mix & Match felületen és a szettgenerálóban is), ami felesleges duplikátumokat hoz létre a Mentett szettek fiókban és a Firestore adatbázisban.
+  - **Megoldás:**
+    - Mentés előtt (`saveOutfit`) vizsgálat beépítése a meglévő szettek elemeinek azonosítói (`item.id`) alapján.
+    - Ha pontosan ugyanaz a ruhakombináció már létezik a mentett szettek között, új rekord létrehozása helyett diszkrét tájékoztatás („Ez a szett már szerepel a mentett szettjeid között!”) vagy opcionális frissítés biztosítása.
 - [ ] ⚖️ **Értékelés Szigorúságának Felülvizsgálata (Harmónia & Pontozási Kalibráció):**
   - **Cél:** A Mix & Match manuális szettépítő és az AI Stylist audit pontozási rendszerének, skálájának és szigorúságának átfogó felülvizsgálata.
   - **Részletek:**
