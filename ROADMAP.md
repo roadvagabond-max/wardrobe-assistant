@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.17` (Production Build)
+- **Aktuális Verzió:** `v1.7.18` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,13 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.17)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.18)
+- [x] **Dupla Kabát Sor, Sorközi Öv & Zokni, Felső Rétegszám Limit & Női Ruhatár Támogatás (v1.7.18):**
+  - **Mobilos Lelógás Megszüntetése (Felsők Max 2 Darab):** A korábbi 3 felső réteg mobilon (~360–390px képernyőszélesség) vízszintesen lefejezte/levágta a kártyákat. A felső sor mostantól szigorúan legfeljebb 2 bázis/köztes darabot (ing + pulóver/kardigán) fogad el, így mobilon 100%-ban elfér vágás nélkül.
+  - **Dupla Külső Réteg a Kabát Sorban (Overshirt + Kabát / Dzseki):** A különálló kabát sor mostantól akár 2 külső réteget is kezel (pl. ingdzseki/overshirt vagy zakó + télikabát), saját `(+) + Kabát` gombbal a jobb oldali sínen.
+  - **Intelligens `+ Réteg` Átmenet:** Ha a felső sor már megtelt 2 darabbal, a mellette lévő gomb automatikusan `+ Kabát` címkére vált, a választó pedig kizárólag a külső rétegeket mutatja fel, amelyek a dedikált kabát sorba kerülnek.
+  - **Sorközi Öv & Zokni Elhelyezés (Nincs Alulra Zsúfolás):** Az öv kis méretben (`w-16 h-16 sm:w-20 sm:h-20`) közvetlenül a nadrág mellett jelenik meg a nadrág sorban; a zokni / harisnya pedig közvetlenül a cipő mellett kap helyet a lábbeli sorban, saját törlés és csere gyorsgombokkal.
+  - **Női Ruhatár Teljes Támogatása:** Egyberuha (`dress`) esetén a nadrág sor rejtve marad, a deréköv közvetlenül a ruha mellett jelenik meg kicsiben (`+ Öv` gombbal a jobb sínen), a cipő sorban pedig női profil esetén `+ Harisnya` gomb jelenik meg a zokni/harisnya választáshoz.
 - [x] **Középre Rendezett Lookbook Flatlay Vászon, Dedikált Jobb Oldali Plusz Gomb Sáv & Automatikus Kabát Sor (v1.7.17):**
   - **Középre Rendezés & Szimmetria (`StylistView.jsx`):** A bal oldali ruhatér minden sorban azonos szélességű (`flex-1`) és vízszintesen középre zárt (`justify-center`). Ennek köszönhetően 2 felső réteg és 1 nadrág esetén a nadrág függőleges felezővonala pixelre pontosan a két felső közötti elválasztó vonalra esik; ugyanez a szimmetria érvényes a cipőre és a kabátra is.
   - **Kategóriák Méretezése:** A fő ruhadarabok (kabát, felsők, nadrág, cipő) egységes, nagyméretű kártyákon jelennek meg (`w-32 h-44 sm:w-40 sm:h-52`), míg a kiegészítők (öv, zokni, ékszerek, óra, táska) kifejezetten kompakt méretet kaptak (`w-16 h-16 sm:w-20 sm:h-20`).
