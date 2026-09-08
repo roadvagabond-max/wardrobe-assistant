@@ -62,6 +62,38 @@ const getInitialWardrobe = () => {
     localStorage.removeItem('sartorial_last_anchor_items');
   } catch (_) {}
   return SAMPLE_SHOWCASE_WARDROBE;
+// Deduplicate outfits list based on unique item combinations and ID
+export const getOutfitSignature = (outfit) => {
+  if (!outfit) return '';
+  if (Array.isArray(outfit.items) && outfit.items.length > 0) {
+    return outfit.items
+      .map(i => i?.id || `${i?.category || ''}_${i?.name || ''}`)
+      .filter(Boolean)
+      .sort()
+      .join('|');
+  }
+  return outfit.id || '';
+};
+
+export const deduplicateOutfitsList = (outfits) => {
+  if (!Array.isArray(outfits) || outfits.length <= 1) return outfits || [];
+  const seenSignatures = new Set();
+  const seenIds = new Set();
+  const result = [];
+
+  for (const o of outfits) {
+    if (!o) continue;
+    const sig = getOutfitSignature(o);
+    const id = o.id;
+
+    if (id && seenIds.has(id)) continue;
+    if (sig && seenSignatures.has(sig)) continue;
+
+    if (id) seenIds.add(id);
+    if (sig) seenSignatures.add(sig);
+    result.push(o);
+  }
+  return result;
 };
 
 export function AuthProvider({ children }) {
@@ -83,8 +115,12 @@ export function AuthProvider({ children }) {
   });
 
   const [savedOutfits, setSavedOutfits] = useState(() => {
-    const saved = localStorage.getItem('saved_outfits');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('saved_outfits');
+      return saved ? deduplicateOutfitsList(JSON.parse(saved)) : [];
+    } catch (_) {
+      return [];
+    }
   });
 
   const [sartorialRules, setSartorialRules] = useState(() => getStoredSartorialRules());
@@ -235,7 +271,7 @@ export function AuthProvider({ children }) {
                 localStorage.setItem('preferred_gemini_model', data.preferredModel);
               }
               if (data.savedOutfits) {
-                setSavedOutfits(data.savedOutfits);
+                setSavedOutfits(deduplicateOutfitsList(data.savedOutfits));
               }
             } else {
               const newProfile = {
@@ -373,13 +409,43 @@ export function AuthProvider({ children }) {
   };
 
   // Save an Outfit (Syncs to Firestore for logged-in users and localStorage)
+  // Prevents saving duplicate outfits with identical garment items
   const saveOutfit = async (outfit) => {
-    const newOutfit = {
-      ...outfit,
-      id: outfit.id || `outfit-${Date.now()}`,
-      savedAt: new Date().toISOString()
-    };
-    const updated = [newOutfit, ...(savedOutfits || []).filter(o => o.id !== newOutfit.id)];
+    if (!outfit) return null;
+    const currentList = deduplicateOutfitsList(savedOutfits || []);
+    const targetSig = getOutfitSignature(outfit);
+
+    // Look for an existing outfit with identical items or identical ID
+    const existingIndex = currentList.findIndex(existing => {
+      if (outfit.id && existing.id === outfit.id) return true;
+      if (targetSig && getOutfitSignature(existing) === targetSig) return true;
+      return false;
+    });
+
+    let updated;
+    let finalOutfit;
+    let isDuplicate = false;
+
+    if (existingIndex >= 0) {
+      isDuplicate = true;
+      const existing = currentList[existingIndex];
+      finalOutfit = {
+        ...existing,
+        ...outfit,
+        id: existing.id, // Preserve original outfit ID
+        savedAt: new Date().toISOString()
+      };
+      updated = [...currentList];
+      updated[existingIndex] = finalOutfit;
+    } else {
+      finalOutfit = {
+        ...outfit,
+        id: outfit.id || `outfit-${Date.now()}`,
+        savedAt: new Date().toISOString()
+      };
+      updated = [finalOutfit, ...currentList];
+    }
+
     setSavedOutfits(updated);
     localStorage.setItem('saved_outfits', JSON.stringify(updated));
 
@@ -391,7 +457,7 @@ export function AuthProvider({ children }) {
         console.warn('Hiba a szett Firestore-ba mentésekor:', err);
       }
     }
-    return newOutfit;
+    return { ...finalOutfit, isDuplicate };
   };
 
   const deleteOutfit = async (outfitId) => {

@@ -101,8 +101,8 @@ export default function ModuleFirstTimeGuide({
             </div>
           )}
 
-          {actionLabel && onAction && (
-            <div className="pt-2 flex items-center gap-3 flex-wrap">
+          <div className="pt-2 flex items-center gap-3 flex-wrap">
+            {actionLabel && onAction && (
               <button
                 type="button"
                 onClick={onAction}
@@ -112,15 +112,15 @@ export default function ModuleFirstTimeGuide({
                 <span>{actionLabel}</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
-              <button
-                type="button"
-                onClick={handleDismiss}
-                className="text-[11px] text-slate-400 hover:text-white transition-colors underline cursor-pointer"
-              >
-                Értem, bezárás
-              </button>
-            </div>
-          )}
+            )}
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium py-1.5 px-3.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+            >
+              Értem, bezárás
+            </button>
+          </div>
         </div>
 
         {/* Dismiss X button */}

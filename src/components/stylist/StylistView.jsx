@@ -334,7 +334,7 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
   };
 
   // Save outfit directly or from audit (100% no confetti, elegant feedback)
-  const handleDirectSaveOutfit = () => {
+  const handleDirectSaveOutfit = async () => {
     if (selectedItems.length === 0) return;
 
     const occasionTitle = manualEvent.trim() || 'Saját Mix & Match Szett';
@@ -361,9 +361,13 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
       savedAt: new Date().toISOString()
     };
 
-    saveOutfit(newOutfit);
+    const result = await saveOutfit(newOutfit);
     setIsManualSaved(true);
-    setSaveToastMessage('✨ Szett sikeresen elmentve a Kedvencekhez!');
+    if (result?.isDuplicate) {
+      setSaveToastMessage('ℹ️ Ez a szett már szerepel a mentett szettjeid között (frissítve)!');
+    } else {
+      setSaveToastMessage('✨ Szett sikeresen elmentve a Mentett szettekhez!');
+    }
     setTimeout(() => setSaveToastMessage(''), 3500);
   };
 
@@ -637,9 +641,6 @@ export default function StylistView({ weather, setWeather, initialAnchorItem = n
                   "A javasolt szetteket közvetlenül elmentheted a kedvenceid közé."
                 ]
           }
-          actionLabel="Irány a Gardrób"
-          onAction={() => { window.location.hash = '#wardrobe'; }}
-          wardrobeCount={wardrobe?.length || 0}
           forceOpen={true}
           onClose={() => setShowGuide(false)}
         />

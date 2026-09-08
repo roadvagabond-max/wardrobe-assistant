@@ -5,7 +5,7 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 ---
 
 ## 📌 Jelenlegi Státusz
-- **Aktuális Verzió:** `v1.7.13` (Production Build)
+- **Aktuális Verzió:** `v1.7.14` (Production Build)
 - **Architektúra:** React (Vite) + Tailwind CSS + Firebase Cloud Functions v2 (Node.js 22 Proxy) + Google Gemini 3.x + Google Cloud Secret Manager + Cloud Firestore + Firestore Persistent Offline Cache.
 - **Éles URL:** [https://wardrobe-assistant-48e01.web.app/](https://wardrobe-assistant-48e01.web.app/)
 
@@ -13,7 +13,11 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 
 ## 🛠️ I. Javítandó Tételek & Technikai Finomhangolások (Tech Debt & Fixes)
 
-### ✅ Lezárt Javítások (v1.5.4 – v1.7.13)
+### ✅ Lezárt Javítások (v1.5.4 – v1.7.14)
+- [x] **Szett Mentési Deduplikáció & Info Súgó Oldalon Maradás (v1.7.14):**
+  - **Szett Mentési Deduplikáció (`AuthContext.jsx`):** A ruhaelemek ujjlenyomata (`getOutfitSignature`) alapján a `saveOutfit` intelligensen felismeri, ha egy pontosan azonos szett már létezik. Új duplikátum létrehozása helyett az eredeti ID megőrzésével frissíti a meglévőt, és diszkrét értesítést ad: *„ℹ️ Ez a szett már szerepel a mentett szettjeid között (frissítve)!”*.
+  - **Múltbéli Duplikátumok Tisztítása (`deduplicateOutfitsList`):** Az inicializáláskor és a Firestore `onSnapshot` szinkronizációkor automatikusan összevonja és kitisztítja a korábban esetlegesen többször elmentett szetteket.
+  - **Info Gomb Oldalon Maradás (`StylistView.jsx`, `ModuleFirstTimeGuide.jsx`):** A félrevezető `[ Irány a Gardrób ]` átirányító gomb és a felesleges darabszámláló eltávolítva; a kártya alján egy tiszta, elegáns `[ Értem, bezárás ]` titán akciógomb jelenik meg, így a bezárás után a felhasználó zavartalanul az adott oldalon marad.
 - [x] **Dinamikus Kontextus-Érzékeny Info (i) Gomb & Obsidian-Titán Súgó Rendszer (v1.7.13):**
   - **Permanens Elrejtés Javítása (`ModuleFirstTimeGuide.jsx`):** Az info gomb megnyomásakor a korábbi `localStorage` bezárási állapot (`isDismissed`) blokkolta a megjelenést. Az új `forceOpen={true}` prop bevezetésével a fejléc `(i)` gombjára kattintva a súgó mindig megbízhatóan és azonnal megjelenik.
   - **Kétirányú Bezárási Szinkronizáció (`onClose`):** A súgó panel bezárásakor (az „X” vagy az „Értem, bezárás” gombbal) az `onClose` callback automatikusan visszaállítja a fejléc gomb állapotát (`setShowGuide(false)`), megszüntetve a beragadt kijelölést.
@@ -151,11 +155,6 @@ Ez a dokumentum rögzíti az **AI Wardrobe Assistant** projekt javítandó felad
 - [x] **Modulokban Lévő Beégetett Adatok Kisöprése:** A `HelpGuideModal.jsx`, `StyleDNAView.jsx`, `sartorialEval.js` és `gemini.js` átfésülése és a tesztadatok, márkák, SKU kódok neutrális, professzionális mintákra cserélése.
 
 ### 📋 Nyitott Tételek & Következő Sprint Feladatai
-- [ ] 🐛 **Egy Szett Többszöri Elmentésének Megakadályozása (Szett Mentési Deduplikáció):**
-  - **Probléma:** Jelenleg egyazon szettet többször is el lehet menteni (a Mix & Match felületen és a szettgenerálóban is), ami felesleges duplikátumokat hoz létre a Mentett szettek fiókban és a Firestore adatbázisban.
-  - **Megoldás:**
-    - Mentés előtt (`saveOutfit`) vizsgálat beépítése a meglévő szettek elemeinek azonosítói (`item.id`) alapján.
-    - Ha pontosan ugyanaz a ruhakombináció már létezik a mentett szettek között, új rekord létrehozása helyett diszkrét tájékoztatás („Ez a szett már szerepel a mentett szettjeid között!”) vagy opcionális frissítés biztosítása.
 - [ ] ⚖️ **Értékelés Szigorúságának Felülvizsgálata (Harmónia & Pontozási Kalibráció):**
   - **Cél:** A Mix & Match manuális szettépítő és az AI Stylist audit pontozási rendszerének, skálájának és szigorúságának átfogó felülvizsgálata.
   - **Részletek:**
