@@ -26,6 +26,7 @@ import {
   toggleRuleStatus, 
   deleteRule as deleteStoredRule 
 } from '../services/sartorialRules';
+import { preloadBackgroundRemoval } from '../services/backgroundRemoval';
 
 const AuthContext = createContext(null);
 const SHOWCASE_VERSION_KEY = 'sartorial_showcase_version';
@@ -235,6 +236,27 @@ export function AuthProvider({ children }) {
 
     // Run when idle
     setTimeout(runSartorialAutoSync, 2500);
+  }, [currentUser?.uid]);
+
+  // 📦 Background Preload for Neural Background Removal Model & WASM Runtime
+  useEffect(() => {
+    const startPreload = async () => {
+      try {
+        await preloadBackgroundRemoval();
+      } catch (err) {
+        console.warn('Packshot modell háttér előtöltési figyelmeztetés:', err);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(() => startPreload(), { timeout: 12000 });
+      } else {
+        startPreload();
+      }
+    }, 3500);
+
+    return () => clearTimeout(timer);
   }, [currentUser?.uid]);
 
   // Listen to Firebase Auth state & Real-time Firestore Cloud Sync

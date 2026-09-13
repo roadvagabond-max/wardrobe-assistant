@@ -201,12 +201,19 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
         setImagePreview(result.dataUrl);
         setActiveImageMode('packshot');
         setAvailableImages(prev => [result.dataUrl, ...prev.filter(x => x !== result.dataUrl)]);
+        setBgRemovalProgress(null);
+      } else {
+        const errorMsg = result?.error || 'A neurális szegmentáció sikertelen';
+        console.warn('Háttéreltávolítás sikertelen:', errorMsg);
+        setBgRemovalProgress({ label: `⚠️ Packshot: ${errorMsg}`, percent: 0 });
+        setTimeout(() => setBgRemovalProgress(null), 4000);
       }
     } catch (err) {
       console.warn('Háttéreltávolítás hiba, marad az eredeti fotó:', err);
+      setBgRemovalProgress({ label: '⚠️ Packshot sikertelen, eredeti fotó megtartva', percent: 0 });
+      setTimeout(() => setBgRemovalProgress(null), 4000);
     } finally {
       setIsRemovingBg(false);
-      setBgRemovalProgress(null);
     }
   };
 
@@ -231,8 +238,8 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               setAvailableImages(prev => [normalized, ...prev.filter(x => x !== normalized)]);
               triggerAIAnalysis(normalized, { title: formData.name, brand: formData.brand });
 
-              // Thread 2: Parallel background removal & autocrop
-              startBackgroundRemoval(file);
+              // Thread 2: Parallel background removal & autocrop with normalized 640x640 input
+              startBackgroundRemoval(normalized);
             } catch (err) {
               console.error('Vágólap kép hiba:', err);
               setAnalysisError('A vágólapon lévő kép optimalizálása nem sikerült.');
@@ -293,7 +300,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             setAvailableImages(prev => [normalized, ...prev.filter(x => x !== normalized)]);
             setIsFormReady(true);
             triggerAIAnalysis(normalized, { title: formData.name, brand: formData.brand });
-            startBackgroundRemoval(blob);
+            startBackgroundRemoval(normalized);
             setIsAnalyzing(false);
             return;
           }
@@ -341,8 +348,8 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       // Thread 1: Launch immediate Gemini Vision analysis
       triggerAIAnalysis(normalizedBase64);
 
-      // Thread 2: Parallel background removal & autocrop
-      startBackgroundRemoval(file);
+      // Thread 2: Parallel background removal & autocrop with normalized 640x640 input
+      startBackgroundRemoval(normalizedBase64);
     } catch (err) {
       console.error('Képfeltöltési hiba:', err);
       setAnalysisError('Nem sikerült a kép optimalizálása.');
@@ -405,7 +412,8 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       setCleanPackshot(null);
       setActiveImageMode('packshot');
       setAvailableImages([normalized]);
-      startBackgroundRemoval(file);
+      // Parallel background removal & autocrop with normalized 640x640 input
+      startBackgroundRemoval(normalized);
     } catch (err) {
       console.error('Fotó csatolási hiba:', err);
     } finally {
@@ -864,10 +872,16 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                       </div>
                     )}
 
-                    {/* Background removal in progress badge */}
-                    {isRemovingBg && (
-                      <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-black/85 backdrop-blur-md rounded-xl px-3 py-1.5 border border-[var(--border-gold)] shadow-xl animate-pulse text-xs text-[var(--accent-gold)]">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent-gold)]" />
+                    {/* Background removal in progress badge or status feedback */}
+                    {(isRemovingBg || (bgRemovalProgress && bgRemovalProgress.percent === 0)) && (
+                      <div className={`absolute top-3 left-3 z-20 flex items-center gap-2 bg-black/85 backdrop-blur-md rounded-xl px-3 py-1.5 border ${
+                        isRemovingBg ? 'border-[var(--border-gold)] animate-pulse text-[var(--accent-gold)]' : 'border-amber-500/50 text-amber-300'
+                      } shadow-xl text-xs`}>
+                        {isRemovingBg ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent-gold)] shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        )}
                         <span className="font-medium">{bgRemovalProgress?.label || '✨ Háttér eltávolítása folyamatban...'}</span>
                       </div>
                     )}
