@@ -3,6 +3,8 @@ import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIco
 import { analyzeClothingImage } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { ensureBase64Image, getSmartGarmentImage } from '../../services/imageOptimizer';
+import { processGarmentPackshot } from '../../services/backgroundRemoval';
+import { uploadGarmentImage } from '../../services/firebase';
 import ColorPalettePicker from '../common/ColorPalettePicker';
 import { useAuth } from '../../context/AuthContext';
 import { getProfileDemographics, getDemographicTags, getDemographicArchetypes } from '../../services/demographics';
@@ -49,7 +51,7 @@ const STYLE_TAG_SUGGESTIONS = [
 ];
 
 export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
-  const { profile } = useAuth();
+  const { profile, currentUser } = useAuth();
   const demographics = getProfileDemographics(profile);
   const demographicArchetypes = getDemographicArchetypes(demographics);
   const demographicTags = getDemographicTags(demographics);
@@ -58,6 +60,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [availableImages, setAvailableImages] = useState([]);
+  const [cleanPackshot, setCleanPackshot] = useState(null); // { dataUrl, blob }
+  const [rawOriginalImage, setRawOriginalImage] = useState(null); // Normalized JPEG
+  const [activeImageMode, setActiveImageMode] = useState('packshot'); // 'packshot' | 'original'
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [bgRemovalProgress, setBgRemovalProgress] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [webshopUrl, setWebshopUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isFormReady, setIsFormReady] = useState(false);
@@ -143,6 +151,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     setSelectedFile(null);
     setImagePreview(null);
     setAvailableImages([]);
+    setCleanPackshot(null);
+    setRawOriginalImage(null);
+    setActiveImageMode('packshot');
+    setIsRemovingBg(false);
+    setBgRemovalProgress(null);
+    setIsSaving(false);
     setWebshopUrl('');
     setAnalysisError(null);
     setIsAnalyzing(false);
@@ -173,6 +187,29 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     onClose();
   };
 
+  // Parallel Thread 2: Salient Object Segmentation + Autocrop Packshot
+  const startBackgroundRemoval = async (source) => {
+    if (!source) return;
+    setIsRemovingBg(true);
+    setBgRemovalProgress({ label: 'Háttéreltávolító motor indítása...', percent: 10 });
+    try {
+      const result = await processGarmentPackshot(source, {
+        onProgress: (p) => setBgRemovalProgress(p)
+      });
+      if (result && result.success && result.dataUrl) {
+        setCleanPackshot({ dataUrl: result.dataUrl, blob: result.blob });
+        setImagePreview(result.dataUrl);
+        setActiveImageMode('packshot');
+        setAvailableImages(prev => [result.dataUrl, ...prev.filter(x => x !== result.dataUrl)]);
+      }
+    } catch (err) {
+      console.warn('Háttéreltávolítás hiba, marad az eredeti fotó:', err);
+    } finally {
+      setIsRemovingBg(false);
+      setBgRemovalProgress(null);
+    }
+  };
+
   // High-performance clipboard processor (Handles direct image blobs and image URLs)
   const handlePastedData = async (items, textData) => {
     // 1. Check for binary image blob in clipboard (e.g. Right click -> Copy Image)
@@ -185,10 +222,17 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             setIsFormReady(true);
             setAnalysisError(null);
             try {
-              const optimized = await ensureBase64Image(file);
-              setImagePreview(optimized);
-              setAvailableImages(prev => [optimized, ...prev.filter(x => x !== optimized)]);
-              await triggerAIAnalysis(optimized, { title: formData.name, brand: formData.brand });
+              // Thread 1: Fast client-side normalization to 640x640 JPEG (< 30ms)
+              const normalized = await ensureBase64Image(file, 640, 640, 0.75);
+              setImagePreview(normalized);
+              setRawOriginalImage(normalized);
+              setCleanPackshot(null);
+              setActiveImageMode('packshot');
+              setAvailableImages(prev => [normalized, ...prev.filter(x => x !== normalized)]);
+              triggerAIAnalysis(normalized, { title: formData.name, brand: formData.brand });
+
+              // Thread 2: Parallel background removal & autocrop
+              startBackgroundRemoval(file);
             } catch (err) {
               console.error('Vágólap kép hiba:', err);
               setAnalysisError('A vágólapon lévő kép optimalizálása nem sikerült.');
@@ -209,11 +253,15 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
         setIsFormReady(true);
         setAnalysisError(null);
         try {
-          const optimized = await ensureBase64Image(cleanText);
-          const finalImg = optimized || cleanText;
+          const normalized = await ensureBase64Image(cleanText, 640, 640, 0.75);
+          const finalImg = normalized || cleanText;
           setImagePreview(finalImg);
+          setRawOriginalImage(finalImg);
+          setCleanPackshot(null);
+          setActiveImageMode('packshot');
           setAvailableImages(prev => [finalImg, ...prev.filter(x => x !== finalImg)]);
-          await triggerAIAnalysis(finalImg, { title: formData.name, brand: formData.brand });
+          triggerAIAnalysis(finalImg, { title: formData.name, brand: formData.brand });
+          startBackgroundRemoval(finalImg);
         } catch (err) {
           console.error('Vágólap link hiba:', err);
         } finally {
@@ -237,11 +285,15 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
           const imageType = item.types.find(type => type.startsWith('image/'));
           if (imageType) {
             const blob = await item.getType(imageType);
-            const optimized = await ensureBase64Image(blob);
-            setImagePreview(optimized);
-            setAvailableImages(prev => [optimized, ...prev.filter(x => x !== optimized)]);
+            const normalized = await ensureBase64Image(blob, 640, 640, 0.75);
+            setImagePreview(normalized);
+            setRawOriginalImage(normalized);
+            setCleanPackshot(null);
+            setActiveImageMode('packshot');
+            setAvailableImages(prev => [normalized, ...prev.filter(x => x !== normalized)]);
             setIsFormReady(true);
-            await triggerAIAnalysis(optimized, { title: formData.name, brand: formData.brand });
+            triggerAIAnalysis(normalized, { title: formData.name, brand: formData.brand });
+            startBackgroundRemoval(blob);
             setIsAnalyzing(false);
             return;
           }
@@ -275,13 +327,22 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
     setSelectedFile(file);
     setIsFormReady(true);
+    setAnalysisError(null);
     try {
       setIsAnalyzing(true);
-      // Fast client-side image compression & robust base64 conversion
-      const optimizedBase64 = await ensureBase64Image(file);
-      setImagePreview(optimizedBase64);
-      setAvailableImages([optimizedBase64]);
-      await triggerAIAnalysis(optimizedBase64);
+      // Thread 1: Fast client-side image normalization (640x640 @ 0.75 JPEG, < 30ms)
+      const normalizedBase64 = await ensureBase64Image(file, 640, 640, 0.75);
+      setImagePreview(normalizedBase64);
+      setRawOriginalImage(normalizedBase64);
+      setCleanPackshot(null);
+      setActiveImageMode('packshot');
+      setAvailableImages([normalizedBase64]);
+
+      // Thread 1: Launch immediate Gemini Vision analysis
+      triggerAIAnalysis(normalizedBase64);
+
+      // Thread 2: Parallel background removal & autocrop
+      startBackgroundRemoval(file);
     } catch (err) {
       console.error('Képfeltöltési hiba:', err);
       setAnalysisError('Nem sikerült a kép optimalizálása.');
@@ -302,11 +363,15 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       
       if (chosenImage) {
         setImagePreview(chosenImage);
+        setRawOriginalImage(chosenImage);
+        setCleanPackshot(null);
+        setActiveImageMode('packshot');
         setAvailableImages([chosenImage]);
         // Convert to Base64 in background for permanent local persistence
-        ensureBase64Image(chosenImage).then(b64 => {
+        ensureBase64Image(chosenImage, 640, 640, 0.75).then(b64 => {
           if (b64 && b64.startsWith('data:')) {
             setImagePreview(b64);
+            setRawOriginalImage(b64);
             setAvailableImages([b64]);
           }
         }).catch(() => {});
@@ -334,9 +399,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     if (!file) return;
     try {
       setIsAnalyzing(true);
-      const optimized = await ensureBase64Image(file);
-      setImagePreview(optimized);
-      setAvailableImages([optimized]);
+      const normalized = await ensureBase64Image(file, 640, 640, 0.75);
+      setImagePreview(normalized);
+      setRawOriginalImage(normalized);
+      setCleanPackshot(null);
+      setActiveImageMode('packshot');
+      setAvailableImages([normalized]);
+      startBackgroundRemoval(file);
     } catch (err) {
       console.error('Fotó csatolási hiba:', err);
     } finally {
@@ -432,26 +501,60 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.name) return;
+    if (!formData.name || isSaving) return;
 
-    let finalImageUrl = imagePreview || getSmartGarmentImage(formData.category, formData.color, formData.subCategory);
+    setIsSaving(true);
+    try {
+      // 1. Determine selected image source (Packshot WebP Blob vs Original Normalized vs URL)
+      let chosenImage = imagePreview;
+      if (activeImageMode === 'packshot' && cleanPackshot?.blob) {
+        chosenImage = cleanPackshot.blob;
+      } else if (activeImageMode === 'original' && rawOriginalImage) {
+        chosenImage = rawOriginalImage;
+      }
 
-    // If it's a remote HTTP URL from a webshop, ensure it is downloaded and persisted as Base64 in Firestore
-    if (finalImageUrl && typeof finalImageUrl === 'string' && finalImageUrl.startsWith('http')) {
-      try {
-        const b64 = await ensureBase64Image(finalImageUrl);
-        if (b64 && b64.startsWith('data:')) {
-          finalImageUrl = b64;
+      if (!chosenImage) {
+        chosenImage = getSmartGarmentImage(formData.category, formData.color, formData.subCategory);
+      }
+
+      // 2. Generate unique garment itemId
+      const itemId = `garment_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+      // 3. Upload to Firebase Cloud Storage (WebP with 1-Year CDN Cache Headers)
+      let finalImageUrl = chosenImage;
+      if (currentUser?.uid && (chosenImage instanceof Blob || (typeof chosenImage === 'string' && chosenImage.startsWith('data:')))) {
+        try {
+          const storageUrl = await uploadGarmentImage(chosenImage, currentUser.uid, itemId);
+          if (storageUrl) {
+            finalImageUrl = storageUrl;
+          }
+        } catch (uploadErr) {
+          console.warn('Storage feltöltési hiba, fallback helyi formátumra:', uploadErr);
         }
-      } catch (_) {}
+      }
+
+      // If remote HTTP URL from webshop and not uploaded, ensure Base64 persistence
+      if (finalImageUrl && typeof finalImageUrl === 'string' && finalImageUrl.startsWith('http') && !finalImageUrl.includes('firebasestorage.googleapis.com')) {
+        try {
+          const b64 = await ensureBase64Image(finalImageUrl, 640, 640, 0.75);
+          if (b64 && b64.startsWith('data:')) {
+            finalImageUrl = b64;
+          }
+        } catch (_) {}
+      }
+
+      onAddClothing({
+        ...formData,
+        id: itemId,
+        imageUrl: finalImageUrl
+      });
+
+      handleClose();
+    } catch (err) {
+      console.error('Mentési hiba:', err);
+    } finally {
+      setIsSaving(false);
     }
-
-    onAddClothing({
-      ...formData,
-      imageUrl: finalImageUrl
-    });
-
-    handleClose();
   };
 
   if (!isOpen) return null;
@@ -718,11 +821,55 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               className="hidden" 
             />
             
-            {/* 1. Proportional Image Preview or Recognized Item Card */}
+            {/* 1. Proportional Image Preview with Packshot Toggle */}
             <div className="space-y-2">
               <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-4 flex flex-col items-center justify-center">
                 {imagePreview ? (
                   <>
+                    {/* View Mode Toggle: Packshot vs Eredeti fotó */}
+                    {rawOriginalImage && cleanPackshot && (
+                      <div className="absolute top-3 left-3 z-20 flex items-center bg-black/85 backdrop-blur-md rounded-xl p-1 border border-amber-500/40 shadow-xl animate-fade-in">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveImageMode('packshot');
+                            setImagePreview(cleanPackshot.dataUrl);
+                          }}
+                          className={`py-1 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                            activeImageMode === 'packshot'
+                              ? 'bg-[var(--accent-gold)] text-black font-bold shadow'
+                              : 'text-slate-300 hover:text-white'
+                          }`}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-current" />
+                          <span>✨ Packshot</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveImageMode('original');
+                            setImagePreview(rawOriginalImage);
+                          }}
+                          className={`py-1 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
+                            activeImageMode === 'original'
+                              ? 'bg-white/20 text-white font-bold shadow'
+                              : 'text-slate-300 hover:text-white'
+                          }`}
+                        >
+                          <Camera className="w-3.5 h-3.5 text-current" />
+                          <span>📷 Eredeti</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Background removal in progress badge */}
+                    {isRemovingBg && (
+                      <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-black/85 backdrop-blur-md rounded-xl px-3 py-1.5 border border-[var(--border-gold)] shadow-xl animate-pulse text-xs text-[var(--accent-gold)]">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent-gold)]" />
+                        <span className="font-medium">{bgRemovalProgress?.label || '✨ Háttér eltávolítása folyamatban...'}</span>
+                      </div>
+                    )}
+
                     <img 
                       src={imagePreview} 
                       alt="Preview" 
@@ -1171,10 +1318,20 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               </button>
               <button
                 type="submit"
-                className="btn-gold flex-1 py-3 text-sm font-bold shadow-xl flex items-center justify-center gap-2"
+                disabled={isSaving}
+                className="btn-gold flex-1 py-3 text-sm font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Check className="w-4 h-4" />
-                <span>Mentés a Gardróbba</span>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Feltöltés és Mentés...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Mentés a Gardróbba</span>
+                  </>
+                )}
               </button>
             </div>
 

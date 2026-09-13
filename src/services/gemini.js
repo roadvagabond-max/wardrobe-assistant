@@ -514,9 +514,11 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   // Helper: Is this item a belt?
   const isBelt = (item) => {
     if (!item) return false;
+    const cat = (item.category || '').toLowerCase();
     const sub = (item.subCategory || '').toLowerCase();
     const name = (item.name || '').toLowerCase();
-    return sub === 'belt' || name.includes('öv') || name.includes('bőröv');
+    if (cat === 'tops' || cat === 'knitwear' || cat === 'outerwear' || cat === 'bottoms' || cat === 'shoes' || cat === 'dresses' || cat === 'skirts') return false;
+    return sub === 'belt' || /\böv\b|\bbőröv\b|\bderéköv\b/i.test(name);
   };
 
   // Target season & Candidate garment cold/warm context detection (off-season shopping support)
@@ -919,7 +921,18 @@ MIND a 3 szett KÖTELEZŐEN e köré a kiszemelt kulcsdarab ("candidate-item") k
 3. SZIGORÚ SZÖVEG- ÉS ID-SZINKRONIZÁCIÓ (ZERO MISMATCH):
    - A leírásban ('stylingTip') és indoklásban megnevezett darabok (különösen a lábbeli, mint pl. barna bőrcipő, fekete loafer vagy fehér sneaker) ID-ja 100%-ban megegyezik a 'matchedItemIds' listába betett gardrób-elemek ID-jával!
    - Tilos barna cipőt írni, ha fekete sneaker ID-ját adod meg, és fordítva!
+   - Tilos fehér inget írni a leírásba, ha fekete póló vagy kék ing van a szettben kiválasztva! A 'stylingTip' 100%-ban a kiválasztott darabok valós nevét használja!
    - A lábbeli formalitása és stílusa 100%-ban passzoljon az összeállítás jellegéhez!
+
+4. SZIGORÚ DUPLIKÁCIÓ- ÉS REDUNDANCIA-BÜNTETÉS:
+   - Ha a kiszemelt darabhoz már létezik funkcionálisan vagy megjelenésében szinte azonos alapdarab a ruhatárban (pl. azonos színű és fazonú zakó, hasonló alap póló, loafer):
+     * "aestheticOverlap": { "isRedundant": true, "existingItemName": "Meglévő darab pontos neve", "reason": "Miért duplikáció", "alternativeRecommendation": "Mit érdemes inkább beszerezni helyette" }
+     * "compatibilityScore": SZIGORÚAN MAXIMUM 40–55 PONT! Tilos 60+ vagy "Erősen Ajánlott" minősítést adni!
+     * "verdict": KÖTELEZŐEN "Gondold Át" vagy "Kerülendő"!
+     * "duplicationWarning": "⚠️ Ez a darab funkcionálisan és megjelenésében szinte azonos a már ruhatáradban lévő [Meglévő darab neve] daraboddal! Felesleges pénzkidobás és duplikáció."
+
+5. FORMALITÁSI HARMÓNIA ÉS SARTORIAL KÓDEX:
+   - Tartsd be az aktív Sartorial Szabályzatot! Kétsoros zakóhoz (double-breasted) és elegáns blézerekhez szigorúan tilos casual, koptatott farmert párosítani; helyette finom pamut/len chino nadrágot vagy gyapjú szövetnadrágot válassz a katalógusból!
 
 MIX & MATCH STRUKTURÁLT SZAKMAI AUDIT:
 - "colorHarmony": Színharmónia, kontraszt, hideg/meleg tónusok és a 3-szín szabály érvényesülése a meglévő darabjaiddal.
@@ -1090,6 +1103,45 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
         }
         if (!parsed.personalFitVerdict) {
           parsed.personalFitVerdict = `Harmonizál a(z) ${styleProfile.bodyType || 'Atlétikus'} testalkatoddal és a meglévő ruhatárad színeivel.`;
+        }
+
+        // Strict Duplication & Redundancy Guardrail (No 90%+ for existing duplicates)
+        const candName = (extractedItem.name || '').toLowerCase();
+        const candColor = (extractedItem.color || '').toLowerCase();
+        const candCat = (extractedItem.category || '').toLowerCase();
+        const candSub = (extractedItem.subCategory || '').toLowerCase();
+
+        const existingDuplicate = wardrobe.find(w => {
+          if (!w || w.id === 'candidate-item' || w.condition === 'Lecserélendő' || w.condition === 'Javításra vár') return false;
+          const wCat = (w.category || '').toLowerCase();
+          const wSub = (w.subCategory || '').toLowerCase();
+          const wColor = (w.color || '').toLowerCase();
+          const wName = (w.name || '').toLowerCase();
+
+          const sameCategory = (wCat && wCat === candCat) || (wSub && wSub === candSub);
+          const sameColor = candColor && wColor && (wColor.includes(candColor) || candColor.includes(wColor));
+          const verySimilarName = candName && wName && (candName.includes(wName) || wName.includes(candName));
+
+          return sameCategory && (sameColor || verySimilarName);
+        });
+
+        if (parsed.aestheticOverlap?.isRedundant || existingDuplicate) {
+          parsed.compatibilityScore = Math.min(Number(parsed.compatibilityScore) || 50, 52);
+          if (parsed.verdict === 'Erősen Ajánlott' || !parsed.verdict) {
+            parsed.verdict = 'Gondold Át';
+          }
+          if (existingDuplicate && (!parsed.aestheticOverlap || !parsed.aestheticOverlap.isRedundant)) {
+            parsed.aestheticOverlap = {
+              isRedundant: true,
+              existingItemName: existingDuplicate.name,
+              reason: `A ruhatáradban már megtalálható egy szinte azonos funkciójú és megjelenésű darab (${existingDuplicate.name}).`,
+              alternativeRecommendation: parsed.aestheticOverlap?.alternativeRecommendation || 'Érdemes inkább egy valóban hiányzó kulcsdarabra fordítani a keretet.'
+            };
+          }
+          if (!parsed.duplicationWarning || !parsed.duplicationWarning.includes('azonos')) {
+            const dupName = parsed.aestheticOverlap?.existingItemName || existingDuplicate?.name || 'egy meglévő ruháddal';
+            parsed.duplicationWarning = `⚠️ Ez a darab funkcionálisan és megjelenésében szinte azonos a már ruhatáradban lévő „${dupName}” daraboddal! Felesleges duplikáció és pénzkidobás.`;
+          }
         }
       }
 

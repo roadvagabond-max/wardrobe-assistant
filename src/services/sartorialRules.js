@@ -225,9 +225,9 @@ export const INITIAL_SARTORIAL_RULES = [
     id: 'rule-worsted-vs-denim',
     category: 'fabric_synergy',
     title: 'Fényes öltönyszövet (Worsted Wool) és farmer összeférhetetlensége',
-    ruleDescription: 'Selyemfényű, sima felületű formális öltönyzakó (Super 120s+ Worsted) nem hordható koptatott farmernadrággal. A farmer textúrájához matt, rusztikusabb vagy szőtt zakó (tweed, flanel, hop-sack, len vagy pamut blézer) dukál.',
-    dont: 'Fényes fésűsgyapjú öltönyzakó + koptatott farmer',
-    do: 'Farmernadrághoz strukturált tweed, gyapjú flanel, pamut vagy lenvászon blézer',
+    ruleDescription: 'Selyemfényű, sima felületű formális öltönyzakó (Super 120s+ Worsted) nem hordható koptatott farmernadrággal. A farmer textúrájához kizárólag strukturált, egysoros lezser zakó (tweed, vastagabb flanel vagy matt pamut dzseki) dukál, sötét tiszta denim nadrággal.',
+    dont: 'Fényes fésűsgyapjú öltönyzakó vagy elegáns zakó + koptatott casual farmer',
+    do: 'Farmernadrághoz kizárólag lezser egysoros sportzakó (tweed, flanel, pamut overshirt) tiszta sötét denim kivitelben',
     targetStyles: ['Klasszikus & Időtlen', 'Smart Urban', 'Olasz Sprezzatura'],
     gender: 'universal',
     ageGroups: ['adult'],
@@ -235,6 +235,21 @@ export const INITIAL_SARTORIAL_RULES = [
     source: 'Loro Piana & Permanent Style Fabric Pairing Manual',
     enabled: true,
     discoveredAt: '2026-09-02T00:00:00.000Z'
+  },
+  {
+    id: 'rule-double-breasted-formality',
+    category: 'menswear_specific',
+    title: 'Kétsoros zakó (Double-Breasted Blazer) és a formalitási szintek harmóniája',
+    ruleDescription: 'A kétsoros szabású zakó (különösen a 6x2 vagy 4x2 gombos, csúcsos hajtókájú peaked lapel blézer, legyen az finom gyapjú vagy szőtt lenvászon) a klasszikus szabászat egyik legstrukturáltabb és legelegánsabb alapdarabja. Hétköznapi, koptatott casual farmerrel párosítva kirívó stílustörést okoz. Kizárólag szellős pamut/len chino nadrággal, finom gyapjú szövetnadrággal vagy sartorial szabott nadrággal és bőrcipővel/loaferrel harmonizál.',
+    dont: 'Kétsoros zakó (double-breasted) + koptatott vagy szaggatott casual farmernadrág',
+    do: 'Kétsoros zakó + pamut/len chino nadrág vagy finom gyapjú flanelnadrág + bőr penny loafer / elegáns derbi',
+    targetStyles: ['Klasszikus & Időtlen', 'Olasz Sprezzatura', 'Old Money & Quiet Luxury'],
+    gender: 'universal',
+    ageGroups: ['adult'],
+    severity: 'strict',
+    source: 'Savile Row Double-Breasted Tailoring Code & Pitti Uomo Standards',
+    enabled: true,
+    discoveredAt: '2026-09-08T00:00:00.000Z'
   },
   {
     id: 'rule-suede-rain-protection',
@@ -504,6 +519,7 @@ export function constructPersonalizedMiningTopics(styleProfile = {}, wardrobe = 
     topics.push(`- Classic Menswear, Italian Sprezzatura & Quiet Luxury tailoring etiquette:
   * Pocket square independence rules (Drake's London, Simon Crompton: pocket square must never match tie pattern/fabric directly)
   * Suit jacket sleeve length, shirt cuff exposure (1.0 - 1.5 cm cuff rule) and double breasted vs single breasted buttoning
+  * Double-breasted blazer formality etiquette (tailored trousers and linen/cotton chinos vs prohibition of casual washed denim)
   * Trouser break proportions (No Break for loafers and monkstraps vs Half Break for Oxfords and Derbies - Crockett & Jones, Edward Green)
   * Lapel width vs tie width vs collar point proportions (Savile Row & Milanese tailoring standard)
   * Sock color rules with tailored trousers (matching trouser tone vs contrast, no white socks with suits, invisible socks with loafers)`);

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Camera, Image, Link as LinkIcon, Sparkles, CheckCircle2, AlertTriangle, 
   Loader2, RefreshCw, Plus, Check, Clipboard, Feather, ShieldAlert, 
-  Layers, Compass, CloudSun, Info
+  Layers, Compass, CloudSun, Info, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { evaluateAndExtractPrePurchaseItem, isCoatGarment, isDress } from '../../services/gemini';
@@ -38,21 +38,36 @@ function getOutfitLayers(items = []) {
     const sub = (item.subCategory || '').toLowerCase();
     const name = (item.name || '').toLowerCase();
 
+    // 1. One-piece dress
     if (cat === 'dresses' || isDress(item)) {
       dressItem = item;
-    } else if (sub === 'belt' || name.includes('öv')) {
-      beltItem = item;
-    } else if (sub === 'socks' || sub === 'tights' || name.includes('zokni') || name.includes('harisnya')) {
-      socksItem = item;
-    } else if (cat === 'shoes' || sub === 'loafers' || sub === 'sneakers' || sub === 'boots' || name.includes('cipő') || name.includes('loafer')) {
-      shoeItem = item;
-    } else if (cat === 'bottoms' || cat === 'skirts' || sub === 'trousers' || sub === 'jeans' || sub === 'skirt' || name.includes('nadrág') || name.includes('szoknya')) {
-      lowerItem = item;
-    } else if (cat === 'outerwear' || cat === 'knitwear' || cat === 'tops' || isCoatGarment(item)) {
+    } 
+    // 2. Tops, Knitwear, Outerwear - ALWAYS UPPER LAYER, NEVER BELT!
+    else if (cat === 'outerwear' || cat === 'knitwear' || cat === 'tops' || isCoatGarment(item)) {
       upperItems.push(item);
-    } else if (cat === 'accessories') {
+    } 
+    // 3. Bottoms & Skirts
+    else if (cat === 'bottoms' || cat === 'skirts' || sub === 'trousers' || sub === 'jeans' || sub === 'skirt' || sub === 'pants' || name.includes('nadrág') || name.includes('szoknya') || name.includes('chino') || name.includes('farmer')) {
+      lowerItem = item;
+    } 
+    // 4. Shoes
+    else if (cat === 'shoes' || sub === 'loafers' || sub === 'sneakers' || sub === 'boots' || sub === 'oxfords' || sub === 'derbies' || name.includes('cipő') || name.includes('loafer') || name.includes('csizma') || name.includes('bakancs')) {
+      shoeItem = item;
+    } 
+    // 5. Belts - only if belt subcategory or accessory with word 'öv' (strictly excluding 'rövid', 'szövet')
+    else if (sub === 'belt' || (cat === 'accessories' && /\böv\b|\bbőröv\b|\bderéköv\b/i.test(name)) || (/\böv\b|\bbőröv\b|\bderéköv\b/i.test(name) && !name.includes('rövid') && !name.includes('szövet') && !name.includes('bővített'))) {
+      beltItem = item;
+    } 
+    // 6. Socks / Tights
+    else if (sub === 'socks' || sub === 'tights' || name.includes('zokni') || name.includes('harisnya')) {
+      socksItem = item;
+    } 
+    // 7. Other Accessories
+    else if (cat === 'accessories') {
       accessories.push(item);
-    } else {
+    } 
+    // 8. Fallback
+    else {
       upperItems.push(item);
     }
   });
@@ -74,6 +89,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [addedToWardrobe, setAddedToWardrobe] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   // Lightbox Modal State
   const [lightboxData, setLightboxData] = useState({
@@ -334,6 +350,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
     setWebshopContext(null);
     setAnalysisError(null);
     setAddedToWardrobe(false);
+    setShowDiagnostics(false);
     if (onClearPrefill) onClearPrefill();
   };
 
@@ -341,7 +358,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
   const scoreBadgeConfig = useMemo(() => {
     if (!evaluationResult) return null;
     const s = evaluationResult.compatibilityScore;
-    if (s >= 80) {
+    if (s >= 85) {
       return {
         glowClass: 'score-glow-emerald border-emerald-500/50 bg-[#061810]/95 text-emerald-300',
         badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
@@ -349,7 +366,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
         title: evaluationResult.verdict || 'Erősen Ajánlott'
       };
     }
-    if (s >= 65) {
+    if (s >= 70) {
       return {
         glowClass: 'score-glow-amber border-amber-500/50 bg-[#1a1408]/95 text-amber-300',
         badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
@@ -757,284 +774,318 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
       )}
 
       {/* ========================================================================= */}
-      {/* 5. RESULT PRESENTATION: MIX & MATCH HERO SCORE BAR + DETAILS */}
+      {/* 5. RESULT PRESENTATION: MIX & MATCH HERO SCORE BAR + ACCORDION DETAILS */}
       {/* ========================================================================= */}
       {evaluationResult && !evaluationResult.isUnknown && scoreBadgeConfig && (
-        <div className="space-y-4 animate-slide-up">
+        <div className="space-y-3 animate-slide-up">
           
-          {/* Main Hero Card */}
-          <div className="p-4 sm:p-6 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-4 shadow-2xl">
+          {/* 1-ROW COMPACT HERO STATUS BAR (MIX & MATCH STYLE) */}
+          <div className={`p-3.5 sm:p-4 rounded-2xl border backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xl transition-all ${scoreBadgeConfig.glowClass}`}>
             
-            {/* Top Row: Score + Verdict + Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-              
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex flex-col items-center justify-center font-bold font-serif shadow-2xl shrink-0 border ${scoreBadgeConfig.glowClass}`}>
-                  <span className="text-xl sm:text-2xl leading-none">{evaluationResult.compatibilityScore}%</span>
-                  <span className="text-[8px] uppercase font-mono tracking-wider opacity-80 mt-1">Pont</span>
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase font-mono tracking-wider text-slate-400 font-semibold">Döntési Javaslat:</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${scoreBadgeConfig.badgeClass}`}>
-                      {scoreBadgeConfig.title}
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-serif font-bold text-slate-100 truncate mt-0.5">
-                    {evaluationResult.item?.name || itemName || 'Ruhatár-Kompatibilitási Eredmény'}
-                  </h3>
-                  <span className="text-[11px] text-slate-400 block truncate">
-                    {evaluationResult.item?.brand ? `${evaluationResult.item.brand} • ` : ''}
-                    {evaluationResult.item?.material ? `${evaluationResult.item.material} • ` : ''}
-                    {evaluationResult.item?.fit ? evaluationResult.item.fit : ''}
-                  </span>
-                </div>
+            {/* Left: Score Badge + Title + Summary */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center font-bold font-serif shadow-xl shrink-0 border ${scoreBadgeConfig.glowClass}`}>
+                <span className="text-lg sm:text-xl leading-none">{evaluationResult.compatibilityScore}%</span>
+                <span className="text-[8px] uppercase font-mono tracking-wider opacity-80 mt-0.5">Pont</span>
               </div>
 
-              {/* Actions Right */}
-              <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-mono tracking-wider opacity-75 font-semibold">Döntés:</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${scoreBadgeConfig.badgeClass}`}>
+                    {scoreBadgeConfig.title}
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-serif font-bold text-slate-100 truncate mt-0.5" title={evaluationResult.item?.name || itemName}>
+                  {evaluationResult.item?.name || itemName || 'Ruhatár-Kompatibilitási Eredmény'}
+                </h3>
+                <p className="text-[11px] text-slate-300 truncate">
+                  {cleanSartorialText(evaluationResult.verdictSummary)}
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Actions (Részletek toggle, Új teszt, Hozzáadás) */}
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={() => setShowDiagnostics(prev => !prev)}
+                className="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>{showDiagnostics ? 'Kevesebb' : 'Részletek'}</span>
+                {showDiagnostics ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleReset}
+                className="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Új elemzés indítása"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Új teszt</span>
+              </button>
+
+              {addedToWardrobe ? (
+                <span className="px-3.5 py-2 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Hozzáadva</span>
+                </span>
+              ) : (
                 <button
                   type="button"
-                  onClick={handleReset}
-                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  onClick={handleAddToWardrobe}
+                  className="px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Új teszt</span>
+                  <Plus className="w-4 h-4" />
+                  <span>Hozzáadás</span>
                 </button>
+              )}
+            </div>
+          </div>
 
-                {addedToWardrobe ? (
-                  <span className="px-3.5 py-2 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Hozzáadva</span>
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleAddToWardrobe}
-                    className="px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Hozzáadás</span>
-                  </button>
+          {/* DUPLICATION ALERT BANNER (If duplicate or redundant) */}
+          {(evaluationResult.aestheticOverlap?.isRedundant || evaluationResult.duplicationWarning?.includes('azonos')) && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 animate-fade-in text-amber-200 text-xs">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1">
+                <strong className="block text-amber-300 font-semibold mb-0.5">⚠️ Duplikáció & Redundancia Figyelmeztetés</strong>
+                <p className="leading-relaxed">
+                  {cleanSartorialText(evaluationResult.duplicationWarning || evaluationResult.aestheticOverlap?.reason || 'Ez a darab funkcionálisan szinte azonos egy már meglévő ruhatári elemeddel.')}
+                </p>
+                {evaluationResult.aestheticOverlap?.alternativeRecommendation && (
+                  <p className="mt-1 text-[11px] text-amber-300/90 font-medium">
+                    💡 <em>Javaslat:</em> {cleanSartorialText(evaluationResult.aestheticOverlap.alternativeRecommendation)}
+                  </p>
                 )}
               </div>
             </div>
+          )}
 
-            {/* Verdict Summary Text */}
-            <p className="text-xs text-slate-300 leading-relaxed">
-              {cleanSartorialText(evaluationResult.verdictSummary)}
-            </p>
-
-            {/* 3 Pillars Overview Tiles */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1">
-              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-mono">
-                  1. Kombinálhatóság
+          {/* COLLAPSIBLE DIAGNOSTIC ACCORDION */}
+          {showDiagnostics && (
+            <div className="p-4 sm:p-5 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-3.5 shadow-2xl animate-fade-in">
+              
+              {/* Top Subtitle */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-xs text-slate-400">
+                <span className="font-semibold text-slate-200">Részletes Diagnosztika & Szakvélemény</span>
+                <span className="text-[11px]">
+                  {evaluationResult.item?.brand ? `${evaluationResult.item.brand} • ` : ''}
+                  {evaluationResult.item?.material ? `${evaluationResult.item.material} • ` : ''}
+                  {evaluationResult.item?.fit ? evaluationResult.item.fit : ''}
                 </span>
-                <p className="text-xs text-slate-200 font-medium">
-                  3 garantált outfit a meglévő darabjaiddal.
-                </p>
               </div>
 
-              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block font-mono">
-                  2. Változatosság & Csere
-                </span>
-                <p className="text-xs text-slate-300">
-                  {cleanSartorialText(evaluationResult.duplicationWarning || 'Új kombinációkat hoz a ruhatáradba.')}
-                </p>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block font-mono">
-                  3. Személyes Illeszkedés
-                </span>
-                <p className="text-xs text-slate-300">
-                  {cleanSartorialText(evaluationResult.personalFitVerdict || 'Harmonizál a stílus DNS-eddel és színeiddel.')}
-                </p>
-              </div>
-            </div>
-
-            {/* Structured Analysis Cards (Mix & Match Parity) */}
-            <div className="space-y-2 pt-1 text-xs">
-
-              {/* 1. Színharmónia & Kontraszt */}
-              {evaluationResult.colorHarmony && (
-                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                    <Sparkles className="w-4 h-4 text-slate-300" />
-                    <span>🎨 Színharmónia & Kontraszt:</span>
-                  </div>
-                  <p className="leading-relaxed text-slate-300">
-                    {cleanSartorialText(evaluationResult.colorHarmony)}
+              {/* 3 Pillars Overview Tiles */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block font-mono">
+                    1. Kombinálhatóság
+                  </span>
+                  <p className="text-xs text-slate-200 font-medium">
+                    3 garantált outfit a meglévő darabjaiddal.
                   </p>
                 </div>
-              )}
 
-              {/* 2. Anyagok & Textúrák Találkozása */}
-              {(evaluationResult.fabricSynergy || evaluationResult.fabricWarning) && (
-                <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
-                  evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
-                    ? 'bg-[#150e0a] border-amber-500/30 text-amber-200'
-                    : 'bg-[#070a12] border-slate-800 text-slate-300'
-                }`}>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-sky-400 block font-mono">
+                    2. Változatosság & Csere
+                  </span>
+                  <p className="text-xs text-slate-300">
+                    {cleanSartorialText(evaluationResult.duplicationWarning || 'Új kombinációkat hoz a ruhatáradba.')}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-[#070a12] border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block font-mono">
+                    3. Személyes Illeszkedés
+                  </span>
+                  <p className="text-xs text-slate-300">
+                    {cleanSartorialText(evaluationResult.personalFitVerdict || 'Harmonizál a stílus DNS-eddel és színeiddel.')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Structured Analysis Cards */}
+              <div className="space-y-2 text-xs">
+
+                {/* 1. Színharmónia & Kontraszt */}
+                {evaluationResult.colorHarmony && (
+                  <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
                     <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                      {evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7) ? (
-                        <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-                      ) : (
-                        <Feather className="w-4 h-4 text-slate-300 shrink-0" />
+                      <Sparkles className="w-4 h-4 text-slate-300" />
+                      <span>🎨 Színharmónia & Kontraszt:</span>
+                    </div>
+                    <p className="leading-relaxed text-slate-300">
+                      {cleanSartorialText(evaluationResult.colorHarmony)}
+                    </p>
+                  </div>
+                )}
+
+                {/* 2. Anyagok & Textúrák Találkozása */}
+                {(evaluationResult.fabricSynergy || evaluationResult.fabricWarning) && (
+                  <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
+                    evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                      ? 'bg-[#150e0a] border-amber-500/30 text-amber-200'
+                      : 'bg-[#070a12] border-slate-800 text-slate-300'
+                  }`}>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                        {evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7) ? (
+                          <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                        ) : (
+                          <Feather className="w-4 h-4 text-slate-300 shrink-0" />
+                        )}
+                        <span>🧵 Anyagok & Textúrák Találkozása:</span>
+                      </div>
+
+                      {evaluationResult.item?.material && (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
+                          evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
+                            ? 'bg-amber-500/20 border-amber-500/30 text-amber-300'
+                            : 'bg-slate-800 border-slate-700 text-slate-300'
+                        }`}>
+                          {evaluationResult.item.material}
+                        </span>
                       )}
-                      <span>🧵 Anyagok & Textúrák Találkozása:</span>
                     </div>
 
-                    {evaluationResult.item?.material && (
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${
-                        evaluationResult.isSynthetic || (evaluationResult.fabricScore && evaluationResult.fabricScore < 7)
-                          ? 'bg-amber-500/20 border-amber-500/30 text-amber-300'
-                          : 'bg-slate-800 border-slate-700 text-slate-300'
-                      }`}>
-                        {evaluationResult.item.material}
-                      </span>
-                    )}
+                    <p className="leading-relaxed text-slate-300">
+                      {cleanSartorialText(evaluationResult.fabricSynergy || evaluationResult.fabricWarning)}
+                    </p>
                   </div>
+                )}
 
-                  <p className="leading-relaxed text-slate-300">
-                    {cleanSartorialText(evaluationResult.fabricSynergy || evaluationResult.fabricWarning)}
-                  </p>
-                </div>
-              )}
-
-              {/* 3. Rétegezés & Sziluett Harmónia */}
-              {evaluationResult.layeringEvaluation && (
-                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                    <Layers className="w-4 h-4 text-slate-300" />
-                    <span>🧥 Rétegezés & Sziluett Harmónia:</span>
-                  </div>
-                  <p className="leading-relaxed text-slate-300">
-                    {cleanSartorialText(evaluationResult.layeringEvaluation)}
-                  </p>
-                </div>
-              )}
-
-              {/* 4. Szabás & Testalkat Illeszkedés */}
-              {(evaluationResult.bodyFitVerdict || evaluationResult.fitMismatchWarning) && (
-                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                    <Compass className="w-4 h-4 text-slate-300" />
-                    <span>📐 Szabás & Testalkat Illeszkedés:</span>
-                  </div>
-                  <p className="leading-relaxed text-slate-300">
-                    {cleanSartorialText(evaluationResult.fitMismatchWarning || evaluationResult.bodyFitVerdict)}
-                  </p>
-                  {evaluationResult.sizingAdvice && (
-                    <div className="pt-1.5 border-t border-slate-800 text-[11px] text-slate-200 font-medium flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span><strong>Méretválasztási javaslat:</strong> {cleanSartorialText(evaluationResult.sizingAdvice)}</span>
+                {/* 3. Rétegezés & Sziluett Harmónia */}
+                {evaluationResult.layeringEvaluation && (
+                  <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                      <Layers className="w-4 h-4 text-slate-300" />
+                      <span>🧥 Rétegezés & Sziluett Harmónia:</span>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* 5. Alkalmi Összhang & Stílus DNS */}
-              {evaluationResult.eventAlignment && (
-                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                    <Sparkles className="w-4 h-4 text-slate-300" />
-                    <span>🎯 Alkalmi Sokoldalúság & Stílus DNS:</span>
+                    <p className="leading-relaxed text-slate-300">
+                      {cleanSartorialText(evaluationResult.layeringEvaluation)}
+                    </p>
                   </div>
-                  <p className="leading-relaxed text-slate-300">
-                    {cleanSartorialText(evaluationResult.eventAlignment)}
-                  </p>
-                </div>
-              )}
+                )}
 
-              {/* 6. Stilisztikai Lefedettség & Redundancia Overlap */}
-              {evaluationResult.aestheticOverlap && (
-                <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
-                  evaluationResult.aestheticOverlap.isRedundant
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
-                    : 'bg-[#070a12] border-slate-800 text-slate-300'
-                }`}>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
+                {/* 4. Szabás & Testalkat Illeszkedés */}
+                {(evaluationResult.bodyFitVerdict || evaluationResult.fitMismatchWarning) && (
+                  <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
                     <div className="flex items-center gap-1.5 font-bold text-slate-200">
                       <Compass className="w-4 h-4 text-slate-300" />
-                      <span>⚖️ Stilisztikai Lefedettség & Kapszula Skála:</span>
+                      <span>📐 Szabás & Testalkat Illeszkedés:</span>
                     </div>
-                    {evaluationResult.aestheticOverlap.isRedundant ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                        ⚠️ Lefedett Stílusszerepkör
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        ✨ Új Stílusdimenzió
-                      </span>
+                    <p className="leading-relaxed text-slate-300">
+                      {cleanSartorialText(evaluationResult.fitMismatchWarning || evaluationResult.bodyFitVerdict)}
+                    </p>
+                    {evaluationResult.sizingAdvice && (
+                      <div className="pt-1.5 border-t border-slate-800 text-[11px] text-slate-200 font-medium flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span><strong>Méretválasztási javaslat:</strong> {cleanSartorialText(evaluationResult.sizingAdvice)}</span>
+                      </div>
                     )}
                   </div>
+                )}
 
-                  <p className="leading-relaxed text-slate-300">
-                    {cleanSartorialText(evaluationResult.aestheticOverlap.reason || 
-                      (evaluationResult.aestheticOverlap.isRedundant
-                        ? `A ruhatáradban lévő '${evaluationResult.aestheticOverlap.existingItemName}' már lefedi ezt a szerepkört.`
-                        : 'Ez a darab valóban új kombinációkat nyit meg a ruhatáradban.'))}
-                  </p>
-
-                  {evaluationResult.aestheticOverlap.alternativeRecommendation && (
-                    <div className="pt-1.5 border-t border-white/10 text-[11px] text-slate-200 flex items-start gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-0.5" />
-                      <div>
-                        <strong className="text-white">Mit érdemes venni helyette?</strong> {cleanSartorialText(evaluationResult.aestheticOverlap.alternativeRecommendation)}
-                      </div>
+                {/* 5. Alkalmi Összhang & Stílus DNS */}
+                {evaluationResult.eventAlignment && (
+                  <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                      <Sparkles className="w-4 h-4 text-slate-300" />
+                      <span>🎯 Alkalmi Sokoldalúság & Stílus DNS:</span>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* 7. Szezonális Dinamika */}
-              {evaluationResult.targetSeason && (
-                <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                    <CloudSun className="w-4 h-4 text-slate-300" />
-                    <span>Szezonális Hordhatóság:</span>
+                    <p className="leading-relaxed text-slate-300">
+                      {cleanSartorialText(evaluationResult.eventAlignment)}
+                    </p>
                   </div>
-                  <p className="leading-relaxed text-slate-400">
-                    ✨ Automatikusan felismert jelleg: <strong>{evaluationResult.targetSeason}</strong>. Az összeállítások ennek megfelelő rétegezéssel készültek a ruhatáradból.
-                  </p>
-                </div>
-              )}
+                )}
 
-              {/* 8. Pros & Cons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-1">
-                  <h4 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>Miért éri meg megvenni:</span>
-                  </h4>
-                  <ul className="space-y-1 text-xs text-emerald-200/90 list-disc list-inside">
-                    {evaluationResult.pros?.map((pro, idx) => (
-                      <li key={idx}>{cleanSartorialText(pro)}</li>
-                    ))}
-                  </ul>
+                {/* 6. Stilisztikai Lefedettség & Redundancia Overlap */}
+                {evaluationResult.aestheticOverlap && (
+                  <div className={`p-3.5 rounded-2xl border space-y-1.5 ${
+                    evaluationResult.aestheticOverlap.isRedundant
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                      : 'bg-[#070a12] border-slate-800 text-slate-300'
+                  }`}>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                        <Compass className="w-4 h-4 text-slate-300" />
+                        <span>⚖️ Stilisztikai Lefedettség & Kapszula Skála:</span>
+                      </div>
+                      {evaluationResult.aestheticOverlap.isRedundant ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          ⚠️ Lefedett Stílusszerepkör
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          ✨ Új Stílusdimenzió
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="leading-relaxed text-slate-300">
+                      {cleanSartorialText(evaluationResult.aestheticOverlap.reason || 
+                        (evaluationResult.aestheticOverlap.isRedundant
+                          ? `A ruhatáradban lévő '${evaluationResult.aestheticOverlap.existingItemName}' már lefedi ezt a szerepkört.`
+                          : 'Ez a darab valóban új kombinációkat nyit meg a ruhatáradban.'))}
+                    </p>
+
+                    {evaluationResult.aestheticOverlap.alternativeRecommendation && (
+                      <div className="pt-1.5 border-t border-white/10 text-[11px] text-slate-200 flex items-start gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0 mt-0.5" />
+                        <div>
+                          <strong className="text-white">Mit érdemes venni helyette?</strong> {cleanSartorialText(evaluationResult.aestheticOverlap.alternativeRecommendation)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 7. Szezonális Dinamika */}
+                {evaluationResult.targetSeason && (
+                  <div className="p-3.5 rounded-2xl bg-[#070a12] border border-slate-800 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                      <CloudSun className="w-4 h-4 text-slate-300" />
+                      <span>Szezonális Hordhatóság:</span>
+                    </div>
+                    <p className="leading-relaxed text-slate-400">
+                      ✨ Automatikusan felismert jelleg: <strong>{evaluationResult.targetSeason}</strong>. Az összeállítások ennek megfelelő rétegezéssel készültek a ruhatáradból.
+                    </p>
+                  </div>
+                )}
+
+                {/* 8. Pros & Cons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-1">
+                    <h4 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span>Miért éri meg megvenni:</span>
+                    </h4>
+                    <ul className="space-y-1 text-xs text-emerald-200/90 list-disc list-inside">
+                      {evaluationResult.pros?.map((pro, idx) => (
+                        <li key={idx}>{cleanSartorialText(pro)}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-1">
+                    <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      <span>Gondold át:</span>
+                    </h4>
+                    <ul className="space-y-1 text-xs text-amber-200/90 list-disc list-inside">
+                      {evaluationResult.cons?.map((con, idx) => (
+                        <li key={idx}>{cleanSartorialText(con)}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-1">
-                  <h4 className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 text-amber-400" />
-                    <span>Gondold át:</span>
-                  </h4>
-                  <ul className="space-y-1 text-xs text-amber-200/90 list-disc list-inside">
-                    {evaluationResult.cons?.map((con, idx) => (
-                      <li key={idx}>{cleanSartorialText(con)}</li>
-                    ))}
-                  </ul>
-                </div>
               </div>
 
             </div>
-
-          </div>
+          )}
 
           {/* ========================================================================= */}
           {/* 6. 3 GUARANTEED OUTFITS ANATOMICAL FLAT-LAY CANVASES (MIX & MATCH STYLE) */}

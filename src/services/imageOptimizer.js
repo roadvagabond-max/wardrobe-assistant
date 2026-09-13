@@ -282,3 +282,5 @@ export function createGarmentSvgPlaceholder(category = 'tops', name = '', color 
 
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
+
+export { cropToBoundingBox } from './backgroundRemoval';

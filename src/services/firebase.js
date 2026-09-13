@@ -190,30 +190,59 @@ export async function logoutUser() {
   }
 }
 
-// Upload Image to Firebase Storage (Always compressed client-side to ~35-50KB)
-export async function uploadGarmentImage(fileOrDataUrl, userId = 'user') {
+// Upload Image to Firebase Storage (Supports WebP Packshot Blobs, Base64 & Images with 1-Year CDN Caching)
+export async function uploadGarmentImage(fileOrBlobOrDataUrl, userId = 'user', itemId = '') {
+  if (!fileOrBlobOrDataUrl) return '';
+
   if (storage) {
     try {
-      // Compress to lightweight 600x600 JPEG (~35KB)
-      const base64 = await ensureBase64Image(fileOrDataUrl, 600, 600, 0.75);
-      if (base64 && typeof base64 === 'string' && base64.startsWith('data:')) {
-        const byteString = atob(base64.split(',')[1]);
-        const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
+      let uploadBlob = null;
+      let contentType = 'image/jpeg';
+      let extension = 'jpg';
+
+      // 1. If input is already a Blob / File (e.g. transparent WebP packshot)
+      if (fileOrBlobOrDataUrl instanceof Blob || fileOrBlobOrDataUrl instanceof File) {
+        uploadBlob = fileOrBlobOrDataUrl;
+        contentType = uploadBlob.type || 'image/webp';
+        extension = contentType.includes('webp') ? 'webp' : contentType.includes('png') ? 'png' : 'jpg';
+      } 
+      // 2. If input is a Base64 Data URL
+      else if (typeof fileOrBlobOrDataUrl === 'string' && fileOrBlobOrDataUrl.startsWith('data:')) {
+        const parts = fileOrBlobOrDataUrl.split(',');
+        const mimeMatch = parts[0].match(/:(.*?);/);
+        contentType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        extension = contentType.includes('webp') ? 'webp' : contentType.includes('png') ? 'png' : 'jpg';
+
+        const byteString = atob(parts[1]);
         const ab = new ArrayBuffer(byteString.length);
         const ia = new Uint8Array(ab);
         for (let i = 0; i < byteString.length; i++) {
           ia[i] = byteString.charCodeAt(i);
         }
-        const blob = new Blob([ab], { type: mimeString });
-        const storageRef = ref(storage, `users/${userId}/wardrobe/${Date.now()}.jpg`);
-        const snapshot = await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+        uploadBlob = new Blob([ab], { type: contentType });
+      }
+
+      if (uploadBlob) {
+        const fileId = itemId || `garment_${Date.now()}`;
+        const storageRef = ref(storage, `users/${userId}/wardrobe/${fileId}.${extension}`);
+        
+        // Optimize browser & CDN caching: 1 year immutable cache
+        const metadata = {
+          contentType,
+          cacheControl: 'public, max-age=31536000, immutable'
+        };
+
+        const snapshot = await uploadBytes(storageRef, uploadBlob, metadata);
         return await getDownloadURL(snapshot.ref);
       }
     } catch (e) {
-      console.warn('Firebase Storage hiba, helyi adatURL használata:', e);
+      console.warn('Firebase Storage feltöltési hiba, helyi formátum használata:', e);
     }
   }
 
-  // Fallback to DataURL
-  return await ensureBase64Image(fileOrDataUrl, 600, 600, 0.75);
+  // Fallback to optimized Base64 Data URL if Storage fails or is unavailable
+  if (fileOrBlobOrDataUrl instanceof Blob || fileOrBlobOrDataUrl instanceof File) {
+    return await ensureBase64Image(fileOrBlobOrDataUrl, 640, 640, 0.75);
+  }
+  return fileOrBlobOrDataUrl;
 }

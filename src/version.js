@@ -1,11 +1,11 @@
 /**
  * AI Wardrobe Assistant - Application Version & Build Information
  */
-export const APP_VERSION = '1.7.21';
-export const APP_BUILD = '1.7.21';
-export const APP_BUILD_NAME = 'v1.7.21 Module Renaming, Outfits Fix & Capsule Architecture';
+export const APP_VERSION = '1.7.26';
+export const APP_BUILD = '1.7.26';
+export const APP_BUILD_NAME = 'v1.7.26 Whering Háttéreltávolítás, Autocrop & Cloud Storage Mentés';
 export const APP_RELEASE_STAGE = 'Production';
 export const APP_NAME = 'AI Wardrobe Assistant';
-export const BUILD_DATE = '2026-09-08';
+export const BUILD_DATE = '2026-09-13';
 
 
