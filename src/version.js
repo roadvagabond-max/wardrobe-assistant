@@ -1,9 +1,9 @@
 /**
  * AI Wardrobe Assistant - Application Version & Build Information
  */
-export const APP_VERSION = '1.7.27';
-export const APP_BUILD = '1.7.27';
-export const APP_BUILD_NAME = 'v1.7.27 Packshot Motor Mobil Javítás & Login Preload';
+export const APP_VERSION = '1.7.28';
+export const APP_BUILD = '1.7.28';
+export const APP_BUILD_NAME = 'v1.7.28 Packshot CSP unsafe-eval & WebAssembly Javítás';
 export const APP_RELEASE_STAGE = 'Production';
 export const APP_NAME = 'AI Wardrobe Assistant';
 export const BUILD_DATE = '2026-09-13';
