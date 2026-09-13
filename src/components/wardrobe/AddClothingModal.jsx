@@ -574,7 +574,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
         {/* Sticky Header */}
         <div className="shrink-0 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-white/10 bg-[#0b0e14] flex items-center justify-between">
           <div>
-            <span className="badge badge-gold">Digitális Ruhatár Bővítés</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="badge badge-gold">Digitális Ruhatár Bővítés</span>
+              <span className="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 text-[10px] font-semibold">
+                <Sparkles className="w-3 h-3 text-emerald-400" />
+                <span>Whering Háttéreltávolító & Packshot Aktív</span>
+              </span>
+            </div>
             <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
               Új Ruhadarab Hozzáadása
             </h3>
@@ -690,7 +696,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Kattints a kamera megnyitásához</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">Fotózd le a ruhát (lehetőleg terítve vagy fogason)</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">Fotózd le a ruhát — az AI automatikusan eltávolítja a hátteret és packshotot készít</p>
                 </div>
               </div>
             )}
@@ -704,13 +710,9 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 <div className="w-14 h-14 rounded-full bg-[var(--accent-gold)]/20 flex items-center justify-center text-[var(--accent-gold)] group-hover:scale-110 transition-transform">
                   <Clipboard className="w-7 h-7" />
                 </div>
-                <div className="space-y-1 max-w-sm">
-                  <p className="text-sm font-semibold text-white">
-                    Kattints ide a vágólap beillesztéséhez
-                  </p>
-                  <p className="text-xs text-[var(--accent-gold-light)] font-medium">
-                    Vagy egyszerűen nyomj <kbd className="px-1.5 py-0.5 rounded bg-black border border-white/20 text-white font-mono text-[11px]">Ctrl + V</kbd>-t bárhol az ablakban!
-                  </p>
+                <div>
+                  <p className="text-sm font-semibold text-white">Kattints ide a vágólap beillesztéséhez</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">Vagy nyomj <strong>Ctrl + V</strong>-t a billentyűzeten bárhol az ablakban</p>
                   <p className="text-[11px] text-[var(--text-muted)] pt-1">
                     Jobb klikk a webshop ruhafotóra ➔ <em>"Kép másolása"</em> vagy <em>"Képhivatkozás másolása"</em>
                   </p>
@@ -739,7 +741,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Válassz fotót a galériádból</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">JPG, PNG, WEBP formátum támogatott</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">Automatikusan eltávolítjuk a hátteret és kitisztítjuk a képet</p>
                 </div>
               </div>
             )}

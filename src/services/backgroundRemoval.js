@@ -127,7 +127,7 @@ export function blobToDataUrl(blob) {
  * @returns {Promise<{ success: boolean, blob?: Blob, dataUrl?: string, error?: string }>}
  */
 export async function removeImageBackground(imageSource, options = {}) {
-  const { onProgress, timeoutMs = 15000 } = options;
+  const { onProgress, timeoutMs = 35000 } = options;
 
   let timeoutId = null;
   const timeoutPromise = new Promise((_, reject) => {
@@ -141,9 +141,13 @@ export async function removeImageBackground(imageSource, options = {}) {
       onProgress?.({ stage: 'loading_engine', label: 'Háttéreltávolító motor betöltése...', percent: 10 });
 
       // Dynamic import: package is loaded on demand when user uploads
-      const { default: removeBackground } = await import('@imgly/background-removal');
+      const imglyModule = await import('@imgly/background-removal');
+      const removeBackground = imglyModule.removeBackground || imglyModule.default;
+      if (typeof removeBackground !== 'function') {
+        throw new Error('A háttéreltávolító függvény nem elérhető a modulban.');
+      }
 
-      onProgress?.({ stage: 'segmenting', label: 'Neurális szegmentáció futtatása...', percent: 35 });
+      onProgress?.({ stage: 'segmenting', label: 'Neurális szegmentáció futtatása...', percent: 30 });
 
       const config = {
         model: 'isnet_quint8', // Fast quantized ~40MB model
@@ -153,8 +157,8 @@ export async function removeImageBackground(imageSource, options = {}) {
         },
         progress: (key, current, total) => {
           if (total > 0) {
-            const pct = 35 + Math.round((current / total) * 45); // 35% -> 80%
-            onProgress?.({ stage: 'downloading_model', label: `Modell előkészítése: ${pct}%`, percent: pct });
+            const pct = 30 + Math.round((current / total) * 50); // 30% -> 80%
+            onProgress?.({ stage: 'downloading_model', label: `Modell letöltése: ${pct}%`, percent: pct });
           }
         }
       };
