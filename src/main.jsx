@@ -20,6 +20,9 @@ window.addEventListener('unhandledrejection', (event) => {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then((registration) => {
+      // Force immediate update check on page load
+      registration.update().catch(() => {});
+
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
         if (installingWorker) {
