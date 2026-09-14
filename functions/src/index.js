@@ -15,8 +15,9 @@ if (getApps().length === 0) {
   initializeApp();
 }
 
-// Google Cloud Secret Manager definition for Gemini Master Key
+// Google Cloud Secret Manager definition for Gemini Master Key and Hugging Face Token
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const hfTokenSecret = defineSecret("HF_TOKEN");
 
 // Google Gemini 2026 official model hierarchy
 const FAST_MODELS = [
@@ -260,7 +261,7 @@ async function getBgRemovalPipeline() {
   if (bgRemovalPipelinePromise) return bgRemovalPipelinePromise;
   bgRemovalPipelinePromise = (async () => {
     try {
-      const hfToken = process.env.HF_TOKEN;
+      const hfToken = (typeof hfTokenSecret !== "undefined" && hfTokenSecret?.value ? hfTokenSecret.value() : null) || process.env.HF_TOKEN;
       if (hfToken) {
         process.env.HF_TOKEN = hfToken;
       }
@@ -294,6 +295,7 @@ async function getBgRemovalPipeline() {
  */
 export const removeGarmentBackground = onCall(
   {
+    secrets: [hfTokenSecret],
     cors: true,
     maxInstances: 5,
     timeoutSeconds: 120,
