@@ -196,11 +196,17 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       const result = await processGarmentPackshot(source, {
         onProgress: (p) => setBgRemovalProgress(p)
       });
-      if (result && result.success && result.dataUrl) {
-        setCleanPackshot({ dataUrl: result.dataUrl, blob: result.blob });
-        setImagePreview(result.dataUrl);
+      if (result && result.success && (result.dataUrl || result.imageUrl)) {
+        setCleanPackshot({ 
+          dataUrl: result.dataUrl || result.imageUrl, 
+          imageUrl: result.imageUrl, 
+          storagePath: result.storagePath,
+          blob: result.blob 
+        });
+        setImagePreview(result.dataUrl || result.imageUrl);
         setActiveImageMode('packshot');
-        setAvailableImages(prev => [result.dataUrl, ...prev.filter(x => x !== result.dataUrl)]);
+        const displayImg = result.imageUrl || result.dataUrl;
+        setAvailableImages(prev => [displayImg, ...prev.filter(x => x !== displayImg)]);
         setBgRemovalProgress(null);
       } else {
         const errorMsg = result?.error || 'A neurális szegmentáció sikertelen';
@@ -513,15 +519,23 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
 
     setIsSaving(true);
     try {
-      // 1. Determine selected image source (Packshot WebP Blob vs Original Normalized vs URL)
+      // 1. Determine selected image source (Packshot Storage URL / WebP vs Original Normalized vs URL)
       let chosenImage = imagePreview;
-      if (activeImageMode === 'packshot' && cleanPackshot?.blob) {
-        chosenImage = cleanPackshot.blob;
+      let alreadyUploadedStorageUrl = null;
+
+      if (activeImageMode === 'packshot' && cleanPackshot) {
+        if (cleanPackshot.imageUrl) {
+          alreadyUploadedStorageUrl = cleanPackshot.imageUrl;
+        } else if (cleanPackshot.blob) {
+          chosenImage = cleanPackshot.blob;
+        } else if (cleanPackshot.dataUrl) {
+          chosenImage = cleanPackshot.dataUrl;
+        }
       } else if (activeImageMode === 'original' && rawOriginalImage) {
         chosenImage = rawOriginalImage;
       }
 
-      if (!chosenImage) {
+      if (!alreadyUploadedStorageUrl && !chosenImage) {
         chosenImage = getSmartGarmentImage(formData.category, formData.color, formData.subCategory);
       }
 
@@ -529,8 +543,8 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
       const itemId = `garment_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
       // 3. Upload to Firebase Cloud Storage (WebP with 1-Year CDN Cache Headers)
-      let finalImageUrl = chosenImage;
-      if (currentUser?.uid && (chosenImage instanceof Blob || (typeof chosenImage === 'string' && chosenImage.startsWith('data:')))) {
+      let finalImageUrl = alreadyUploadedStorageUrl || chosenImage;
+      if (!alreadyUploadedStorageUrl && currentUser?.uid && (chosenImage instanceof Blob || (typeof chosenImage === 'string' && chosenImage.startsWith('data:')))) {
         try {
           const storageUrl = await uploadGarmentImage(chosenImage, currentUser.uid, itemId);
           if (storageUrl) {

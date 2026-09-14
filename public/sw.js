@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wardrobe-pwa-v1.7.28';
+const CACHE_NAME = 'wardrobe-pwa-v1.7.29';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

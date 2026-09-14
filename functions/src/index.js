@@ -6,6 +6,9 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp, getApps } from "firebase-admin/app";
+import { getStorage } from "firebase-admin/storage";
+import sharp from "sharp";
+import crypto from "crypto";
 
 // Initialize Firebase Admin SDK
 if (getApps().length === 0) {
@@ -244,3 +247,131 @@ export const sartorialAiProxy = onCall(
     );
   }
 );
+
+/**
+ * Lazy-initialized singleton for Transformers.js neural segmentation
+ */
+let segmenterPromise = null;
+async function getSegmenter() {
+  if (segmenterPromise) return segmenterPromise;
+  segmenterPromise = (async () => {
+    try {
+      const { pipeline, env } = await import("@xenova/transformers");
+      env.cacheDir = "/tmp/.transformers_cache";
+      return await pipeline("image-segmentation", "Xenova/modnet", {
+        quantized: true
+      });
+    } catch (err) {
+      console.warn("Transformers.js nem tudott inicializálódni:", err.message);
+      return null;
+    }
+  })();
+  return segmenterPromise;
+}
+
+/**
+ * Server-Side Neural Background Removal & Packshot Engine (v2)
+ * Removes background using Transformers.js on Node.js CPU,
+ * trims borders with Sharp autocrop, and stores directly in Firebase Storage.
+ */
+export const removeGarmentBackground = onCall(
+  {
+    cors: true,
+    maxInstances: 10,
+    timeoutSeconds: 60,
+    memory: "1GiB"
+  },
+  async (request) => {
+    // 1. Auth check (allows authenticated users and gracefully handles guest sessions)
+    const uid = request.auth?.uid || "guest_user";
+
+    // 2. Validate input
+    const { imageBase64 } = request.data || {};
+    if (!imageBase64 || typeof imageBase64 !== "string") {
+      throw new HttpsError("invalid-argument", "A képadat (imageBase64) hiányzik.");
+    }
+
+    // Clean data URL prefix if present
+    const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+    const inputBuffer = Buffer.from(cleanBase64, "base64");
+
+    if (inputBuffer.length > 5 * 1024 * 1024) {
+      throw new HttpsError("invalid-argument", "A feltöltött kép mérete meghaladja az 5MB-ot.");
+    }
+
+    // 3. Neural Matting / Segmentation
+    let cutOutBuffer = inputBuffer;
+    try {
+      const segmenter = await getSegmenter();
+      if (segmenter) {
+        const { RawImage } = await import("@xenova/transformers");
+        const rawImg = await RawImage.fromBlob(new Blob([inputBuffer]));
+        const output = await segmenter(rawImg);
+        if (output && output.mask) {
+          const maskBuffer = await sharp(output.mask.data, {
+            raw: {
+              width: output.mask.width,
+              height: output.mask.height,
+              channels: 1
+            }
+          })
+            .resize(rawImg.width, rawImg.height)
+            .png()
+            .toBuffer();
+
+          cutOutBuffer = await sharp(inputBuffer)
+            .ensureAlpha()
+            .composite([{ input: maskBuffer, blend: "dest-in" }])
+            .png()
+            .toBuffer();
+        }
+      }
+    } catch (segErr) {
+      console.warn("Transformers.js szegmentáció figyelmeztetés:", segErr);
+    }
+
+    // 4. Sharp Autocrop (Trim transparent margins) & WebP conversion
+    let trimmedWebp;
+    try {
+      trimmedWebp = await sharp(cutOutBuffer)
+        .trim({ threshold: 12 })
+        .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 85 })
+        .toBuffer();
+    } catch (cropErr) {
+      console.warn("Sharp trim figyelmeztetés, normál WebP kódolás:", cropErr);
+      trimmedWebp = await sharp(cutOutBuffer)
+        .resize(800, 800, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 85 })
+        .toBuffer();
+    }
+
+    // 5. Firebase Storage persistence
+    const itemId = `packshot_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const filePath = `users/${uid}/wardrobe/packshots/${itemId}.webp`;
+    const bucket = getStorage().bucket();
+    const file = bucket.file(filePath);
+    const downloadToken = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+
+    await file.save(trimmedWebp, {
+      metadata: {
+        contentType: "image/webp",
+        metadata: {
+          firebaseStorageDownloadTokens: downloadToken
+        }
+      }
+    });
+
+    const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(filePath)}?alt=media&token=${downloadToken}`;
+    const dataUrl = `data:image/webp;base64,${trimmedWebp.toString("base64")}`;
+
+    return {
+      success: true,
+      itemId,
+      imageUrl,
+      dataUrl,
+      storagePath: filePath
+    };
+  }
+);
+

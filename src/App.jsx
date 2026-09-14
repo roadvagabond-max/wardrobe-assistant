@@ -238,50 +238,52 @@ export default function App() {
       {/* Mobile-First Bottom Navigation Bar */}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Modals */}
-      <AddClothingModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAddClothing={(item) => addItem(item)}
-      />
-
-      {selectedItem && (
-        <ItemDetailModal
-          item={(wardrobe || []).find(w => w?.id === selectedItem?.id) || selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onPlanWithItem={handlePlanWithItem}
+      {/* Modals with Global Error Boundary Protection */}
+      <ErrorBoundary>
+        <AddClothingModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAddClothing={(item) => addItem(item)}
         />
-      )}
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
-      />
+        {selectedItem && (
+          <ItemDetailModal
+            item={(wardrobe || []).find(w => w?.id === selectedItem?.id) || selectedItem}
+            onClose={() => setSelectedItem(null)}
+            onPlanWithItem={handlePlanWithItem}
+          />
+        )}
 
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
-      />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onOpenSettings={() => setIsSettingsModalOpen(true)}
+        />
 
-      <HelpGuideModal
-        isOpen={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-      />
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+        />
 
-      <OnboardingModal
-        isOpen={isOnboardingModalOpen}
-        onClose={() => {
-          setIsOnboardingModalOpen(false);
-          if (currentUser) {
-            sessionStorage.setItem(`sartorial_onboarding_skipped_${currentUser.uid}`, 'true');
-          }
-        }}
-        onFinish={(updatedProfile) => {
-          setIsOnboardingModalOpen(false);
-          setActiveTab('wardrobe');
-        }}
-      />
+        <HelpGuideModal
+          isOpen={isHelpModalOpen}
+          onClose={() => setIsHelpModalOpen(false)}
+        />
+
+        <OnboardingModal
+          isOpen={isOnboardingModalOpen}
+          onClose={() => {
+            setIsOnboardingModalOpen(false);
+            if (currentUser) {
+              sessionStorage.setItem(`sartorial_onboarding_skipped_${currentUser.uid}`, 'true');
+            }
+          }}
+          onFinish={(updatedProfile) => {
+            setIsOnboardingModalOpen(false);
+            setActiveTab('wardrobe');
+          }}
+        />
+      </ErrorBoundary>
 
     </div>
   );
