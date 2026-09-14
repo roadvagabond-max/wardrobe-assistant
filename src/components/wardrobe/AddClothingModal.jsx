@@ -205,8 +205,6 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
         });
         setImagePreview(result.dataUrl || result.imageUrl);
         setActiveImageMode('packshot');
-        const displayImg = result.imageUrl || result.dataUrl;
-        setAvailableImages(prev => [displayImg, ...prev.filter(x => x !== displayImg)]);
         setBgRemovalProgress(null);
       } else {
         const errorMsg = result?.error || 'A neurális szegmentáció sikertelen';
@@ -598,10 +596,6 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="badge badge-gold">Digitális Ruhatár Bővítés</span>
-              <span className="badge bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 text-[10px] font-semibold">
-                <Sparkles className="w-3 h-3 text-emerald-400" />
-                <span>Whering Háttéreltávolító & Packshot Aktív</span>
-              </span>
             </div>
             <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
               Új Ruhadarab Hozzáadása
@@ -993,11 +987,11 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 </button>
               </div>
 
-              {/* Multi-Image Packshot Selector */}
-              {availableImages.length > 1 && (
+              {/* Multi-Image Selector — Only for genuine webshop multi-image imports */}
+              {availableImages.length > 1 && activeMode === 'link' && (
                 <div className="space-y-1">
                   <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">
-                    További képek a webshopból (kattints a kiválasztáshoz):
+                    További képek a termékoldalról (kattints a kiválasztáshoz):
                   </span>
                   <div className="flex items-center gap-2 overflow-x-auto py-1">
                     {availableImages.map((imgUrl, idx) => (

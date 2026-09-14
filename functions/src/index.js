@@ -249,40 +249,43 @@ export const sartorialAiProxy = onCall(
 );
 
 /**
- * Lazy-initialized singleton for Transformers.js neural segmentation
+ * Lazy-initialized singleton for background removal pipeline
+ * Uses @huggingface/transformers v3+ native 'background-removal' task
  */
-let segmenterPromise = null;
-async function getSegmenter() {
-  if (segmenterPromise) return segmenterPromise;
-  segmenterPromise = (async () => {
+let bgRemovalPipelinePromise = null;
+async function getBgRemovalPipeline() {
+  if (bgRemovalPipelinePromise) return bgRemovalPipelinePromise;
+  bgRemovalPipelinePromise = (async () => {
     try {
-      const { pipeline, env } = await import("@xenova/transformers");
+      const { pipeline, env } = await import("@huggingface/transformers");
       env.cacheDir = "/tmp/.transformers_cache";
-      return await pipeline("image-segmentation", "Xenova/modnet", {
-        quantized: true
+      env.allowLocalModels = false;
+      return await pipeline("background-removal", "Xenova/modnet", {
+        dtype: "fp32"
       });
     } catch (err) {
-      console.warn("Transformers.js nem tudott inicializálódni:", err.message);
+      console.warn("Transformers.js background-removal pipeline init error:", err.message);
+      bgRemovalPipelinePromise = null; // Allow retry on next call
       return null;
     }
   })();
-  return segmenterPromise;
+  return bgRemovalPipelinePromise;
 }
 
 /**
  * Server-Side Neural Background Removal & Packshot Engine (v2)
- * Removes background using Transformers.js on Node.js CPU,
+ * Uses @huggingface/transformers v3 native background-removal pipeline,
  * trims borders with Sharp autocrop, and stores directly in Firebase Storage.
  */
 export const removeGarmentBackground = onCall(
   {
     cors: true,
-    maxInstances: 10,
-    timeoutSeconds: 60,
-    memory: "1GiB"
+    maxInstances: 5,
+    timeoutSeconds: 120,
+    memory: "2GiB"
   },
   async (request) => {
-    // 1. Auth check (allows authenticated users and gracefully handles guest sessions)
+    // 1. Auth check
     const uid = request.auth?.uid || "guest_user";
 
     // 2. Validate input
@@ -299,48 +302,56 @@ export const removeGarmentBackground = onCall(
       throw new HttpsError("invalid-argument", "A feltöltött kép mérete meghaladja az 5MB-ot.");
     }
 
-    // 3. Neural Matting / Segmentation
-    let cutOutBuffer = inputBuffer;
+    // 3. Neural Background Removal via Transformers.js v3 pipeline
+    let processedBuffer = null;
+    let isPackshot = false;
+
     try {
-      const segmenter = await getSegmenter();
+      const segmenter = await getBgRemovalPipeline();
       if (segmenter) {
-        const { RawImage } = await import("@xenova/transformers");
-        const rawImg = await RawImage.fromBlob(new Blob([inputBuffer]));
-        const output = await segmenter(rawImg);
-        if (output && output.mask) {
-          const maskBuffer = await sharp(output.mask.data, {
+        // The background-removal pipeline accepts a RawImage or Blob
+        const inputBlob = new Blob([inputBuffer], { type: "image/jpeg" });
+        const output = await segmenter(inputBlob);
+
+        // output is a RawImage with transparent background (RGBA)
+        if (output && output.data && output.width && output.height) {
+          // Convert RawImage RGBA pixel data to PNG buffer via Sharp
+          processedBuffer = await sharp(Buffer.from(output.data), {
             raw: {
-              width: output.mask.width,
-              height: output.mask.height,
-              channels: 1
+              width: output.width,
+              height: output.height,
+              channels: output.channels || 4
             }
           })
-            .resize(rawImg.width, rawImg.height)
             .png()
             .toBuffer();
-
-          cutOutBuffer = await sharp(inputBuffer)
-            .ensureAlpha()
-            .composite([{ input: maskBuffer, blend: "dest-in" }])
-            .png()
-            .toBuffer();
+          isPackshot = true;
         }
       }
     } catch (segErr) {
-      console.warn("Transformers.js szegmentáció figyelmeztetés:", segErr);
+      console.warn("Background removal pipeline error:", segErr.message || segErr);
+    }
+
+    // If neural removal failed, return honest failure (no fake packshot)
+    if (!processedBuffer || !isPackshot) {
+      return {
+        success: false,
+        isPackshot: false,
+        error: "A neurális háttéreltávolítás nem sikerült. Az eredeti fotó kerül mentésre."
+      };
     }
 
     // 4. Sharp Autocrop (Trim transparent margins) & WebP conversion
     let trimmedWebp;
     try {
-      trimmedWebp = await sharp(cutOutBuffer)
+      trimmedWebp = await sharp(processedBuffer)
         .trim({ threshold: 12 })
         .resize(800, 800, { fit: "inside", withoutEnlargement: true })
         .webp({ quality: 85 })
         .toBuffer();
     } catch (cropErr) {
-      console.warn("Sharp trim figyelmeztetés, normál WebP kódolás:", cropErr);
-      trimmedWebp = await sharp(cutOutBuffer)
+      console.warn("Sharp trim warning, fallback to normal WebP:", cropErr.message);
+      trimmedWebp = await sharp(processedBuffer)
         .resize(800, 800, { fit: "inside", withoutEnlargement: true })
         .webp({ quality: 85 })
         .toBuffer();
@@ -367,6 +378,7 @@ export const removeGarmentBackground = onCall(
 
     return {
       success: true,
+      isPackshot: true,
       itemId,
       imageUrl,
       dataUrl,
