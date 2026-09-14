@@ -37,6 +37,17 @@ jobs:
             cd functions && npm install --legacy-peer-deps && cd ..
           fi
 
+      - name: Clear overlapping env var from Cloud Run
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WARDROBE_ASSISTANT_48E01 }}' > /tmp/sa.json
+          gcloud auth activate-service-account --key-file=/tmp/sa.json
+          gcloud run services update removegarmentbackground \
+            --remove-env-vars=HF_TOKEN \
+            --region=us-central1 \
+            --project=wardrobe-assistant-48e01 \
+            --quiet || true
+          rm -f /tmp/sa.json
+
       - name: Deploy to Firebase Functions & Firestore Rules
         uses: w9jds/firebase-action@master
         with:
