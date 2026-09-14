@@ -253,6 +253,8 @@ export const sartorialAiProxy = onCall(
  * Uses @huggingface/transformers v3+ native 'background-removal' task
  */
 let bgRemovalPipelinePromise = null;
+let lastPipelineInitError = null;
+
 async function getBgRemovalPipeline() {
   if (bgRemovalPipelinePromise) return bgRemovalPipelinePromise;
   bgRemovalPipelinePromise = (async () => {
@@ -260,11 +262,14 @@ async function getBgRemovalPipeline() {
       const { pipeline, env } = await import("@huggingface/transformers");
       env.cacheDir = "/tmp/.transformers_cache";
       env.allowLocalModels = false;
-      return await pipeline("background-removal", "Xenova/modnet", {
+      const pipe = await pipeline("background-removal", "Xenova/modnet", {
         dtype: "fp32"
       });
+      lastPipelineInitError = null;
+      return pipe;
     } catch (err) {
-      console.warn("Transformers.js background-removal pipeline init error:", err.message);
+      console.error("Transformers.js background-removal pipeline init error:", err);
+      lastPipelineInitError = err.message || String(err);
       bgRemovalPipelinePromise = null; // Allow retry on next call
       return null;
     }
@@ -305,31 +310,44 @@ export const removeGarmentBackground = onCall(
     // 3. Neural Background Removal via Transformers.js v3 pipeline
     let processedBuffer = null;
     let isPackshot = false;
+    let failureReason = null;
 
     try {
       const segmenter = await getBgRemovalPipeline();
-      if (segmenter) {
-        // The background-removal pipeline accepts a RawImage or Blob
+      if (!segmenter) {
+        failureReason = lastPipelineInitError || "Nem sikerült a neurális szegmentációs modellt inicializálni.";
+      } else {
+        const { RawImage } = await import("@huggingface/transformers");
+        // Read inputBuffer into RawImage via standard Blob
         const inputBlob = new Blob([inputBuffer], { type: "image/jpeg" });
-        const output = await segmenter(inputBlob);
+        const rawInput = await RawImage.fromBlob(inputBlob);
 
-        // output is a RawImage with transparent background (RGBA)
-        if (output && output.data && output.width && output.height) {
+        // BackgroundRemovalPipeline accepts RawImage and returns Promise<RawImage[]>
+        const output = await segmenter(rawInput);
+
+        // Extract first RawImage from output array
+        const rawImage = Array.isArray(output) ? output[0] : output;
+
+        // Verify transparent background (RGBA) pixel data
+        if (rawImage && rawImage.data && rawImage.width && rawImage.height) {
           // Convert RawImage RGBA pixel data to PNG buffer via Sharp
-          processedBuffer = await sharp(Buffer.from(output.data), {
+          processedBuffer = await sharp(Buffer.from(rawImage.data), {
             raw: {
-              width: output.width,
-              height: output.height,
-              channels: output.channels || 4
+              width: rawImage.width,
+              height: rawImage.height,
+              channels: rawImage.channels || 4
             }
           })
             .png()
             .toBuffer();
           isPackshot = true;
+        } else {
+          failureReason = "A neurális modell nem adott vissza érvényes képadatot.";
         }
       }
     } catch (segErr) {
-      console.warn("Background removal pipeline error:", segErr.message || segErr);
+      console.error("Background removal execution error:", segErr);
+      failureReason = segErr.message || String(segErr);
     }
 
     // If neural removal failed, return honest failure (no fake packshot)
@@ -337,7 +355,9 @@ export const removeGarmentBackground = onCall(
       return {
         success: false,
         isPackshot: false,
-        error: "A neurális háttéreltávolítás nem sikerült. Az eredeti fotó kerül mentésre."
+        error: failureReason
+          ? `A neurális háttéreltávolítás nem sikerült (${failureReason}). Az eredeti fotó kerül mentésre.`
+          : "A neurális háttéreltávolítás nem sikerült. Az eredeti fotó kerül mentésre."
       };
     }
 
@@ -360,7 +380,8 @@ export const removeGarmentBackground = onCall(
     // 5. Firebase Storage persistence
     const itemId = `packshot_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const filePath = `users/${uid}/wardrobe/packshots/${itemId}.webp`;
-    const bucket = getStorage().bucket();
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || "wardrobe-assistant-48e01.firebasestorage.app";
+    const bucket = getStorage().bucket(bucketName);
     const file = bucket.file(filePath);
     const downloadToken = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 
