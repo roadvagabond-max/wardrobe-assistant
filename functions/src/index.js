@@ -251,6 +251,7 @@ export const sartorialAiProxy = onCall(
 /**
  * Lazy-initialized singleton for background removal pipeline
  * Uses @huggingface/transformers v3+ native 'background-removal' task
+ * Authenticates with Hugging Face Hub token to prevent 429 Rate Limit errors.
  */
 let bgRemovalPipelinePromise = null;
 let lastPipelineInitError = null;
@@ -259,9 +260,18 @@ async function getBgRemovalPipeline() {
   if (bgRemovalPipelinePromise) return bgRemovalPipelinePromise;
   bgRemovalPipelinePromise = (async () => {
     try {
+      const hfToken = process.env.HF_TOKEN;
+      if (hfToken) {
+        process.env.HF_TOKEN = hfToken;
+      }
+
       const { pipeline, env } = await import("@huggingface/transformers");
       env.cacheDir = "/tmp/.transformers_cache";
       env.allowLocalModels = false;
+      if (hfToken) {
+        env.token = hfToken;
+      }
+
       const pipe = await pipeline("background-removal", "Xenova/modnet", {
         dtype: "fp32"
       });

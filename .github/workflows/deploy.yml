@@ -35,6 +35,7 @@ jobs:
         run: |
           if [ -d "functions" ]; then
             cd functions && npm install --legacy-peer-deps && cd ..
+            echo "HF_TOKEN=${{ secrets.HF_TOKEN }}" > functions/.env
           fi
 
       - name: Deploy to Firebase Functions & Firestore Rules
