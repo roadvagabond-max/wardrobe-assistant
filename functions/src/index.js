@@ -9,6 +9,7 @@ import { initializeApp, getApps } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import sharp from "sharp";
 import crypto from "crypto";
+import { removeBackgroundWithBiRefNet, cleanUpMaskAndCrop } from "./services/imageProcessingService.js";
 
 // Initialize Firebase Admin SDK
 if (getApps().length === 0) {
@@ -290,8 +291,9 @@ async function getBgRemovalPipeline() {
 
 /**
  * Server-Side Neural Background Removal & Packshot Engine (v2)
- * Uses @huggingface/transformers v3 native background-removal pipeline,
- * trims borders with Sharp autocrop, and stores directly in Firebase Storage.
+ * Primary: SOTA BiRefNet (ZhengPeng7/BiRefNet) on Hugging Face Inference API (1024px)
+ * Secondary: Local Transformers.js background-removal pipeline
+ * Post-Processing: cleanUpMaskAndCrop (Alpha hardening/thresholding + Sharp autocrop @ 1000px WebP 90)
  */
 export const removeGarmentBackground = onCall(
   {
@@ -319,50 +321,51 @@ export const removeGarmentBackground = onCall(
       throw new HttpsError("invalid-argument", "A feltöltött kép mérete meghaladja az 5MB-ot.");
     }
 
-    // 3. Neural Background Removal via Transformers.js v3 pipeline
+    // 3. Neural Background Removal via BiRefNet (Hugging Face Inference API)
     let processedBuffer = null;
     let isPackshot = false;
     let failureReason = null;
 
+    const hfToken = (typeof hfTokenSecret !== "undefined" && hfTokenSecret?.value ? hfTokenSecret.value() : null) || process.env.HF_TOKEN;
+
     try {
-      const segmenter = await getBgRemovalPipeline();
-      if (!segmenter) {
-        failureReason = lastPipelineInitError || "Nem sikerült a neurális szegmentációs modellt inicializálni.";
-      } else {
-        const { RawImage } = await import("@huggingface/transformers");
-        // Read inputBuffer into RawImage via standard Blob
-        const inputBlob = new Blob([inputBuffer], { type: "image/jpeg" });
-        const rawInput = await RawImage.fromBlob(inputBlob);
+      // Primary SOTA Neural Packshot Model: ZhengPeng7/BiRefNet
+      processedBuffer = await removeBackgroundWithBiRefNet(inputBuffer, hfToken);
+      isPackshot = true;
+    } catch (biRefErr) {
+      console.warn("BiRefNet API figyelmeztetés, kísérlet helyi pipeline-nal:", biRefErr.message);
+      failureReason = biRefErr.message;
 
-        // BackgroundRemovalPipeline accepts RawImage and returns Promise<RawImage[]>
-        const output = await segmenter(rawInput);
+      // Fallback: Local Transformers.js pipeline
+      try {
+        const segmenter = await getBgRemovalPipeline();
+        if (segmenter) {
+          const { RawImage } = await import("@huggingface/transformers");
+          const inputBlob = new Blob([inputBuffer], { type: "image/jpeg" });
+          const rawInput = await RawImage.fromBlob(inputBlob);
+          const output = await segmenter(rawInput);
+          const rawImage = Array.isArray(output) ? output[0] : output;
 
-        // Extract first RawImage from output array
-        const rawImage = Array.isArray(output) ? output[0] : output;
-
-        // Verify transparent background (RGBA) pixel data
-        if (rawImage && rawImage.data && rawImage.width && rawImage.height) {
-          // Convert RawImage RGBA pixel data to PNG buffer via Sharp
-          processedBuffer = await sharp(Buffer.from(rawImage.data), {
-            raw: {
-              width: rawImage.width,
-              height: rawImage.height,
-              channels: rawImage.channels || 4
-            }
-          })
-            .png()
-            .toBuffer();
-          isPackshot = true;
-        } else {
-          failureReason = "A neurális modell nem adott vissza érvényes képadatot.";
+          if (rawImage && rawImage.data && rawImage.width && rawImage.height) {
+            processedBuffer = await sharp(Buffer.from(rawImage.data), {
+              raw: {
+                width: rawImage.width,
+                height: rawImage.height,
+                channels: rawImage.channels || 4
+              }
+            })
+              .png()
+              .toBuffer();
+            isPackshot = true;
+            failureReason = null;
+          }
         }
+      } catch (localErr) {
+        console.error("Helyi Transformers.js szegmentációs hiba:", localErr.message);
       }
-    } catch (segErr) {
-      console.error("Background removal execution error:", segErr);
-      failureReason = segErr.message || String(segErr);
     }
 
-    // If neural removal failed, return honest failure (no fake packshot)
+    // If neural removal failed, return honest failure (Rule 2: Zero Mock Guarantee)
     if (!processedBuffer || !isPackshot) {
       return {
         success: false,
@@ -373,19 +376,17 @@ export const removeGarmentBackground = onCall(
       };
     }
 
-    // 4. Sharp Autocrop (Trim transparent margins) & WebP conversion
+    // 4. Alpha Thresholding & Hardening + Sharp Autocrop (cleanUpMaskAndCrop)
     let trimmedWebp;
     try {
-      trimmedWebp = await sharp(processedBuffer)
-        .trim({ threshold: 12 })
-        .resize(800, 800, { fit: "inside", withoutEnlargement: true })
-        .webp({ quality: 85 })
-        .toBuffer();
+      trimmedWebp = await cleanUpMaskAndCrop(processedBuffer);
     } catch (cropErr) {
-      console.warn("Sharp trim warning, fallback to normal WebP:", cropErr.message);
+      console.warn("cleanUpMaskAndCrop hiba, fallback normál WebP trimre:", cropErr.message);
       trimmedWebp = await sharp(processedBuffer)
-        .resize(800, 800, { fit: "inside", withoutEnlargement: true })
-        .webp({ quality: 85 })
+        .ensureAlpha()
+        .trim({ threshold: 25 })
+        .resize(1000, 1000, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 90 })
         .toBuffer();
     }
 

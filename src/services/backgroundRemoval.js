@@ -26,8 +26,8 @@ export async function processGarmentPackshot(fileOrDataUrl, options = {}) {
   try {
     onProgress?.({ stage: 'normalizing', label: 'Fotó előkészítése...', percent: 20 });
     
-    // Ensure compact 640x640 JPEG base64 (< 50 KB)
-    const base64Image = await ensureBase64Image(fileOrDataUrl, 640, 640, 0.75);
+    // High-resolution 1024x1024 JPEG normalization for BiRefNet neural segmentation
+    const base64Image = await ensureBase64Image(fileOrDataUrl, 1024, 1024, 0.85);
     if (!base64Image) {
       throw new Error('Nem sikerült a kép előkészítése.');
     }
