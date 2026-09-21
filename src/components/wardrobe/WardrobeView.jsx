@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
-  Plus, Search, Shirt, Sparkles, Compass, AlertCircle, RefreshCw, 
-  ChevronDown, ChevronUp, ExternalLink, ArrowRight, BookmarkPlus, Loader2,
-  Layers, CheckCircle2, ShieldAlert
+  Plus, Search, Shirt, Sparkles, AlertCircle, RefreshCw, 
+  ChevronDown, ChevronUp, ExternalLink, ArrowRight, Loader2,
+  Info
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeBrandName } from '../../services/webshop';
 import { analyzeWardrobeGaps } from '../../services/gemini';
-import OnboardingGuide from '../common/OnboardingGuide';
+import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 
 export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab }) {
   const { wardrobe, profile } = useAuth();
@@ -17,7 +17,11 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Capsule Ruhatár Index (CRI) & Gap Analysis Drawer States
+  // View mode and header states matching Mix & Match & Buy or Skip
+  const [wardrobeViewMode, setWardrobeViewMode] = useState('grid'); // 'grid' | 'cri'
+  const [showGuide, setShowGuide] = useState(false);
+
+  // Wardrobe Index & Gap Analysis Drawer States (Strictly NO "kapszula" word)
   const [isCriExpanded, setIsCriExpanded] = useState(false);
   const [gaps, setGaps] = useState(() => {
     try {
@@ -28,15 +32,14 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
     }
   });
   const [isLoadingGaps, setIsLoadingGaps] = useState(false);
-  const [wishlistIds, setWishlistIds] = useState(new Set());
 
   const rulesKey = (profile?.customStylingRules || []).join(';;');
   const prevRulesKeyRef = useRef(rulesKey);
 
-  // Calculate Capsule Ruhatár Index (CRI 0-100)
+  // Calculate Wardrobe Index (0-100) with English status labels
   const criData = useMemo(() => {
     if (!wardrobe || wardrobe.length === 0) {
-      return { score: 0, readiness: 'Kezdő / Üres', levelColor: 'text-slate-400', progressColor: 'bg-slate-500' };
+      return { score: 0, readiness: 'Empty / Getting Started', levelColor: 'text-slate-400', progressColor: 'bg-slate-500' };
     }
 
     const topsCount = wardrobe.filter(w => w.category === 'tops' || (w.name || '').toLowerCase().includes('ing') || (w.name || '').toLowerCase().includes('póló')).length;
@@ -65,16 +68,16 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
 
     const clampedScore = Math.max(10, Math.min(100, Math.round(score)));
 
-    let readiness = 'Fejlesztendő alapok';
+    let readiness = 'Building Foundations';
     let levelColor = 'text-amber-400';
     let progressColor = 'bg-amber-500';
 
     if (clampedScore >= 85) {
-      readiness = 'Kiváló Kapszula Egyensúly';
+      readiness = 'Excellent Balance';
       levelColor = 'text-emerald-400';
       progressColor = 'bg-emerald-500';
     } else if (clampedScore >= 65) {
-      readiness = 'Jól variálható ruhatár';
+      readiness = 'Well-Versatile Wardrobe';
       levelColor = 'text-[var(--accent-gold)]';
       progressColor = 'bg-[var(--accent-gold)]';
     }
@@ -93,7 +96,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
         localStorage.setItem('capsule_gaps_cache', JSON.stringify(results));
       }
     } catch (e) {
-      console.error('Kapszula hiányelemzési hiba:', e);
+      console.error('Hiányelemzési hiba:', e);
     } finally {
       setIsLoadingGaps(false);
     }
@@ -112,15 +115,6 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
       loadGaps(true);
     }
   }, [rulesKey]);
-
-  const handleToggleWishlist = (gapId) => {
-    setWishlistIds(prev => {
-      const next = new Set(prev);
-      if (next.has(gapId)) next.delete(gapId);
-      else next.add(gapId);
-      return next;
-    });
-  };
 
   const categories = [
     { id: 'all', label: 'Összes darab' },
@@ -181,47 +175,120 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
   }, [wardrobe, selectedCategory, selectedSeason, selectedCondition, searchQuery]);
 
   return (
-    <div className="space-y-6 animate-slide-up relative pb-16">
+    <div className="space-y-4 animate-fade-in relative pb-32">
       
-      {/* Interactive Onboarding Quick-Start Guide */}
-      <OnboardingGuide 
-        onNavigateTab={onNavigateTab || (() => {})} 
-        onOpenAddModal={onAddNewItem} 
-      />
+      {/* ========================================================================= */}
+      {/* 1. TOP HEADER BAR: EXACT 1-ROW MIX & MATCH / BUY OR SKIP DESIGN (STICKY) */}
+      {/* ========================================================================= */}
+      <div className="sticky top-0 z-30 flex items-center justify-between px-3 sm:px-4 py-2.5 rounded-2xl bg-[#090d15]/95 border border-slate-800 shadow-xl backdrop-blur-md">
+        
+        {/* Left: Wardrobe badge, count & segmented view mode switch */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="px-3 py-1.5 rounded-xl bg-slate-200 text-slate-950 font-bold text-xs shadow-sm flex items-center gap-1.5 shrink-0">
+            <span>🚪</span>
+            <span>Wardrobe</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] text-slate-200 font-mono ml-1">
+              {wardrobe.length} pcs
+            </span>
+          </span>
 
-      {/* Top Banner & Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold font-serif gold-gradient-text">
-            Gardróbom
-          </h2>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-0.5">
-            {wardrobe.length} rögzített ruhadarab és kiegészítő
-          </p>
+          {/* Segmented View Switcher: Items | Wardrobe index */}
+          <div className="hidden sm:flex items-center bg-[#0d121c] p-1 rounded-xl border border-slate-800 shrink-0">
+            <button
+              type="button"
+              onClick={() => setWardrobeViewMode('grid')}
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                wardrobeViewMode === 'grid'
+                  ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>Items</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setWardrobeViewMode('cri');
+                setIsCriExpanded(true);
+                if (gaps.length === 0) loadGaps(true);
+              }}
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                wardrobeViewMode === 'cri'
+                  ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>Wardrobe index</span>
+            </button>
+          </div>
         </div>
 
-        <button
-          onClick={onAddNewItem}
-          className="btn-gold w-full sm:w-auto shadow-lg flex items-center justify-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Új Ruha Feltöltése</span>
-        </button>
+        {/* Right: + Add and Info Guide toggle */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onAddNewItem}
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+            title="Add new clothing item"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowGuide(!showGuide)}
+            className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+              showGuide
+                ? 'bg-slate-200 text-slate-900 border-white'
+                : 'bg-[#0d121c] text-slate-400 hover:text-white border-slate-800'
+            }`}
+            title="Súgó / Információ"
+            aria-label="Információ"
+          >
+            <Info className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Capsule Ruhatár Index (CRI) Bar with Expandable Drawer */}
-      <div className="glass-card p-4 sm:p-5 border-[var(--border-gold)]/45 bg-gradient-to-r from-[#0c1527]/95 via-[#080d1a]/95 to-black/90 shadow-xl space-y-3">
-        
+      {/* ========================================================================= */}
+      {/* 2. REFINED MODULE FIRST TIME GUIDE (OPENED BY INFO BUTTON) */}
+      {/* ========================================================================= */}
+      {showGuide && (
+        <ModuleFirstTimeGuide
+          moduleId="wardrobe"
+          title="Hogyan működik a Wardrobe nézet?"
+          subtitle="Digitális ruhatár-menedzsment és ruhatár index elemzés"
+          badgeText="Útmutató & Tippek"
+          description="Itt kezelheted a rögzített ruhadarabjaidat, átláthatod a ruhatárad sokoldalúságát és felfedezheted az ajánlott kulcsdarabokat."
+          points={[
+            "1. Fotózás & Felvitel: Készíts képet, másolj be fotót vágólapról, vagy illessz be webshop linket/termékkódot az Add gombbal.",
+            "2. Wardrobe Index: A rendszer valós időben értékeli (0–100) a ruhatárad variálhatóságát és a kategória-arányokat.",
+            "3. Recommended Pieces: Az AI azonosítja a ruhatárból hiányzó darabokat, és konkrét piaci keresőszavakat javasol.",
+            "4. Részletek & Szettépítés: Bármelyik darabra kattintva szerkesztheted az adatait, vagy kiinduló darabként használhatod az Outfit tervezőben."
+          ]}
+          forceOpen={true}
+          onClose={() => setShowGuide(false)}
+          wardrobeCount={wardrobe.length}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. WARDROBE INDEX PANEL (STRICTLY NO KAPSZULA WORD, ENGLISH STATUSES) */}
+      {/* ========================================================================= */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-2xl space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="badge badge-gold text-[10px]">Kapszula Ruhatár Index (CRI)</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-slate-800 text-slate-200 border border-slate-700">
+                Wardrobe Index
+              </span>
               <span className={`text-xs font-bold ${criData.levelColor}`}>
                 {criData.readiness}
               </span>
             </div>
-            <p className="text-xs text-[var(--text-secondary)]">
-              Kapszula egyensúly: <strong>{criData.score} / 100 pont</strong> • {criData.topsCount || 0} Felső / {criData.bottomsCount || 0} Nadrág / {criData.shoesCount || 0} Cipő
+            <p className="text-xs text-slate-300">
+              Wardrobe balance: <strong>{criData.score} / 100 pts</strong> • {criData.topsCount || 0} Tops / {criData.bottomsCount || 0} Bottoms / {criData.outerCount || 0} Outerwear / {criData.shoesCount || 0} Shoes
             </p>
           </div>
 
@@ -231,32 +298,32 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
               setIsCriExpanded(!isCriExpanded);
               if (!isCriExpanded && gaps.length === 0) loadGaps(true);
             }}
-            className="btn-secondary text-xs py-2 px-3 self-start sm:self-center flex items-center gap-1.5 transition-all"
+            className="px-3 py-1.5 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-xs flex items-center gap-1.5 text-slate-300 hover:text-white transition-colors cursor-pointer self-start sm:self-center shrink-0"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-            <span>{isCriExpanded ? 'Hiányelemző Becsukása' : 'Hiánypótló Kulcsdarabok'}</span>
+            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+            <span>{isCriExpanded ? 'Close recommendations' : `Recommended pieces${gaps.length > 0 ? ` (${gaps.length})` : ''}`}</span>
             {isCriExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
         </div>
 
         {/* Visual Progress Bar */}
-        <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden border border-white/10">
+        <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden border border-slate-800">
           <div 
             className={`h-full ${criData.progressColor} transition-all duration-700 shadow-sm`}
             style={{ width: `${criData.score}%` }}
           />
         </div>
 
-        {/* Expandable Gap Analysis Drawer */}
+        {/* Expandable Recommendations Drawer */}
         {isCriExpanded && (
-          <div className="pt-3 border-t border-white/10 space-y-4 animate-fade-in">
+          <div className="pt-3 border-t border-slate-800 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
               <span className="text-xs font-serif font-bold text-white flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-[var(--accent-gold)]" />
-                <span>Kapszula Hiányelemzés & Piaci Keresőszintaxis</span>
+                <Sparkles className="w-4 h-4 text-sky-400" />
+                <span>Search recommended pieces</span>
                 {gaps.length > 0 && (
-                  <span className="badge badge-gold text-[10px] ml-1">
-                    {gaps.length} db kulcsdarab
+                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-200 border border-slate-700 ml-1">
+                    {gaps.length} pcs key pieces
                   </span>
                 )}
               </span>
@@ -265,61 +332,60 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                 type="button"
                 onClick={() => loadGaps(true)}
                 disabled={isLoadingGaps}
-                className="text-[11px] text-[var(--accent-gold)] hover:underline flex items-center gap-1"
+                className="text-[11px] text-slate-300 hover:text-white hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <RefreshCw className={`w-3 h-3 ${isLoadingGaps ? 'animate-spin' : ''}`} />
-                <span>Újraelemzés</span>
+                <span>Refresh</span>
               </button>
             </div>
 
             {isLoadingGaps ? (
               <div className="p-6 text-center space-y-2">
-                <Loader2 className="w-6 h-6 text-[var(--accent-gold)] animate-spin mx-auto" />
-                <p className="text-xs text-[var(--text-secondary)]">Az AI elemzi a hiányzó kulcsdarabokat...</p>
+                <Loader2 className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
+                <p className="text-xs text-slate-400">Az AI elemzi az ajánlott darabokat...</p>
               </div>
             ) : gaps.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {gaps.map(gap => {
-                  const isWishlisted = wishlistIds.has(gap.id);
                   const score = gap.priorityScore || 80;
 
                   return (
-                    <div key={gap.id} className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-2.5 flex flex-col justify-between">
+                    <div key={gap.id} className="p-3.5 rounded-2xl bg-[#090d15] border border-slate-800 space-y-2.5 flex flex-col justify-between shadow">
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className={`badge text-[9px] font-bold ${
                             score >= 90 ? 'bg-rose-500/20 text-rose-300 border-rose-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                           }`}>
-                            {gap.priorityLevel || 'Kulcsdarab'} ({score}p)
+                            {score >= 90 ? 'Priority 1' : 'Key Piece'} ({score} pts)
                           </span>
-                          <span className="text-[10px] text-[var(--text-muted)] truncate">{gap.season || ''}</span>
+                          <span className="text-[10px] text-slate-400 truncate">{gap.season || ''}</span>
                         </div>
 
                         <h4 className="text-xs font-bold text-white">{gap.title}</h4>
-                        <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2">{gap.reason}</p>
+                        <p className="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">{gap.reason}</p>
 
-                        <div className="bg-black/30 p-2 rounded-lg border border-white/5">
-                          <span className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] block">Keresőszintaxis:</span>
-                          <code className="text-[11px] text-[var(--accent-gold-light)] font-mono truncate block">
+                        <div className="bg-[#0d121c] p-2 rounded-xl border border-slate-800">
+                          <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-semibold">Search keywords:</span>
+                          <code className="text-[11px] text-amber-200 font-mono truncate block mt-0.5">
                             "{gap.searchKeywords}"
                           </code>
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-white/5 flex items-center gap-2">
+                      <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
                         <a
                           href={`https://www.google.com/search?q=${encodeURIComponent(gap.searchKeywords)}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="btn-secondary text-[10px] py-1.5 px-2.5 flex-1 text-center flex items-center justify-center gap-1"
+                          className="px-2.5 py-1.5 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-200 hover:text-white flex-1 text-center flex items-center justify-center gap-1 transition-colors"
                         >
-                          <span>Keresés</span>
+                          <span>Search</span>
                           <ExternalLink className="w-3 h-3" />
                         </a>
                         <button
                           type="button"
                           onClick={() => onNavigateTab && onNavigateTab('advisor')}
-                          className="btn-gold text-[10px] py-1.5 px-2.5 flex-1 flex items-center justify-center gap-1"
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-[11px] flex-1 flex items-center justify-center gap-1 shadow transition-colors cursor-pointer"
                         >
                           <span>Buy or Skip</span>
                           <ArrowRight className="w-3 h-3" />
@@ -330,20 +396,20 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                 })}
               </div>
             ) : (
-              <p className="text-xs text-[var(--text-muted)] italic">Nincs azonosított hiányzó kulcsdarab.</p>
+              <p className="text-xs text-slate-400 italic">Nincs azonosított hiányzó kulcsdarab.</p>
             )}
-
           </div>
         )}
-
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="glass-card p-4 space-y-4">
+      {/* ========================================================================= */}
+      {/* 4. FILTER & SEARCH BAR (DARK SLEEK STYLE) */}
+      {/* ========================================================================= */}
+      <div className="p-3 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-3 shadow-2xl">
         
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
             id="wardrobe-search-input"
@@ -352,79 +418,90 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
             placeholder="Keresés szín, anyag, márka vagy stílus szerint (pl. 'lenvászon', 'sötétkék', 'loafer')..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="custom-input pl-10"
+            className="w-full bg-[#090d15] border border-slate-800 rounded-xl pl-10 pr-16 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-slate-500 transition-colors"
           />
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)] hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white px-1.5 py-0.5 rounded cursor-pointer"
             >
               Törlés
             </button>
           )}
         </div>
 
-        {/* Category Pills */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-                selectedCategory === cat.id
-                  ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-md'
-                  : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 hover:text-white border border-white/5'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+        {/* Category Pills: 1-row sleek scrollable bar */}
+        <div className="flex gap-1.5 p-1 bg-[#090d15] rounded-2xl border border-slate-800 overflow-x-auto scrollbar-thin">
+          {categories.map(cat => {
+            const isActive = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Sub-Filters: Season & Condition */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/5 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800/80 text-xs">
           
           {/* Season Selector */}
-          <div className="flex items-center gap-2 overflow-x-auto">
-            <span className="text-[var(--text-muted)] whitespace-nowrap">Évszak:</span>
-            {seasons.map(s => (
-              <button
-                key={s.id}
-                onClick={() => setSelectedSeason(s.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs transition-colors whitespace-nowrap ${
-                  selectedSeason === s.id
-                    ? 'bg-white/20 text-white font-medium'
-                    : 'text-[var(--text-muted)] hover:text-white'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className="text-slate-500 text-[11px] whitespace-nowrap mr-1">Évszak:</span>
+            {seasons.map(s => {
+              const isActive = selectedSeason === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedSeason(s.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? 'bg-slate-700 text-white font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Condition Selector */}
-          <div className="flex items-center gap-2 overflow-x-auto">
-            <span className="text-[var(--text-muted)] whitespace-nowrap">Állapot:</span>
-            {conditions.map(c => (
-              <button
-                key={c.id}
-                onClick={() => setSelectedCondition(c.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs transition-colors whitespace-nowrap ${
-                  selectedCondition === c.id
-                    ? 'bg-emerald-500/20 text-emerald-300 font-medium border border-emerald-500/30'
-                    : 'text-[var(--text-muted)] hover:text-white'
-                }`}
-              >
-                {c.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className="text-slate-500 text-[11px] whitespace-nowrap mr-1">Állapot:</span>
+            {conditions.map(c => {
+              const isActive = selectedCondition === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCondition(c.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/40'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
           </div>
 
         </div>
 
       </div>
 
-      {/* Grid of Clothing Items (Dynamic Dense/Compact vs Normal Grid) */}
+      {/* ========================================================================= */}
+      {/* 5. GRID OF CLOTHING ITEMS */}
+      {/* ========================================================================= */}
       {filteredWardrobe.length > 0 ? (
         <div className={profile?.displayCompactCards 
           ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3.5" 
@@ -434,15 +511,16 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
             <div
               key={item.id}
               onClick={() => onSelectItem(item)}
-              className={`glass-card overflow-hidden group cursor-pointer border-[var(--border-subtle)] hover:border-[var(--border-gold)] transition-all duration-300 flex flex-col justify-between hover:scale-[1.02] ${
-                profile?.displayCompactCards ? 'rounded-xl' : 'rounded-2xl'
-              }`}
+              className={`p-0 rounded-2xl bg-[#0a0e17] border border-slate-800 hover:border-slate-600 transition-all duration-300 overflow-hidden group cursor-pointer flex flex-col justify-between hover:scale-[1.02] shadow-lg hover:shadow-2xl`}
             >
               <div>
                 {/* Image Container (Uncropped, Proportional object-contain) */}
-                <div className={`relative aspect-[4/3] w-full flex items-center justify-center overflow-hidden ${
-                  profile?.displayCompactCards ? 'p-1.5' : 'p-2'
-                }`} style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}>
+                <div 
+                  className={`relative aspect-[4/3] w-full flex items-center justify-center overflow-hidden ${
+                    profile?.displayCompactCards ? 'p-1.5' : 'p-2'
+                  }`} 
+                  style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}
+                >
                   <img
                     src={item.imageUrl}
                     alt={item.name}
@@ -455,8 +533,8 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                   />
                   
                   {/* Category Badge */}
-                  <span className={`absolute badge badge-gold uppercase font-bold tracking-wider backdrop-blur-md ${
-                    profile?.displayCompactCards ? 'top-1.5 left-1.5 text-[8.5px] px-1.5 py-0.5' : 'top-2 left-2 text-[10px]'
+                  <span className={`absolute bg-black/75 backdrop-blur-md border border-white/10 text-white uppercase font-bold tracking-wider ${
+                    profile?.displayCompactCards ? 'top-1.5 left-1.5 text-[8.5px] px-1.5 py-0.5 rounded' : 'top-2 left-2 text-[10px] px-2 py-0.5 rounded-lg'
                   }`}>
                     {item.category === 'outerwear' ? 'Zakó' : item.category === 'knitwear' ? 'Kötött' : item.category === 'tops' ? 'Felső' : item.category === 'bottoms' ? 'Nadrág' : item.category === 'shoes' ? 'Cipő' : item.category === 'skirts' ? 'Szoknya' : item.category}
                   </span>
@@ -479,7 +557,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
 
                 {/* Card Info */}
                 <div className={profile?.displayCompactCards ? 'p-2 space-y-1' : 'p-3.5 space-y-1.5'}>
-                  <h3 className={`font-serif font-bold text-white line-clamp-1 group-hover:text-[var(--accent-gold)] transition-colors ${
+                  <h3 className={`font-serif font-bold text-white line-clamp-1 group-hover:text-slate-200 transition-colors ${
                     profile?.displayCompactCards ? 'text-xs' : 'text-sm'
                   }`}>
                     {item.name}
@@ -487,7 +565,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
 
                   {/* Brand & Size Info */}
                   {(item.brand || item.size) && (
-                    <div className="flex items-center justify-between text-[10.5px] text-[var(--accent-gold-light)] font-medium">
+                    <div className="flex items-center justify-between text-[10.5px] text-slate-300 font-medium">
                       <span className="truncate">{item.brand || ''}</span>
                       {item.size && (
                         <span className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-white text-[9.5px] shrink-0 font-bold">
@@ -497,7 +575,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between text-[10.5px] text-[var(--text-muted)]">
+                  <div className="flex items-center justify-between text-[10.5px] text-slate-400">
                     <span className="truncate">{item.material || 'Természetes'}</span>
                     <div className="flex items-center gap-1 shrink-0">
                       {item.colorHex && (
@@ -508,7 +586,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                   </div>
 
                   {item.styleArchetype && !profile?.displayCompactCards && (
-                    <span className="text-[10px] text-[var(--accent-gold-light)] block truncate font-medium">
+                    <span className="text-[10px] text-amber-200/90 block truncate font-medium">
                       ✦ {item.styleArchetype}
                     </span>
                   )}
@@ -516,31 +594,31 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
               </div>
 
               {!profile?.displayCompactCards && (
-                <div className="p-3.5 pt-0 flex items-center justify-between text-[10px] text-[var(--text-muted)] border-t border-white/5">
+                <div className="p-3.5 pt-0 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/80">
                   <span className="capitalize">{item.formality || 'Smart Casual'}</span>
-                  <span className="text-[var(--accent-gold)] font-bold">Részletek ➔</span>
+                  <span className="text-slate-300 font-bold group-hover:text-white transition-colors">Részletek ➔</span>
                 </div>
               )}
             </div>
           ))}
         </div>
       ) : wardrobe.length === 0 ? (
-        <div className="glass-card p-8 sm:p-12 text-center space-y-5 border-[var(--border-gold)]/50 bg-gradient-to-b from-black/60 to-[var(--accent-gold-glow)]/10 max-w-xl mx-auto">
-          <div className="w-16 h-16 rounded-full bg-[var(--accent-gold)]/20 border border-[var(--border-gold)] flex items-center justify-center mx-auto text-[var(--accent-gold)] shadow-lg">
+        <div className="p-8 sm:p-12 text-center space-y-5 rounded-3xl bg-[#0a0e17] border border-slate-800 max-w-xl mx-auto shadow-2xl">
+          <div className="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto text-slate-200 shadow-lg">
             <Shirt className="w-8 h-8" />
           </div>
           <div className="space-y-2">
             <h3 className="text-xl font-serif font-bold text-white">
               A digitális gardróbod még üres
             </h3>
-            <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
               Töltsd fel az első 3-5 ruhádat az <strong>aktuális szezonból</strong> (pl. kedvenc inged, zakód, nadrágod, cipőd), hogy az AI azonnal dolgozni tudjon velük!
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <button
               onClick={onAddNewItem}
-              className="btn-gold w-full sm:w-auto text-xs py-2.5 px-5 flex items-center justify-center gap-2 shadow"
+              className="px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow transition-all cursor-pointer w-full sm:w-auto"
             >
               <Plus className="w-4 h-4" />
               <span>Első Szezonális Ruha Feltöltése</span>
@@ -548,11 +626,11 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
           </div>
         </div>
       ) : (
-        <div className="glass-card p-12 text-center space-y-4">
-          <Shirt className="w-12 h-12 text-[var(--accent-gold)] mx-auto opacity-50" />
+        <div className="p-12 text-center space-y-4 rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-xl">
+          <Shirt className="w-12 h-12 text-slate-500 mx-auto opacity-50" />
           <div className="space-y-1">
             <h3 className="text-lg font-serif font-bold text-white">Nincs találat a szűrésre</h3>
-            <p className="text-xs text-[var(--text-secondary)]">Próbálj más kategóriát vagy szűrőt választani.</p>
+            <p className="text-xs text-slate-400">Próbálj más kategóriát vagy szűrőt választani.</p>
           </div>
           <button
             onClick={() => {
@@ -561,24 +639,26 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
               setSelectedCondition('all');
               setSearchQuery('');
             }}
-            className="btn-secondary text-xs"
+            className="px-4 py-2 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-xs text-slate-200 hover:text-white transition-colors cursor-pointer"
           >
             Szűrők Visszaállítása
           </button>
         </div>
       )}
 
-      {/* Floating Action Button (FAB) - Ergonomic Bottom-Right Action */}
+      {/* ========================================================================= */}
+      {/* 6. FLOATING ACTION BUTTON (FAB) - ERGONOMIC BOTTOM-RIGHT ACTION */}
+      {/* ========================================================================= */}
       <div className="fixed bottom-20 sm:bottom-24 right-4 sm:right-8 z-30 pointer-events-none">
         <button
           type="button"
           onClick={onAddNewItem}
-          className="pointer-events-auto btn-gold p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-[0_8px_30px_rgba(212,175,55,0.4)] flex items-center gap-2 transform hover:scale-105 active:scale-95 transition-all duration-200 group"
-          title="Új Ruha Hozzáadása"
+          className="pointer-events-auto bg-slate-200 hover:bg-white text-slate-950 font-bold p-3.5 sm:px-5 sm:py-3.5 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.6)] border border-white/20 flex items-center gap-2 transform hover:scale-105 active:scale-95 transition-all duration-200 group cursor-pointer"
+          title="Add Item"
         >
-          <Plus className="w-5 h-5 text-black group-hover:rotate-90 transition-transform duration-300" />
-          <span className="hidden sm:inline font-serif font-bold text-black text-xs uppercase tracking-wider">
-            Új Ruha
+          <Plus className="w-5 h-5 text-slate-950 group-hover:rotate-90 transition-transform duration-300" />
+          <span className="hidden sm:inline font-serif font-bold text-slate-950 text-xs uppercase tracking-wider">
+            Add
           </span>
         </button>
       </div>
@@ -586,4 +666,3 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
     </div>
   );
 }
-

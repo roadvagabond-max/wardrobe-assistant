@@ -600,105 +600,100 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl bg-[#0b0e14] border border-[var(--border-gold)] rounded-2xl shadow-2xl flex flex-col my-auto animate-scale-up max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] overflow-hidden"
+        className="relative w-full max-w-2xl bg-[#0a0e17] border border-slate-800 rounded-3xl shadow-2xl flex flex-col my-auto animate-scale-up max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] overflow-hidden"
       >
         
-        {/* Sticky Header */}
-        <div className="shrink-0 p-4 sm:p-6 pb-3 sm:pb-4 border-b border-white/10 bg-[#0b0e14] flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="badge badge-gold">Digitális Ruhatár Bővítés</span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
-              Új Ruhadarab Hozzáadása
+        {/* Header matching Mix & Match and Buy or Skip style */}
+        <div className="shrink-0 px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-[#090d15]/95 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="px-2.5 py-1 rounded-xl bg-slate-200 text-slate-950 font-bold text-xs shadow-sm flex items-center gap-1.5">
+              <span>🚪</span>
+              <span>Wardrobe</span>
+            </span>
+            <h3 className="text-base sm:text-lg font-serif font-bold text-white">
+              Új Ruhadarab Rögzítése
             </h3>
           </div>
           <button 
+            type="button"
             onClick={handleClose}
-            className="p-2 rounded-full text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white bg-[#0d121c] border border-slate-800 transition-colors cursor-pointer"
+            title="Bezárás"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Input Method Selector / Form */}
         {!isFormReady ? (
-          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
             
             {/* Helpful Onboarding & Best Practices Tip Card */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 text-xs space-y-2">
-              <div className="flex items-center gap-2 text-amber-300 font-bold font-serif text-xs">
-                <Sparkles className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
-                <span>Aranyszabályok a hatékony ruhatárépítéshez:</span>
+            <div className="p-3.5 rounded-2xl bg-[#0f1420]/70 border border-slate-800 text-xs space-y-2">
+              <div className="flex items-center gap-2 text-slate-200 font-bold font-serif text-xs">
+                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                <span>Tanácsok a ruhatárépítéshez:</span>
               </div>
-              <ul className="space-y-1.5 pl-1 text-[11px] text-[var(--text-secondary)] leading-relaxed">
+              <ul className="space-y-1.5 pl-1 text-[11px] text-slate-300 leading-relaxed">
                 <li className="flex items-start gap-1.5">
-                  <span className="text-amber-400 font-bold shrink-0">🍂 1.</span>
-                  <span><strong>Szezonális prioritás:</strong> Először az <em>aktuális évszakban hordott ruháidat</em> töltsd fel, hogy az AI Stylist azonnal a mai napra és időjárásra készítsen szetteket!</span>
+                  <span className="text-sky-400 font-bold shrink-0">🍂 1.</span>
+                  <span><strong>Szezonális prioritás:</strong> Először az <em>aktuális évszakban hordott ruháidat</em> töltsd fel az azonnali szettkészítéshez.</span>
                 </li>
                 <li className="flex items-start gap-1.5">
                   <span className="text-emerald-400 font-bold shrink-0">📏 2.</span>
-                  <span><strong>Csak a tökéletesen passzoló darabok:</strong> Csak olyan ruhát rögzíts, ami ma is kényelmes és jó méretű. A kinőtt vagy túl szűk darabokat hagyd ki!</span>
+                  <span><strong>Tökéletesen passzoló darabok:</strong> Csak olyan ruhát rögzíts, ami most is kényelmes és jó méretű.</span>
                 </li>
                 <li className="flex items-start gap-1.5">
-                  <span className="text-amber-300 font-bold shrink-0">✨ 3.</span>
-                  <span><strong>Valós állapot:</strong> Ha a darab kopott, állítsd <em>Játszós</em> vagy <em>Lecserélendő</em> státuszra, hogy az AI ne tegye elegáns szettekbe.</span>
+                  <span className="text-amber-400 font-bold shrink-0">✨ 3.</span>
+                  <span><strong>Valós állapot:</strong> Ha a darab kopott, állítsd <em>Játszós</em> vagy <em>Lecserélendő</em> státuszra.</span>
                 </li>
               </ul>
             </div>
             
-            {/* Mode Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+            {/* Source Tabs: Strictly 1 single row on all mobile and desktop screens, matching Buy or Skip */}
+            <div className="grid grid-cols-4 gap-1 p-1 bg-[#090d15] rounded-2xl border border-slate-800">
               <button
                 type="button"
                 onClick={() => setActiveMode('camera')}
-                className={`py-2.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                  activeMode === 'camera' 
-                    ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
-                    : 'text-[var(--text-secondary)] hover:text-white'
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2.5 py-2 rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-semibold min-w-0 transition-all cursor-pointer ${
+                  activeMode === 'camera' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Camera className="w-4 h-4" />
-                <span>Fotózás</span>
+                <Camera className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Fotózás</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveMode('clipboard')}
-                className={`py-2.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                  activeMode === 'clipboard' 
-                    ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
-                    : 'text-[var(--text-secondary)] hover:text-white'
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2.5 py-2 rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-semibold min-w-0 transition-all cursor-pointer ${
+                  activeMode === 'clipboard' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Clipboard className="w-4 h-4" />
-                <span>Vágólap (Ctrl+V)</span>
+                <Clipboard className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Vágólap</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveMode('upload')}
-                className={`py-2.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                  activeMode === 'upload' 
-                    ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
-                    : 'text-[var(--text-secondary)] hover:text-white'
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2.5 py-2 rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-semibold min-w-0 transition-all cursor-pointer ${
+                  activeMode === 'upload' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Upload className="w-4 h-4" />
-                <span>Feltöltés</span>
+                <Upload className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Feltöltés</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveMode('link')}
-                className={`py-2.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all ${
-                  activeMode === 'link' 
-                    ? 'bg-[var(--accent-gold)] text-black font-semibold shadow' 
-                    : 'text-[var(--text-secondary)] hover:text-white'
+                className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-2.5 py-2 rounded-xl text-[10px] xs:text-[11px] sm:text-xs font-semibold min-w-0 transition-all cursor-pointer ${
+                  activeMode === 'link' ? 'bg-slate-200 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <LinkIcon className="w-4 h-4" />
-                <span>Webshop Link</span>
+                <LinkIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Link / Kód</span>
               </button>
             </div>
 
@@ -706,7 +701,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             {activeMode === 'camera' && (
               <div 
                 onClick={() => cameraInputRef.current?.click()}
-                className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3 bg-[var(--accent-gold-glow)]"
+                className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-6 sm:p-8 text-center cursor-pointer bg-[#090d15]/50 flex flex-col items-center justify-center gap-3 transition-all"
               >
                 <input 
                   type="file" 
@@ -719,12 +714,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                   onChange={handleFileChange} 
                   className="hidden" 
                 />
-                <div className="w-14 h-14 rounded-full bg-[var(--accent-gold)]/20 flex items-center justify-center text-[var(--accent-gold)]">
-                  <Camera className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-200 shadow">
+                  <Camera className="w-6 h-6" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Kattints a kamera megnyitásához</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">Fotózd le a ruhát — az AI automatikusan eltávolítja a hátteret és packshotot készít</p>
+                  <p className="text-xs text-slate-400 mt-1">Fotózd le a ruhát — az AI automatikusan kitisztítja a hátteret</p>
                 </div>
               </div>
             )}
@@ -733,16 +728,16 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             {activeMode === 'clipboard' && (
               <div 
                 onClick={handleClipboardButtonClick}
-                className="border-2 border-dashed border-[var(--border-gold)] rounded-2xl p-8 text-center cursor-pointer hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3 bg-[var(--accent-gold-glow)] group"
+                className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-6 sm:p-8 text-center cursor-pointer bg-[#090d15]/50 flex flex-col items-center justify-center gap-3 transition-all group"
               >
-                <div className="w-14 h-14 rounded-full bg-[var(--accent-gold)]/20 flex items-center justify-center text-[var(--accent-gold)] group-hover:scale-110 transition-transform">
-                  <Clipboard className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-200 group-hover:scale-110 transition-transform shadow">
+                  <Clipboard className="w-6 h-6" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Kattints ide a vágólap beillesztéséhez</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">Vagy nyomj <strong>Ctrl + V</strong>-t a billentyűzeten bárhol az ablakban</p>
-                  <p className="text-[11px] text-[var(--text-muted)] pt-1">
-                    Jobb klikk a webshop ruhafotóra ➔ <em>"Kép másolása"</em> vagy <em>"Képhivatkozás másolása"</em>
+                  <p className="text-xs text-slate-400 mt-1">Vagy nyomj <strong>Ctrl + V</strong>-t a billentyűzeten bárhol az ablakban</p>
+                  <p className="text-[11px] text-slate-500 pt-1">
+                    Jobb klikk a webshop fotóra ➔ <em>"Kép másolása"</em>
                   </p>
                 </div>
               </div>
@@ -752,7 +747,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             {activeMode === 'upload' && (
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center cursor-pointer hover:border-[var(--border-gold)] hover:bg-white/5 transition-all flex flex-col items-center justify-center gap-3"
+                className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-2xl p-6 sm:p-8 text-center cursor-pointer bg-[#090d15]/50 flex flex-col items-center justify-center gap-3 transition-all"
               >
                 <input 
                   type="file" 
@@ -764,12 +759,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                   onChange={handleFileChange} 
                   className="hidden" 
                 />
-                <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-[var(--text-secondary)]">
-                  <Upload className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-200 shadow">
+                  <Upload className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Válassz fotót a galériádból</p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">Automatikusan eltávolítjuk a hátteret és kitisztítjuk a képet</p>
+                  <p className="text-sm font-semibold text-white">Válassz fotót a készülékedről</p>
+                  <p className="text-xs text-slate-400 mt-1">Automatikusan eltávolítjuk a hátteret és kitisztítjuk a képet</p>
                 </div>
               </div>
             )}
@@ -778,10 +773,10 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             {activeMode === 'link' && (
               <form onSubmit={handleLinkImport} className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="add-clothing-webshop-input" className="block text-xs font-medium text-[var(--text-secondary)]">
+                  <label htmlFor="add-clothing-webshop-input" className="block text-xs font-medium text-slate-300">
                     Webshop Terméklink VAGY Cikkszám / Termékkód (Next, Zara, Reserved stb.):
                   </label>
-                  <span className="text-[10px] text-[var(--accent-gold)] font-medium">SKU Keresés Aktív</span>
+                  <span className="text-[10px] text-sky-400 font-medium">SKU Keresés Aktív</span>
                 </div>
                 <div className="flex gap-2">
                   <input
@@ -796,12 +791,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                       setWebshopUrl(e.target.value);
                       if (analysisError) setAnalysisError(null);
                     }}
-                    className="custom-input text-xs"
+                    className="w-full bg-[#090d15] border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-slate-500 transition-colors"
                   />
                   <button 
                     type="submit" 
                     disabled={isAnalyzing || !webshopUrl.trim()}
-                    className="btn-gold px-5 text-xs whitespace-nowrap flex items-center gap-1.5 shrink-0"
+                    className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs whitespace-nowrap flex items-center gap-1.5 shrink-0 shadow transition-colors cursor-pointer"
                   >
                     {isAnalyzing ? (
                       <>
@@ -829,7 +824,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                     <button
                       type="button"
                       onClick={handleClipboardButtonClick}
-                      className="btn-gold py-1.5 px-3 text-[11px] shrink-0 flex items-center gap-1.5 justify-center self-end sm:self-auto shadow"
+                      className="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-[11px] shrink-0 flex items-center gap-1.5 justify-center self-end sm:self-auto shadow cursor-pointer transition-colors"
                     >
                       <Clipboard className="w-3.5 h-3.5" />
                       <span>Kép Beillesztése (Ctrl+V)</span>
@@ -853,12 +848,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             
             {/* 1. Proportional Image Preview with Packshot Toggle */}
             <div className="space-y-2">
-              <div className="relative aspect-square sm:aspect-[4/3] max-h-[360px] sm:max-h-[420px] w-full rounded-2xl overflow-hidden border border-white/10 p-1.5 flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}>
+              <div className="relative aspect-square sm:aspect-[4/3] max-h-[360px] sm:max-h-[420px] w-full rounded-2xl overflow-hidden border border-slate-800 p-1.5 flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}>
                 {imagePreview ? (
                   <>
                     {/* View Mode Toggle: Packshot vs Eredeti fotó */}
                     {rawOriginalImage && cleanPackshot && (
-                      <div className="absolute top-3 left-3 z-20 flex items-center bg-black/85 backdrop-blur-md rounded-xl p-1 border border-amber-500/40 shadow-xl animate-fade-in">
+                      <div className="absolute top-3 left-3 z-20 flex items-center bg-black/85 backdrop-blur-md rounded-xl p-1 border border-slate-700 shadow-xl animate-fade-in">
                         <button
                           type="button"
                           onClick={() => {
@@ -867,7 +862,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                           }}
                           className={`py-1 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all ${
                             activeImageMode === 'packshot'
-                              ? 'bg-[var(--accent-gold)] text-black font-bold shadow'
+                              ? 'bg-slate-200 text-slate-950 font-bold shadow'
                               : 'text-slate-300 hover:text-white'
                           }`}
                         >
@@ -895,10 +890,10 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                     {/* Background removal in progress badge or status feedback */}
                     {(isRemovingBg || (bgRemovalProgress && bgRemovalProgress.percent === 0)) && (
                       <div className={`absolute top-3 left-3 z-20 flex items-center gap-2 bg-black/85 backdrop-blur-md rounded-xl px-3 py-1.5 border ${
-                        isRemovingBg ? 'border-[var(--border-gold)] animate-pulse text-[var(--accent-gold)]' : 'border-amber-500/50 text-amber-300'
+                        isRemovingBg ? 'border-sky-500/50 animate-pulse text-sky-300' : 'border-amber-500/50 text-amber-300'
                       } shadow-xl text-xs`}>
                         {isRemovingBg ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent-gold)] shrink-0" />
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400 shrink-0" />
                         ) : (
                           <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                         )}
@@ -922,7 +917,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                       <button
                         type="button"
                         onClick={handleClipboardButtonClick}
-                        className="btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5 bg-black/80 backdrop-blur-md hover:bg-black border border-white/20 shadow-lg text-[var(--accent-gold)]"
+                        className="px-3 py-1.5 rounded-xl bg-black/80 hover:bg-black backdrop-blur-md border border-slate-700 text-[11px] flex items-center gap-1.5 text-slate-200 hover:text-white shadow-lg transition-colors cursor-pointer"
                         title="Kép beillesztése vágólapról (Ctrl+V)"
                       >
                         <Clipboard className="w-3.5 h-3.5" />
@@ -931,10 +926,10 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                       <button
                         type="button"
                         onClick={() => attachPhotoInputRef.current?.click()}
-                        className="btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5 bg-black/80 backdrop-blur-md hover:bg-black border border-white/20 shadow-lg"
+                        className="px-3 py-1.5 rounded-xl bg-black/80 hover:bg-black backdrop-blur-md border border-slate-700 text-[11px] flex items-center gap-1.5 text-slate-200 hover:text-white shadow-lg transition-colors cursor-pointer"
                         title="Saját fotó készítése vagy feltöltése"
                       >
-                        <Camera className="w-3.5 h-3.5 text-[var(--accent-gold)]" />
+                        <Camera className="w-3.5 h-3.5 text-sky-400" />
                         <span>Saját fotó</span>
                       </button>
                     </div>
@@ -949,11 +944,11 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                         {formData.category === 'outerwear' ? '🧥' : formData.category === 'knitwear' ? '🧶' : formData.category === 'tops' ? '👔' : formData.category === 'bottoms' ? '👖' : formData.category === 'shoes' ? '👞' : '✨'}
                       </span>
                     </div>
-                    <span className="badge badge-gold text-[10px]">Webshopból Kinyert Termék</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 text-[10px] font-bold border border-slate-700 inline-block">Webshopból Kinyert Termék</span>
                     <h4 className="font-serif font-bold text-white text-sm sm:text-base max-w-md line-clamp-2">
                       {formData.name || 'Új Ruhadarab'}
                     </h4>
-                    <p className="text-xs text-[var(--accent-gold-light)] font-medium">
+                    <p className="text-xs text-slate-300 font-medium">
                       {formData.brand || 'Next Direct'} • {formData.material || 'Természetes szálak'}
                     </p>
                     
@@ -961,17 +956,17 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                       <button
                         type="button"
                         onClick={handleClipboardButtonClick}
-                        className="btn-gold py-1.5 px-3 text-[11px] flex items-center gap-1.5 shadow-lg"
+                        className="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-[11px] flex items-center gap-1.5 shadow transition-colors cursor-pointer"
                       >
                         <Clipboard className="w-3.5 h-3.5" />
-                        <span>Kép Beillesztése Vágólapról (Ctrl+V)</span>
+                        <span>Kép Beillesztése (Ctrl+V)</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => attachPhotoInputRef.current?.click()}
-                        className="btn-secondary py-1.5 px-3 text-[11px] flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        <Camera className="w-3.5 h-3.5" />
+                        <Camera className="w-3.5 h-3.5 text-sky-400" />
                         <span>Saját fotó</span>
                       </button>
                     </div>
@@ -980,7 +975,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 
                 {isAnalyzing && (
                   <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 text-white rounded-2xl">
-                    <Loader2 className="w-8 h-8 text-[var(--accent-gold)] animate-spin" />
+                    <Loader2 className="w-8 h-8 text-slate-200 animate-spin" />
                     <p className="text-xs font-medium tracking-wide">Az AI villámgyorsan elemzi a ruhadarabot...</p>
                   </div>
                 )}
@@ -1002,7 +997,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               {/* Multi-Image Selector — Only for genuine webshop multi-image imports */}
               {availableImages.length > 1 && activeMode === 'link' && (
                 <div className="space-y-1">
-                  <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
                     További képek a termékoldalról (kattints a kiválasztáshoz):
                   </span>
                   <div className="flex items-center gap-2 overflow-x-auto py-1">
@@ -1011,10 +1006,10 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                         key={idx}
                         type="button"
                         onClick={() => setImagePreview(imgUrl)}
-                        className={`w-14 h-14 rounded-xl overflow-hidden bg-[#07090e] border p-0.5 shrink-0 transition-all ${
+                        className={`w-14 h-14 rounded-xl overflow-hidden bg-[#07090e] border p-0.5 shrink-0 transition-all cursor-pointer ${
                           imagePreview === imgUrl 
-                            ? 'border-[var(--accent-gold)] ring-2 ring-[var(--accent-gold)]/40 scale-105' 
-                            : 'border-white/10 opacity-60 hover:opacity-100'
+                            ? 'border-white ring-2 ring-slate-400 scale-105' 
+                            : 'border-slate-800 opacity-60 hover:opacity-100'
                         }`}
                       >
                         <img src={imgUrl} alt={`Foto ${idx + 1}`} width="100" height="75" className="w-full h-full object-contain" />
@@ -1308,10 +1303,10 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                       key={tag}
                       type="button"
                       onClick={() => handleTagToggle(tag)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                      className={`px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-[var(--accent-gold)] text-black font-semibold shadow-sm'
-                          : 'bg-white/5 text-[var(--text-muted)] hover:bg-white/10 hover:text-white border border-white/5'
+                          ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
+                          : 'bg-[#090d15] text-slate-400 hover:text-white border border-slate-800'
                       }`}
                     >
                       #{tag}
@@ -1330,12 +1325,12 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                   placeholder="Egyedi címke hozzáadása..."
                   value={customTagInput}
                   onChange={(e) => setCustomTagInput(e.target.value)}
-                  className="custom-input text-xs py-1.5"
+                  className="w-full bg-[#090d15] border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-slate-500 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={handleAddCustomTag}
-                  className="btn-secondary text-xs px-3 whitespace-nowrap"
+                  className="px-3 py-1.5 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-xs text-slate-200 hover:text-white transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Hozzáadás</span>
@@ -1344,18 +1339,18 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             </div>
 
             {/* Submit Button */}
-            <div className="pt-3 border-t border-white/10 flex gap-3">
+            <div className="pt-3 border-t border-slate-800 flex gap-3">
               <button
                 type="button"
                 onClick={handleClose}
-                className="btn-secondary flex-1 py-3"
+                className="px-4 py-2.5 rounded-xl bg-[#0d121c] hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer flex-1 font-semibold"
               >
                 Mégse
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="btn-gold flex-1 py-3 text-sm font-bold shadow-xl flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-white text-slate-950 font-bold text-xs shadow flex items-center justify-center gap-2 transition-all cursor-pointer flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? (
                   <>
@@ -1365,7 +1360,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                 ) : (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>Mentés a Gardróbba</span>
+                    <span>Mentés a Ruhatárba</span>
                   </>
                 )}
               </button>
