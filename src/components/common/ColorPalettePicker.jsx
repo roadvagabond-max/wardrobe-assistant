@@ -65,6 +65,60 @@ export function deduplicateColors(colors = []) {
   return result;
 }
 
+/**
+ * Returns a real HEX color for Hungarian/English fashion color names
+ */
+export function getColorHex(colorStr) {
+  if (!colorStr || typeof colorStr !== 'string') return '#d4af37';
+  const norm = normalizeColorName(colorStr).toLowerCase();
+  
+  // Exact match from curated colors
+  const curated = CURATED_FASHION_COLORS.find(c => areColorsMatching(c.name, norm));
+  if (curated) return curated.hex;
+
+  // Extended fashion color matching
+  if (norm.includes('sötétkék') || norm.includes('navy') || norm.includes('tengerészkék')) return '#1b2a4a';
+  if (norm.includes('királykék') || norm.includes('kobalt')) return '#27408b';
+  if (norm.includes('világoskék') || norm.includes('égkék') || norm.includes('baby blue')) return '#87ceeb';
+  if (norm.includes('kék') || norm.includes('blue') || norm.includes('denim') || norm.includes('farmer')) return '#2b5282';
+  
+  if (norm.includes('dohánybarna') || norm.includes('espresso') || norm.includes('csokoládé')) return '#4a3525';
+  if (norm.includes('konyak') || norm.includes('cognac')) return '#9a4e24';
+  if (norm.includes('teveszín') || norm.includes('camel') || norm.includes('karamell')) return '#c19a6b';
+  if (norm.includes('homok') || norm.includes('bézs') || norm.includes('nude') || norm.includes('sand')) return '#d8c3a5';
+  if (norm.includes('barna') || norm.includes('brown')) return '#5c4033';
+  
+  if (norm.includes('fekete') || norm.includes('black')) return '#111111';
+  if (norm.includes('antracit') || norm.includes('charcoal') || norm.includes('grafit')) return '#374151';
+  if (norm.includes('világosszürke') || norm.includes('light grey')) return '#d1d5db';
+  if (norm.includes('szürke') || norm.includes('grey') || norm.includes('gray')) return '#6b7280';
+  
+  if (norm.includes('törtfehér') || norm.includes('krém') || norm.includes('ecru') || norm.includes('ivory')) return '#f5f2eb';
+  if (norm.includes('fehér') || norm.includes('white')) return '#ffffff';
+  
+  if (norm.includes('bordó') || norm.includes('burgundi') || norm.includes('wine') || norm.includes('maroon')) return '#6b1d2f';
+  if (norm.includes('piros') || norm.includes('vörös') || norm.includes('red')) return '#c53030';
+  if (norm.includes('terrakotta') || norm.includes('rozsda') || norm.includes('rust')) return '#b7410e';
+  if (norm.includes('korall') || norm.includes('lazac') || norm.includes('coral')) return '#e07a5f';
+  if (norm.includes('rózsaszín') || norm.includes('pink') || norm.includes('púder')) return '#d48c96';
+  
+  if (norm.includes('olívazöld') || norm.includes('oliva') || norm.includes('olive') || norm.includes('keki') || norm.includes('khaki')) return '#556b2f';
+  if (norm.includes('zsálya') || norm.includes('sage')) return '#8a9a86';
+  if (norm.includes('erdőzöld') || norm.includes('forest') || norm.includes('mélyzöld')) return '#23442a';
+  if (norm.includes('menta') || norm.includes('mint')) return '#98ff98';
+  if (norm.includes('zöld') || norm.includes('green')) return '#2e7d32';
+  
+  if (norm.includes('mustár') || norm.includes('mustard')) return '#d4a017';
+  if (norm.includes('sárga') || norm.includes('yellow')) return '#ecc94b';
+  if (norm.includes('arany') || norm.includes('gold')) return '#d4af37';
+  if (norm.includes('narancs') || norm.includes('orange')) return '#dd6b20';
+  
+  if (norm.includes('lila') || norm.includes('purple') || norm.includes('szilva') || norm.includes('padlizsán') || norm.includes('violet')) return '#553c9a';
+  if (norm.includes('levendula') || norm.includes('lavender')) return '#b794f4';
+
+  return '#94a3b8'; // Neutral stylish slate fallback
+}
+
 export default function ColorPalettePicker({ selectedColor, selectedHex, onSelectColor }) {
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef(null);

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   LogIn, 
@@ -145,12 +146,18 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
     }
   };
 
-  return (
-    <div className="modal-backdrop">
-      <div className="glass-card max-w-md w-full p-6 sm:p-7 border-[var(--border-gold)] space-y-5 animate-slide-up max-h-[90vh] overflow-y-auto">
+  return createPortal(
+    <div 
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-[#0a0e17] border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 my-auto max-h-[85vh] overflow-y-auto overscroll-contain scrollbar-thin"
+      >
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
             <AppLogo className="w-9 h-9 shrink-0 shadow-md" />
             <div>
@@ -540,6 +547,7 @@ export default function AuthModal({ isOpen, onClose, onOpenSettings }) {
         )}
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

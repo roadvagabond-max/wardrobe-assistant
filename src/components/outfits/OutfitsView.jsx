@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Sparkles, CloudSun, Calendar, Compass, ArrowRight, Bookmark, Check, RefreshCw, 
   Loader2, Plus, X, Layers, Lock, Unlock, CheckCircle2, ShieldAlert,
@@ -9,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { generateEventOutfits, swapOutfitItem, enforceAnatomicalOutfitLayers } from '../../services/gemini';
 import { fetchCurrentWeather, CITIES } from '../../services/weather';
 import { getDynamicEventPresets } from '../../services/demographics';
+import { createGarmentSvgPlaceholder } from '../../services/imageOptimizer';
 import confetti from 'canvas-confetti';
 import GarmentLightboxModal from '../common/GarmentLightboxModal';
 import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
@@ -543,9 +545,47 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
     );
   };
 
+  // Subcomponent: Render a visual mini-card for accessories, belt or socks
+  const renderMiniAccessoryCard = (item, label, outfitIdx, outfit) => {
+    if (!item) return null;
+    return (
+      <div 
+        key={item.id}
+        className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-[#070a12] border border-slate-700/80 group shrink-0 shadow flex flex-col justify-between"
+      >
+        <img 
+          src={item.imageUrl || createGarmentSvgPlaceholder(item.category || 'accessories', item.name, item.color)} 
+          alt={item.name}
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = createGarmentSvgPlaceholder(item.category || 'accessories', item.name, item.color);
+          }}
+          onClick={() => openLightbox(outfit.items, outfit.items.findIndex(it => it.id === item.id), item.name, 'single', { outfitIndex: outfitIdx, outfit })}
+          className="w-full h-full object-contain p-1.5 cursor-pointer group-hover:scale-105 transition-transform duration-300" 
+        />
+        <span className="absolute bottom-0.5 left-1 px-1 py-0.2 rounded bg-black/75 text-[8px] sm:text-[9px] text-slate-300 pointer-events-none truncate max-w-[85%]">
+          {label}
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setItemSwapModal({ outfitIndex: outfitIdx, item, outfit });
+          }}
+          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center backdrop-blur-sm transition-colors z-10 shadow cursor-pointer"
+          title="Darab cseréje"
+        >
+          <RefreshCw className="w-2.5 h-2.5" />
+        </button>
+      </div>
+    );
+  };
+
   // Subcomponent: Render an Outfit Flatlay Canvas
   const renderOutfitFlatlay = (outfit, outfitIdx) => {
     const isSaved = savedIds.has(outfitIdx);
+    const isFemale = profile?.gender === 'Női';
     const enforcedItems = enforceAnatomicalOutfitLayers(outfit.items || [], wardrobe, anchorItems[0] || null, weather);
     const { outer, upper, lower, dress, belt, shoes, socks, accessories } = categorizeOutfitItems(enforcedItems);
 
@@ -639,33 +679,54 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
               </div>
             )}
 
-            {/* 2. Lower Zone & Footwear */}
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-500 block">
-                👖 Alsó & Lábbeli:
-              </span>
-              <div className="grid grid-cols-2 gap-2.5">
-                {lower && renderGarmentCard(lower, outfitIdx, outfit, belt ? `Öv: ${belt.name}` : null)}
-                {shoes && renderGarmentCard(shoes, outfitIdx, outfit, socks ? `Zokni: ${socks.name}` : null)}
+            {/* 2. Lower Zone & Belt */}
+            {lower && (
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-500 block">
+                  👖 Alsótest {belt ? '& Öv' : ''}:
+                </span>
+                <div className="flex items-center gap-2.5">
+                  <div className="flex-1 min-w-0">
+                    {renderGarmentCard(lower, outfitIdx, outfit)}
+                  </div>
+                  {belt && renderMiniAccessoryCard(belt, 'Öv', outfitIdx, outfit)}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* 3. Embedded Accessories Strip (Belt, Watch, Bag, etc.) */}
-            {(belt || accessories.length > 0) && (
-              <div className="flex items-center gap-1.5 p-2 rounded-xl bg-[#090d15] border border-slate-800 text-[11px] text-slate-300 overflow-x-auto scrollbar-none">
-                <span className="text-[10px] uppercase font-mono font-bold text-slate-500 shrink-0">Kiegészítők:</span>
-                {belt && (
-                  <span className="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700 text-slate-200 truncate shrink-0 flex items-center gap-1">
-                    <span>🎗️</span>
-                    <span className="truncate">{belt.name}</span>
-                  </span>
-                )}
-                {accessories.map((acc, accIdx) => (
-                  <span key={acc.id || accIdx} className="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700 text-slate-200 truncate shrink-0 flex items-center gap-1">
-                    <span>⌚</span>
-                    <span className="truncate">{acc.name}</span>
-                  </span>
-                ))}
+            {/* 3. Footwear & Socks Zone */}
+            {shoes && (
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-500 block">
+                  👞 Lábbeli {socks ? (isFemale ? '& Harisnya' : '& Zokni') : ''}:
+                </span>
+                <div className="flex items-center gap-2.5">
+                  <div className="flex-1 min-w-0">
+                    {renderGarmentCard(shoes, outfitIdx, outfit)}
+                  </div>
+                  {socks && renderMiniAccessoryCard(socks, isFemale ? 'Harisnya' : 'Zokni', outfitIdx, outfit)}
+                </div>
+              </div>
+            )}
+
+            {/* 4. Accessories Zone (Watches, Bags, Scarves, Jewelry) */}
+            {accessories.length > 0 && (
+              <div className="space-y-1 pt-1">
+                <span className="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-500 block">
+                  ⌚ Kiegészítők:
+                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {accessories.map((acc, accIdx) => {
+                    const sub = (acc.subCategory || '').toLowerCase();
+                    const name = (acc.name || '').toLowerCase();
+                    const label = (sub.includes('watch') || name.includes('óra')) ? 'Óra' 
+                      : (sub.includes('bag') || name.includes('táska')) ? 'Táska'
+                      : (sub.includes('scarf') || name.includes('sál')) ? 'Sál'
+                      : (sub.includes('tie') || name.includes('nyakkendő')) ? 'Nyakkendő'
+                      : 'Kieg';
+                    return renderMiniAccessoryCard(acc, label, outfitIdx, outfit);
+                  })}
+                </div>
               </div>
             )}
 
@@ -1048,16 +1109,16 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
       )}
 
       {/* ========================================================================= */}
-      {/* 6. ANCHOR ITEMS MODAL (DARK TITANIUM GLASSMORPHISM) */}
+      {/* 6. ANCHOR ITEMS MODAL (DARK TITANIUM GLASSMORPHISM - PORTAL CENTERED) */}
       {/* ========================================================================= */}
-      {showAnchorModal && (
+      {showAnchorModal && createPortal(
         <div 
           onClick={(e) => { if (e.target === e.currentTarget) setShowAnchorModal(false); }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+          className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg bg-[#0a0e17] border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+            className="w-full max-w-lg bg-[#0a0e17] border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl overflow-hidden my-auto"
           >
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
               <div className="flex items-center gap-2">
@@ -1124,20 +1185,21 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
-      {/* 7. GARMENT SWAP MODAL (AI VS MANUAL REPLACEMENT) */}
+      {/* 7. GARMENT SWAP MODAL (AI VS MANUAL REPLACEMENT - PORTAL CENTERED) */}
       {/* ========================================================================= */}
-      {itemSwapModal && (
+      {itemSwapModal && createPortal(
         <div 
           onClick={(e) => { if (e.target === e.currentTarget) setItemSwapModal(null); }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+          className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg bg-[#0a0e17] border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+            className="w-full max-w-lg bg-[#0a0e17] border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl overflow-hidden my-auto"
           >
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
               <div className="flex items-center gap-2">
@@ -1218,7 +1280,8 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Universal Lightbox Modal */}

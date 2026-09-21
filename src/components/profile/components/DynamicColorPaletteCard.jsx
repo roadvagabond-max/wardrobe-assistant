@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Palette, Plus, X, Sparkles, Check, Info, ShieldCheck } from 'lucide-react';
-import { normalizeColorName, areColorsMatching, deduplicateColors } from '../../common/ColorPalettePicker';
+import { Palette, Plus, X, Sparkles, Check, Info } from 'lucide-react';
+import { normalizeColorName, areColorsMatching, deduplicateColors, getColorHex } from '../../common/ColorPalettePicker';
 
 export default function DynamicColorPaletteCard({ 
   profile, 
@@ -56,21 +56,22 @@ export default function DynamicColorPaletteCard({
   };
 
   return (
-    <div className="glass-card p-6 sm:p-7 border-[var(--border-gold)] space-y-5">
+    <div className="rounded-3xl bg-[#0a0e17] border border-slate-800 shadow-2xl p-5 sm:p-6 space-y-5">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
         <div>
           <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-[var(--accent-gold)]" />
-            <span className="badge badge-gold text-[10px]">Színintelligencia</span>
-            <span className="badge badge-emerald text-[10px]">Kapszula Paletta</span>
+            <Palette className="w-4 h-4 text-amber-400" />
+            <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+              Színintelligencia
+            </span>
           </div>
           <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
             Alappaletta & Kedvelt Színek
           </h3>
-          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-            A színtípusodhoz illő bázisszínek és az egyénileg rögzített kedvenc akcentszíneid.
+          <p className="text-xs text-slate-400 mt-0.5">
+            A színtípusodhoz illő bázisszínek és az egyénileg rögzített kedvenc árnyalataid.
           </p>
         </div>
       </div>
@@ -81,18 +82,18 @@ export default function DynamicColorPaletteCard({
           <span className="text-xs font-semibold text-white block">
             Aktív Bázis & Kedvenc Színeid (Core Palette):
           </span>
-          <span className="text-[10px] text-[var(--text-muted)]">
+          <span className="text-[10px] text-slate-400">
             {favoriteColors.length > 0 ? `${favoriteColors.length} db aktív szín` : 'Még nincs beállítva'}
           </span>
         </div>
 
         {favoriteColors.length === 0 ? (
-          <div className="p-4 rounded-xl bg-white/5 border border-dashed border-white/15 text-center space-y-1">
-            <p className="text-xs text-[var(--text-secondary)]">
+          <div className="p-4 rounded-2xl bg-[#0d121c] border border-dashed border-slate-800 text-center space-y-1">
+            <p className="text-xs text-slate-300">
               Még nincsenek rögzített színeid a profilodban.
             </p>
-            <p className="text-[11px] text-[var(--text-muted)]">
-              Használd a fenti <strong>AI Portré Elemzőt</strong> az arcbőrödhöz illő paletta meghatározásához, vagy adj hozzá saját kedvenceket alább!
+            <p className="text-[11px] text-slate-400">
+              Használd a <strong>Portré Fotó Elemzőt</strong> az arcbőrödhöz illő paletta meghatározásához, vagy adj hozzá saját kedvenceket alább!
             </p>
           </div>
         ) : (
@@ -100,14 +101,18 @@ export default function DynamicColorPaletteCard({
             {favoriteColors.map((color, idx) => (
               <div 
                 key={idx}
-                className="badge badge-subtle text-xs py-1.5 px-3 flex items-center gap-2 bg-white/5 border border-white/10 hover:border-[var(--border-gold)]/60 transition-colors group"
+                className="text-xs py-1.5 px-3 rounded-xl flex items-center gap-2 bg-[#0d121c] border border-slate-800 hover:border-slate-600 transition-colors group shadow-sm"
               >
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-gold)] shrink-0 shadow-sm" />
+                <span 
+                  className="w-3 h-3 rounded-full shrink-0 shadow-sm border border-white/25" 
+                  style={{ backgroundColor: getColorHex(color) }} 
+                  title={color}
+                />
                 <span className="text-white font-medium">{color}</span>
                 <button
                   type="button"
                   onClick={() => handleRemoveColor(color)}
-                  className="text-[var(--text-muted)] hover:text-rose-400 p-0.5 rounded transition-colors"
+                  className="text-slate-400 hover:text-rose-400 p-0.5 rounded transition-colors cursor-pointer"
                   title={`${color} eltávolítása`}
                 >
                   <X className="w-3 h-3" />
@@ -134,12 +139,12 @@ export default function DynamicColorPaletteCard({
           value={newColorInput}
           onChange={(e) => setNewColorInput(e.target.value)}
           placeholder="Egyedi szín hozzáadása (pl. Konyakbarna, Olívazöld, Bordó...)"
-          className="custom-input text-xs sm:text-sm flex-1"
+          className="flex-1 bg-[#0d121c] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
         />
         <button
           type="submit"
           disabled={!newColorInput.trim()}
-          className="btn-gold px-4 text-xs sm:text-sm flex items-center gap-1.5 shrink-0 shadow"
+          className="bg-slate-200 hover:bg-white text-slate-950 font-bold px-4 text-xs sm:text-sm rounded-xl flex items-center gap-1.5 shrink-0 shadow transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
           <span>Hozzáadás</span>
@@ -148,16 +153,16 @@ export default function DynamicColorPaletteCard({
 
       {/* Wardrobe Color Frequency (Auto-Learning Insight) */}
       {wardrobe.length >= 3 && wardrobeColors.length > 0 && (
-        <div className="space-y-2.5 pt-3 border-t border-white/5">
+        <div className="space-y-2.5 pt-3 border-t border-slate-800">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-            <span className="text-[11px] font-semibold text-[var(--accent-gold)] uppercase tracking-wider block">
+            <span className="text-[11px] font-semibold text-amber-300 uppercase tracking-wider block">
               Gardrób Színkészlet (A Ruhatárad Valós Megoszlása):
             </span>
-            <span className="text-[10px] text-[var(--text-muted)]">
+            <span className="text-[10px] text-slate-400">
               {wardrobe.length} db ruha alapján számítva
             </span>
           </div>
-          <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+          <p className="text-[11px] text-slate-400 leading-relaxed">
             A meglévő ruháid valós színei automatikusan nem íródnak be a kedvencek közé, de az AI Stylist figyelembe veszi őket. Kattints a <strong>[+]</strong> gombra, ha egy meglévő színt hivatalos kedvencként is rögzíteni szeretnél:
           </p>
 
@@ -170,16 +175,20 @@ export default function DynamicColorPaletteCard({
                   type="button"
                   onClick={() => !isFavorite && handleAddColor(wc.name)}
                   disabled={isFavorite}
-                  className={`text-[11px] py-1 px-2.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+                  className={`text-[11px] py-1 px-2.5 rounded-xl border transition-all flex items-center gap-2 cursor-pointer ${
                     isFavorite
                       ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 cursor-default'
-                      : 'bg-white/5 border-white/10 text-[var(--text-secondary)] hover:border-[var(--border-gold)] hover:text-white'
+                      : 'bg-[#0d121c] border-slate-800 text-slate-300 hover:border-slate-600 hover:text-white'
                   }`}
                   title={isFavorite ? 'Már szerepel a palettádban' : `Kattints a(z) ${wc.name} palettához adásához`}
                 >
-                  {isFavorite ? <Check className="w-3 h-3 text-emerald-400" /> : <Plus className="w-3 h-3 text-[var(--accent-gold)]" />}
+                  <span 
+                    className="w-2.5 h-2.5 rounded-full shrink-0 border border-white/20" 
+                    style={{ backgroundColor: getColorHex(wc.name) }} 
+                  />
+                  {isFavorite ? <Check className="w-3 h-3 text-emerald-400" /> : <Plus className="w-3 h-3 text-amber-400" />}
                   <span>{wc.name}</span>
-                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/40 text-[var(--text-muted)]">
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-black/50 text-slate-400">
                     {wc.count} db
                   </span>
                 </button>
@@ -190,10 +199,10 @@ export default function DynamicColorPaletteCard({
       )}
 
       {/* Auto-learning Info Notice */}
-      <div className="p-3 rounded-xl bg-[var(--accent-gold-glow)]/40 border border-[var(--border-gold)]/40 text-[11px] text-[var(--accent-gold-light)] flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
+      <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-200/90 flex items-center gap-2">
+        <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
         <span>
-          <strong>Harmonikus Kapszula Elv:</strong> Az AI Wardrobe Assistant az arcbőrödhöz illő színtípus bázisszíneket és a fenti egyéni kedvenceidet összehangolva építi fel az önazonos szetteket.
+          <strong>Harmonikus Stíluselv:</strong> Az AI Wardrobe Assistant az arcbőrödhöz illő színtípus bázisszíneket és a fenti egyéni kedvenceidet összehangolva építi fel az önazonos szetteket.
         </span>
       </div>
 

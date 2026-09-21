@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Sparkles, User, ThermometerSnowflake, Sun, Scale, Calendar, CheckCircle2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Check, Sparkles, User, ThermometerSnowflake, Sun, Scale, Calendar } from 'lucide-react';
 import { getProfileDemographics } from '../../../services/demographics';
 
 const ALL_STYLE_ARCHETYPES = [
@@ -56,37 +57,42 @@ export default function ProfileEditModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 pt-4 sm:pt-6 bg-black/80 backdrop-blur-md overflow-y-auto overscroll-contain animate-fade-in">
+  return createPortal(
+    <div 
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+    >
       <form 
         onSubmit={handleSubmit}
-        className="relative w-full max-w-2xl bg-[#12161f] border border-[var(--border-gold)] rounded-2xl shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] sm:max-h-[88vh] overflow-hidden animate-scale-up"
+        className="relative w-full max-w-xl bg-[#0a0e17] border border-slate-800 rounded-3xl shadow-2xl flex flex-col my-auto max-h-[85vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="shrink-0 p-4 sm:p-5 border-b border-white/10 bg-[#12161f] flex items-center justify-between">
+        <div className="shrink-0 p-4 sm:p-5 border-b border-slate-800 bg-[#0a0e17] flex items-center justify-between">
           <div>
-            <span className="badge badge-gold text-[10px]">Profil Beállítások</span>
-            <h3 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
+            <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+              Profil Beállítások
+            </span>
+            <h3 className="text-lg sm:text-xl font-serif font-bold text-white mt-1">
               Személyes Adottságok & Stílus Módosítása
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white bg-[#0d121c] border border-slate-800 transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
-        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 text-xs sm:text-sm">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4 text-xs sm:text-sm scrollbar-thin">
           
           {/* Row 1: Name & Gender */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
-              <label htmlFor="modal-profile-name" className="block text-xs text-[var(--text-secondary)] mb-1 font-medium">
+              <label htmlFor="modal-profile-name" className="block text-xs text-slate-300 mb-1 font-medium">
                 Név / Megszólítás:
               </label>
               <input
@@ -95,16 +101,16 @@ export default function ProfileEditModal({
                 name="profileName"
                 value={formData.name || ''}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="custom-input text-xs sm:text-sm"
+                className="w-full bg-[#0d121c] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
                 placeholder="pl. Attila"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-[var(--text-secondary)] mb-1 font-medium">
+              <label className="block text-xs text-slate-300 mb-1 font-medium">
                 Nem:
               </label>
-              <div className="grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-2 gap-1.5">
                 {['Férfi', 'Női'].map(g => {
                   const isSel = (formData.gender || 'Férfi') === g;
                   return (
@@ -112,10 +118,10 @@ export default function ProfileEditModal({
                       key={g}
                       type="button"
                       onClick={() => setFormData({ ...formData, gender: g })}
-                      className={`py-2 px-1 text-center rounded-xl text-xs font-semibold border transition-all ${
+                      className={`py-2 px-1 text-center rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                         isSel
-                          ? 'bg-[var(--accent-gold)] text-black border-[var(--accent-gold)] shadow'
-                          : 'bg-white/5 text-[var(--text-secondary)] border-white/10 hover:bg-white/10 hover:text-white'
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                          : 'bg-[#0d121c] text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white'
                       }`}
                     >
                       {g === 'Férfi' ? '👔 Férfi' : '👗 Női'}
@@ -129,14 +135,14 @@ export default function ProfileEditModal({
           {/* Row 2: Birth Year & Measurements */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label htmlFor="modal-profile-birthyear" className="block text-xs text-[var(--text-secondary)] mb-1 font-medium flex items-center justify-between">
+              <label htmlFor="modal-profile-birthyear" className="block text-xs text-slate-300 mb-1 font-medium flex items-center justify-between">
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3 text-[var(--accent-gold)]" />
+                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
                   <span>Születési év:</span>
                 </span>
                 {demographics && (
                   <span className="text-[10px] text-emerald-400 font-bold">
-                    {demographics.age} éves ({demographics.bracketDescription.split(' (')[0]})
+                    {demographics.age} éves
                   </span>
                 )}
               </label>
@@ -148,13 +154,13 @@ export default function ProfileEditModal({
                 max={new Date().getFullYear()}
                 value={formData.birthYear || ''}
                 onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
-                className="custom-input text-xs sm:text-sm font-mono"
-                placeholder="pl. 1995 vagy 2018"
+                className="w-full bg-[#0d121c] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+                placeholder="pl. 1995"
               />
             </div>
 
             <div>
-              <label htmlFor="modal-profile-height" className="block text-xs text-[var(--text-secondary)] mb-1 font-medium">
+              <label htmlFor="modal-profile-height" className="block text-xs text-slate-300 mb-1 font-medium">
                 Magasság:
               </label>
               <input
@@ -163,14 +169,14 @@ export default function ProfileEditModal({
                 name="profileHeight"
                 value={formData.height || ''}
                 onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                className="custom-input text-xs sm:text-sm"
+                className="w-full bg-[#0d121c] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
                 placeholder="pl. 182 cm"
               />
             </div>
 
             <div>
-              <label htmlFor="modal-profile-weight" className="block text-xs text-[var(--text-secondary)] mb-1 font-medium">
-                Testsúly (kg):
+              <label htmlFor="modal-profile-weight" className="block text-xs text-slate-300 mb-1 font-medium">
+                Testsúly:
               </label>
               <input
                 type="text"
@@ -181,7 +187,7 @@ export default function ProfileEditModal({
                   const val = e.target.value.replace(/[^0-9]/g, '');
                   setFormData({ ...formData, weight: val ? `${val} kg` : '' });
                 }}
-                className="custom-input text-xs sm:text-sm"
+                className="w-full bg-[#0d121c] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
                 placeholder="pl. 78 kg"
               />
             </div>
@@ -189,7 +195,7 @@ export default function ProfileEditModal({
 
           {/* Row 3: Body Type Presets & Custom Input */}
           <div className="space-y-1.5">
-            <label className="block text-xs text-[var(--text-secondary)] font-medium">
+            <label className="block text-xs text-slate-300 font-medium">
               Testalkat & Sziluett:
             </label>
             <div className="flex flex-wrap gap-1.5 mb-1.5">
@@ -200,10 +206,10 @@ export default function ProfileEditModal({
                     key={preset}
                     type="button"
                     onClick={() => setFormData({ ...formData, bodyType: preset })}
-                    className={`py-1 px-2.5 rounded-lg text-xs font-medium border transition-all ${
+                    className={`py-1 px-2.5 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
                       isSel
-                        ? 'bg-[var(--accent-gold)]/20 text-[var(--accent-gold-light)] border-[var(--border-gold)] font-bold'
-                        : 'bg-white/5 text-[var(--text-secondary)] border-white/5 hover:bg-white/10'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold'
+                        : 'bg-[#0d121c] text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white'
                     }`}
                   >
                     {preset}
@@ -217,33 +223,17 @@ export default function ProfileEditModal({
               name="profileBodyType"
               value={formData.bodyType || ''}
               onChange={(e) => setFormData({ ...formData, bodyType: e.target.value })}
-              className="custom-input text-xs sm:text-sm"
+              className="w-full bg-[#0d121c] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
               placeholder="Vagy írd be egyedileg: pl. Atlétikus, széles vállak, vékony derék"
             />
           </div>
 
-          {/* Row 4: Skin Tone & Color Season string */}
-          <div>
-            <label htmlFor="modal-profile-skintone" className="block text-xs text-[var(--text-secondary)] mb-1 font-medium">
-              Bőrtónus & Színtípus megnevezése:
-            </label>
-            <input
-              type="text"
-              id="modal-profile-skintone"
-              name="profileSkinTone"
-              value={formData.skinTone || ''}
-              onChange={(e) => setFormData({ ...formData, skinTone: e.target.value })}
-              className="custom-input text-xs sm:text-sm"
-              placeholder="pl. Meleg Ősz / Tavasz paletta"
-            />
-          </div>
-
-          {/* Row 5: Thermal Preference (Transferred from Settings) */}
-          <div className="space-y-1.5 p-3 rounded-xl bg-white/5 border border-white/10">
+          {/* Row 4: Thermal Preference */}
+          <div className="space-y-1.5 p-3 rounded-2xl bg-[#0d121c] border border-slate-800">
             <label className="block text-xs font-semibold text-white">
-              Hőtűrési Preferencia (AI Stylist Rétegezési Motor):
+              Hőtűrési Preferencia (AI Rétegezési Motor):
             </label>
-            <p className="text-[11px] text-[var(--text-muted)] mb-2">
+            <p className="text-[11px] text-slate-400 mb-2">
               Befolyásolja, hogy hűvösebb időben a Stylist milyen vastag és mennyi réteget javasoljon neked.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -258,7 +248,7 @@ export default function ProfileEditModal({
                   key: 'balanced', 
                   label: 'Kiegyensúlyozott', 
                   icon: <Scale className="w-4 h-4 text-emerald-300" />,
-                  desc: 'Kiegyensúlyozott rétegrend' 
+                  desc: 'Standard kiegyensúlyozott rétegrend' 
                 },
                 { 
                   key: 'warmSensitive', 
@@ -273,26 +263,26 @@ export default function ProfileEditModal({
                     key={opt.key}
                     type="button"
                     onClick={() => setFormData({ ...formData, thermalPreference: opt.key })}
-                    className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-1 ${
+                    className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-1 cursor-pointer ${
                       isSel
-                        ? 'bg-[var(--accent-gold)]/20 border-[var(--border-gold)] text-white shadow'
-                        : 'bg-black/30 border-white/5 text-[var(--text-secondary)] hover:bg-white/5'
+                        ? 'bg-amber-500/20 border-amber-500/40 text-white shadow'
+                        : 'bg-[#070a12] border-slate-800 text-slate-400 hover:bg-[#090d15] hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 font-bold text-xs">
                       {opt.icon}
-                      <span className={isSel ? 'text-[var(--accent-gold-light)]' : 'text-white'}>{opt.label}</span>
+                      <span className={isSel ? 'text-amber-300' : 'text-white'}>{opt.label}</span>
                     </div>
-                    <span className="text-[10px] text-[var(--text-muted)] leading-tight">{opt.desc}</span>
+                    <span className="text-[10px] text-slate-400 leading-tight">{opt.desc}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Row 6: Style Archetypes selector */}
+          {/* Row 5: Style Archetypes selector */}
           <div className="space-y-1.5">
-            <label className="block text-xs text-[var(--text-secondary)] font-medium">
+            <label className="block text-xs text-slate-300 font-medium">
               Preferált Stílusirányzatok:
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -303,10 +293,10 @@ export default function ProfileEditModal({
                     key={s}
                     type="button"
                     onClick={() => handleStyleToggle(s)}
-                    className={`py-1.5 px-3 rounded-xl text-xs font-medium border transition-all ${
+                    className={`py-1.5 px-3 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[var(--accent-gold)] text-black font-bold border-[var(--accent-gold)] shadow'
-                        : 'bg-white/5 text-[var(--text-secondary)] border-white/5 hover:bg-white/10 hover:text-white'
+                        ? 'bg-amber-500/20 text-amber-300 font-bold border-amber-500/40 shadow-sm'
+                        : 'bg-[#0d121c] text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white'
                     }`}
                   >
                     ✦ {s}
@@ -316,9 +306,9 @@ export default function ProfileEditModal({
             </div>
           </div>
 
-          {/* Row 7: Style Philosophy */}
+          {/* Row 6: Style Philosophy */}
           <div>
-            <label htmlFor="modal-profile-philosophy" className="block text-xs text-[var(--text-secondary)] mb-1 font-medium">
+            <label htmlFor="modal-profile-philosophy" className="block text-xs text-slate-300 mb-1 font-medium">
               Stílusfilozófia & Szabási preferenciák:
             </label>
             <textarea
@@ -327,24 +317,24 @@ export default function ProfileEditModal({
               rows={3}
               value={formData.stylePhilosophy || ''}
               onChange={(e) => setFormData({ ...formData, stylePhilosophy: e.target.value })}
-              className="custom-input text-xs sm:text-sm"
-              placeholder="pl. Időtlen, letisztult kapszula ruhatár minőségi alapdarabokkal, slim szabással."
+              className="w-full bg-[#0d121c] border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+              placeholder="pl. Időtlen, letisztult ruhatár minőségi alapdarabokkal, slim szabással."
             />
           </div>
         </div>
 
         {/* Sticky Actions Footer */}
-        <div className="shrink-0 p-4 sm:p-5 border-t border-white/10 bg-[#12161f] flex items-center justify-end gap-2">
+        <div className="shrink-0 p-4 sm:p-5 border-t border-slate-800 bg-[#0a0e17] flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="btn-secondary py-2 px-4 text-xs"
+            className="bg-[#0d121c] hover:bg-slate-800 text-slate-300 border border-slate-700 py-2 px-4 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
           >
             Mégse
           </button>
           <button
             type="submit"
-            className="btn-gold py-2 px-5 text-xs flex items-center gap-1.5 shadow"
+            className="bg-slate-200 hover:bg-white text-slate-950 font-bold py-2 px-5 text-xs rounded-xl flex items-center gap-1.5 shadow transition-colors cursor-pointer"
           >
             <Check className="w-4 h-4" />
             <span>Módosítások Mentése</span>
@@ -352,6 +342,7 @@ export default function ProfileEditModal({
         </div>
 
       </form>
-    </div>
+    </div>,
+    document.body
   );
 }
