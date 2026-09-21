@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus, Heart, HelpCircle, Clipboard } from 'lucide-react';
+import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus, Heart, HelpCircle, Clipboard, Info } from 'lucide-react';
 import { analyzeClothingImage } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { ensureBase64Image, getSmartGarmentImage } from '../../services/imageOptimizer';
 import { processGarmentPackshot } from '../../services/backgroundRemoval';
 import { uploadGarmentImage } from '../../services/firebase';
 import ColorPalettePicker from '../common/ColorPalettePicker';
+import ModuleFirstTimeGuide from '../common/ModuleFirstTimeGuide';
 import { useAuth } from '../../context/AuthContext';
 import { getProfileDemographics, getDemographicTags, getDemographicArchetypes } from '../../services/demographics';
 
@@ -71,6 +72,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
   const [isFormReady, setIsFormReady] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
   const [customTagInput, setCustomTagInput] = useState('');
+  const [showGuide, setShowGuide] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -614,41 +616,51 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               Új Ruhadarab Rögzítése
             </h3>
           </div>
-          <button 
-            type="button"
-            onClick={handleClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white bg-[#0d121c] border border-slate-800 transition-colors cursor-pointer"
-            title="Bezárás"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowGuide(prev => !prev)}
+              className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
+                showGuide
+                  ? 'bg-slate-200 text-slate-900 border-white'
+                  : 'bg-[#0d121c] text-slate-400 hover:text-white border-slate-800'
+              }`}
+              title="Információ és tanácsok"
+              aria-label="Információ"
+            >
+              <Info className="w-4 h-4" />
+            </button>
+            <button 
+              type="button"
+              onClick={handleClose}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-white bg-[#0d121c] border border-slate-800 transition-colors cursor-pointer"
+              title="Bezárás"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Input Method Selector / Form */}
         {!isFormReady ? (
           <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-4">
             
-            {/* Helpful Onboarding & Best Practices Tip Card */}
-            <div className="p-3.5 rounded-2xl bg-[#0f1420]/70 border border-slate-800 text-xs space-y-2">
-              <div className="flex items-center gap-2 text-slate-200 font-bold font-serif text-xs">
-                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                <span>Tanácsok a ruhatárépítéshez:</span>
-              </div>
-              <ul className="space-y-1.5 pl-1 text-[11px] text-slate-300 leading-relaxed">
-                <li className="flex items-start gap-1.5">
-                  <span className="text-sky-400 font-bold shrink-0">🍂 1.</span>
-                  <span><strong>Szezonális prioritás:</strong> Először az <em>aktuális évszakban hordott ruháidat</em> töltsd fel az azonnali szettkészítéshez.</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-emerald-400 font-bold shrink-0">📏 2.</span>
-                  <span><strong>Tökéletesen passzoló darabok:</strong> Csak olyan ruhát rögzíts, ami most is kényelmes és jó méretű.</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="text-amber-400 font-bold shrink-0">✨ 3.</span>
-                  <span><strong>Valós állapot:</strong> Ha a darab kopott, állítsd <em>Játszós</em> vagy <em>Lecserélendő</em> státuszra.</span>
-                </li>
-              </ul>
-            </div>
+            {/* First-time Guide (Auto-shown once, re-openable via Info button) */}
+            <ModuleFirstTimeGuide
+              moduleId="add_clothing"
+              title="Tanácsok az Új Ruhák Rögzítéséhez"
+              subtitle="Tudatos ruhatár-digitalizálás a tökéletes szettekhez"
+              badgeText="Útmutató & Tippek"
+              description="A ruhatár digitalizálása a tudatos öltözködés alapköve. Néhány javaslat a legjobb eredmény eléréséhez:"
+              points={[
+                "1. Szezonális prioritás: Először az aktuális évszakban hordott darabjaidat töltsd fel az azonnali szettkészítéshez.",
+                "2. Tökéletesen passzoló darabok: Csak olyan ruhát rögzíts, ami most is kényelmes és jó méretű; a többit érdemes átgondolni.",
+                "3. Valós állapot megadása: Ha egy ruha javításra szorul vagy elhasználódott, jelöld 'Javításra vár' vagy 'Lecserélendő' státusszal.",
+                "4. Fotó, link vagy vágólap: Fotózd le a ruhát semleges háttér előtt, másold be vágólapról (Ctrl+V), vagy illeszd be a webshop linkjét/kódját."
+              ]}
+              forceOpen={showGuide}
+              onClose={() => setShowGuide(false)}
+            />
             
             {/* Source Tabs: Strictly 1 single row on all mobile and desktop screens, matching Buy or Skip */}
             <div className="grid grid-cols-4 gap-1 p-1 bg-[#090d15] rounded-2xl border border-slate-800">

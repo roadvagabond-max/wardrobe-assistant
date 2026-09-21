@@ -16,6 +16,25 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
   const [selectedSeason, setSelectedSeason] = useState('all');
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [openDropdown, setOpenDropdown] = useState(null); // 'category' | 'season' | 'condition' | null
+  const filterDropdownRef = useRef(null);
+
+  // Click-outside listener for filter popovers
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target)) {
+        setOpenDropdown(null);
+      }
+    }
+    if (openDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [openDropdown]);
 
   // View mode and header states matching Mix & Match & Buy or Skip
   const [wardrobeViewMode, setWardrobeViewMode] = useState('grid'); // 'grid' | 'cri'
@@ -43,7 +62,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
     }
 
     const topsCount = wardrobe.filter(w => w.category === 'tops' || (w.name || '').toLowerCase().includes('ing') || (w.name || '').toLowerCase().includes('póló')).length;
-    const bottomsCount = wardrobe.filter(w => w.category === 'bottoms' || (w.name || '').toLowerCase().includes('nadrág')).length;
+    const bottomsCount = wardrobe.filter(w => w.category === 'bottoms' || (w.name || '').toLowerCase().includes('nadrág') || (w.name || '').toLowerCase().includes('farmer')).length;
     const outerCount = wardrobe.filter(w => w.category === 'outerwear' || (w.name || '').toLowerCase().includes('zakó') || (w.name || '').toLowerCase().includes('kabát')).length;
     const shoesCount = wardrobe.filter(w => w.category === 'shoes' || (w.name || '').toLowerCase().includes('cipő') || (w.name || '').toLowerCase().includes('loafer')).length;
 
@@ -140,6 +159,7 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
     { id: 'all', label: 'Minden állapot' },
     { id: 'clean', label: '✨ Csak szép / megkímélt' },
     { id: 'casual', label: '🧸 Játszós / kopott' },
+    { id: 'repair', label: '🧵 Javításra vár' },
     { id: 'replace', label: '🗑️ Lecserélendő' }
   ];
 
@@ -152,9 +172,11 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
       if (selectedCondition === 'clean') {
         matchCondition = !item.condition || item.condition.includes('Vadonatúj') || item.condition.includes('Megkímélt');
       } else if (selectedCondition === 'casual') {
-        matchCondition = item.condition && item.condition.includes('Játszós');
+        matchCondition = Boolean(item.condition && item.condition.includes('Játszós'));
+      } else if (selectedCondition === 'repair') {
+        matchCondition = Boolean(item.condition && item.condition.includes('Javításra'));
       } else if (selectedCondition === 'replace') {
-        matchCondition = item.condition && (item.condition.includes('Lecserélendő') || item.condition.includes('Javításra'));
+        matchCondition = Boolean(item.condition && item.condition.includes('Lecserélendő'));
       }
 
       if (searchQuery.trim()) {
@@ -403,10 +425,12 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. FILTER & SEARCH BAR (DARK SLEEK STYLE) */}
+      {/* 4. FILTER & SEARCH BAR (POPOVER DROPDOWNS - ZERO HORIZONTAL SCROLL) */}
       {/* ========================================================================= */}
-      <div className="p-3 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-3 shadow-2xl">
-        
+      <div 
+        ref={filterDropdownRef}
+        className="p-3 sm:p-4 rounded-3xl bg-[#0a0e17] border border-slate-800 space-y-3 shadow-2xl relative z-20"
+      >
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -430,70 +454,189 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
           )}
         </div>
 
-        {/* Category Pills: 1-row sleek scrollable bar */}
-        <div className="flex gap-1.5 p-1 bg-[#090d15] rounded-2xl border border-slate-800 overflow-x-auto scrollbar-thin">
-          {categories.map(cat => {
-            const isActive = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-slate-200 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {cat.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Sub-Filters: Season & Condition */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800/80 text-xs">
+        {/* 3 Dropdown Chips in a single clean row + Reset button */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           
-          {/* Season Selector */}
-          <div className="flex items-center gap-1.5 overflow-x-auto">
-            <span className="text-slate-500 text-[11px] whitespace-nowrap mr-1">Évszak:</span>
-            {seasons.map(s => {
-              const isActive = selectedSeason === s.id;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => setSelectedSeason(s.id)}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors whitespace-nowrap cursor-pointer ${
-                    isActive
-                      ? 'bg-slate-700 text-white font-semibold'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
+          {/* 1. Category Dropdown Chip */}
+          <div className="relative flex-1 min-w-[120px]">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(prev => prev === 'category' ? null : 'category')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                selectedCategory !== 'all'
+                  ? 'bg-slate-200 text-slate-950 border-slate-200 shadow-sm font-bold'
+                  : 'bg-[#090d15] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[11px] opacity-70">Kategória:</span>
+                <span className="truncate">
+                  {selectedCategory === 'all' 
+                    ? 'Mind' 
+                    : (categories.find(c => c.id === selectedCategory)?.label || 'Kategória').replace(/^[^\s]+\s/, '')}
+                </span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ml-1 transition-transform ${openDropdown === 'category' ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Category Dropdown Popover */}
+            {openDropdown === 'category' && (
+              <div className="absolute left-0 top-full mt-1.5 w-60 max-h-72 overflow-y-auto rounded-2xl bg-[#0d121c] border border-slate-700 shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800">
+                  Válassz kategóriát
+                </div>
+                {categories.map(cat => {
+                  const isSelected = selectedCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(cat.id);
+                        setOpenDropdown(null);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-slate-800 text-white font-bold'
+                          : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                      }`}
+                    >
+                      <span>{cat.label}</span>
+                      {isSelected && <span className="text-emerald-400 text-xs">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Condition Selector */}
-          <div className="flex items-center gap-1.5 overflow-x-auto">
-            <span className="text-slate-500 text-[11px] whitespace-nowrap mr-1">Állapot:</span>
-            {conditions.map(c => {
-              const isActive = selectedCondition === c.id;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCondition(c.id)}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors whitespace-nowrap cursor-pointer ${
-                    isActive
-                      ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/40'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {c.label}
-                </button>
-              );
-            })}
+          {/* 2. Season Dropdown Chip */}
+          <div className="relative flex-1 min-w-[110px]">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(prev => prev === 'season' ? null : 'season')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                selectedSeason !== 'all'
+                  ? 'bg-slate-200 text-slate-950 border-slate-200 shadow-sm font-bold'
+                  : 'bg-[#090d15] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[11px] opacity-70">Évszak:</span>
+                <span className="truncate">
+                  {selectedSeason === 'all' 
+                    ? 'Mind' 
+                    : (seasons.find(s => s.id === selectedSeason)?.label || 'Évszak').replace(/^[^\s]+\s/, '')}
+                </span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ml-1 transition-transform ${openDropdown === 'season' ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Season Dropdown Popover */}
+            {openDropdown === 'season' && (
+              <div className="absolute left-0 top-full mt-1.5 w-48 rounded-2xl bg-[#0d121c] border border-slate-700 shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800">
+                  Válassz évszakot
+                </div>
+                {seasons.map(s => {
+                  const isSelected = selectedSeason === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSeason(s.id);
+                        setOpenDropdown(null);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-slate-800 text-white font-bold'
+                          : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                      }`}
+                    >
+                      <span>{s.label}</span>
+                      {isSelected && <span className="text-emerald-400 text-xs">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
+
+          {/* 3. Condition Dropdown Chip */}
+          <div className="relative flex-1 min-w-[110px]">
+            <button
+              type="button"
+              onClick={() => setOpenDropdown(prev => prev === 'condition' ? null : 'condition')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                selectedCondition !== 'all'
+                  ? selectedCondition === 'repair'
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-sm font-bold'
+                    : selectedCondition === 'replace'
+                    ? 'bg-rose-500 text-white border-rose-400 shadow-sm font-bold'
+                    : 'bg-slate-200 text-slate-950 border-slate-200 shadow-sm font-bold'
+                  : 'bg-[#090d15] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[11px] opacity-70">Állapot:</span>
+                <span className="truncate">
+                  {selectedCondition === 'all' 
+                    ? 'Mind' 
+                    : (conditions.find(c => c.id === selectedCondition)?.label || 'Állapot').replace(/^[^\s]+\s/, '')}
+                </span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 shrink-0 ml-1 transition-transform ${openDropdown === 'condition' ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Condition Dropdown Popover */}
+            {openDropdown === 'condition' && (
+              <div className="absolute right-0 sm:left-0 top-full mt-1.5 w-56 rounded-2xl bg-[#0d121c] border border-slate-700 shadow-2xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800">
+                  Válassz állapotot
+                </div>
+                {conditions.map(c => {
+                  const isSelected = selectedCondition === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCondition(c.id);
+                        setOpenDropdown(null);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-slate-800 text-white font-bold'
+                          : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
+                      }`}
+                    >
+                      <span className={c.id === 'repair' ? 'text-amber-300' : c.id === 'replace' ? 'text-rose-300' : ''}>{c.label}</span>
+                      {isSelected && <span className="text-emerald-400 text-xs">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Reset Filters Button if any active */}
+          {(selectedCategory !== 'all' || selectedSeason !== 'all' || selectedCondition !== 'all' || searchQuery.trim().length > 0) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCategory('all');
+                setSelectedSeason('all');
+                setSelectedCondition('all');
+                setSearchQuery('');
+                setOpenDropdown(null);
+              }}
+              className="px-2.5 py-2 rounded-xl text-xs text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-800 border border-slate-700/60 transition-colors whitespace-nowrap cursor-pointer shrink-0"
+              title="Minden szűrő visszaállítása"
+            >
+              Szűrők törlése
+            </button>
+          )}
 
         </div>
 
@@ -544,13 +687,15 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
                     <span className={`absolute bottom-1.5 right-1.5 font-bold px-1.5 py-0.5 rounded shadow ${
                       profile?.displayCompactCards ? 'text-[8px]' : 'text-[9px]'
                     } ${
-                      item.condition.includes('Lecserélendő')
+                      item.condition.includes('Javításra')
+                        ? 'bg-amber-600/90 text-white border border-amber-400/40'
+                        : item.condition.includes('Lecserélendő')
                         ? 'bg-rose-500/80 text-white'
                         : item.condition.includes('Játszós')
                         ? 'bg-amber-500/80 text-black'
                         : 'bg-black/70 text-emerald-300'
                     }`}>
-                      {item.condition.split('/')[0].trim()}
+                      {item.condition.includes('Javításra') ? '🧵 Javításra vár' : item.condition.split('/')[0].trim()}
                     </span>
                   )}
                 </div>
