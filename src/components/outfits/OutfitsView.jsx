@@ -317,7 +317,8 @@ export default function OutfitsView({ weather, setWeather, initialAnchorItem = n
         weather: weather || { temperature: 21, condition: 'Kellemes' },
         wardrobe,
         styleProfile: profile,
-        anchorItemIds: anchorItems.map(a => a.id)
+        anchorItemIds: anchorItems.map(a => a.id),
+        count: 1
       });
 
       if (newOutfits && newOutfits.length > 0) {
