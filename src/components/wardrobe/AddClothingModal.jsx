@@ -853,7 +853,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             
             {/* 1. Proportional Image Preview with Packshot Toggle */}
             <div className="space-y-2">
-              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/10 p-4 flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}>
+              <div className="relative aspect-square sm:aspect-[4/3] max-h-[360px] sm:max-h-[420px] w-full rounded-2xl overflow-hidden border border-white/10 p-1.5 flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}>
                 {imagePreview ? (
                   <>
                     {/* View Mode Toggle: Packshot vs Eredeti fotó */}
@@ -916,7 +916,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
                           return remaining;
                         });
                       }}
-                      className="max-h-full max-w-full object-contain rounded-xl shadow-lg transition-all" 
+                      className="w-full h-full object-contain rounded-xl shadow-lg transition-all" 
                     />
                     <div className="absolute bottom-3 right-3 flex items-center gap-2">
                       <button

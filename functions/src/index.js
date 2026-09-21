@@ -358,8 +358,7 @@ export const removeGarmentBackground = onCall(
       trimmedWebp = await sharp(processedBuffer)
         .ensureAlpha()
         .trim({ threshold: 25 })
-        .resize(880, 880, { fit: "inside", withoutEnlargement: true })
-        .extend({ top: 60, bottom: 60, left: 60, right: 60, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .resize(920, 920, { fit: "inside", withoutEnlargement: false })
         .resize(1000, 1000, { fit: "contain", position: "centre", background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .webp({ quality: 90 })
         .toBuffer();

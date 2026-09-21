@@ -186,21 +186,18 @@ export async function cleanUpMaskAndCrop(pngWithAlphaBuffer, garmentBox = null) 
     }
   }
 
-  // 4. Autocrop empty borders, then place the garment centered on a 1000×1000 transparent canvas.
-  // fit:'contain' with transparent background + gravity:'center' guarantees:
-  //   - The longest dimension fills at most 880px (leaving ~60px breathing room per side)
-  //   - Perfectly square, symmetrically padded, professional studio-packshot output
+  // 4. Autocrop empty borders, then upscale/downscale the garment to fill 92% of a 1000×1000 canvas.
+  // fit:'inside' with withoutEnlargement:false ensures small photos (taken from a distance)
+  // are cleanly scaled up to 920px.
+  // fit:'contain' with transparent background + position:'centre' places it squarely in the middle
+  // with an elegant 40px (4%) breathing border on the longest side.
   return await sharp(data, {
     raw: { width: W, height: H, channels: 4 }
   })
     .trim({ threshold: 25 })
-    .resize(880, 880, {
+    .resize(920, 920, {
       fit: "inside",
-      withoutEnlargement: true
-    })
-    .extend({
-      top: 60, bottom: 60, left: 60, right: 60,
-      background: { r: 0, g: 0, b: 0, alpha: 0 }
+      withoutEnlargement: false
     })
     .resize(1000, 1000, {
       fit: "contain",
