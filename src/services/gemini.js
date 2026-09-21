@@ -199,7 +199,15 @@ SZABÁLYOK:
 SZIGORÚ ZERO-MÉRET HALLUCINÁCIÓS SZABÁLY:
 SOHA NE TIPPELJ ÉS NE TALÁLJ KI MÉRETET! KIZÁRÓLAG akkor adj meg méretet (pl. 'M', 'L', '40', '32/32'), ha a fotón szereplő címkén OLVASHATÓAN látszik a méretjelölés, VAGY ha a webshop bemenet ezt konkrétan megadja! Ha a fotón csak maga a ruha látható címke nélkül, a "size" KÖTELEZŐEN üres string: ""!
 
-VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
+UNIVERZÁLIS RUHADARAB BOUNDING BOX SZABÁLY (garmentBox mező):
+HA A FOTÓN AZ ADOTT RUHADARAB EGY EMBEREN VAN VISELVE (pl. farmer nadrág emberen, ing emberen, zakó emberen, cipő lábon):
+- Határozd meg a CÉLRUHADARAB pontos határait a képen 0-tól 1-ig terjedő relatív koordinátákkal (bal-felső saroktól mérve).
+- Például nadrágon: ymin=a derékzóna felső határa, ymax=a nadrágszár aljának határa (NEM a zokni/cipő aljáig!), xmin/xmax=a nadrágszárak külső szélei.
+- Például felsőnél (ing/póló/pulóver): ymin=a gallér/váll vonala, ymax=az aljzóna (de NEM az alatta lévő nadrág területére), xmin/xmax=az ujjak külső szélei.
+- Például cipőnél: ymin/ymax/xmin/xmax=kizárólag a cipő körvonalát tartalmazza, nem a nadrágszárat.
+- Ha a ruha NINCS emberen (pl. asztalon fekve, fogason lóg, webshop termékfotó), állítsd: "garmentBox": null.
+- HA BIZONYTALAN VAGY, inkább adj meg egy szélesebb határt, mint hogy levágj a ruhadarabból!
+
 {
   "name": "Pontos és elegáns magyar megnevezés a gallér- és ujjhosszal (pl. 'Navy Kék Állógalléros Len Ing' vagy 'Homokbézs Pamut Kereknyakú Gyerekpulóver')",
   "category": "outerwear" | "knitwear" | "tops" | "bottoms" | "shoes" | "dresses" | "skirts" | "accessories",
@@ -221,14 +229,10 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
   "stylingAdvice": "Karakteres, kényelmes és praktikus darab.",
   "personalMatchScore": 95,
   "imageUrl": "Ha a Google Keresési találatokban találsz közvetlen termékfotó URL-t, add meg, különben hagyd üresen",
-  "tags": ["alapdarab", "pamut", "kényelmes"]
-}al",
-  "bodyFitAdvice": "Hogyan áll a szabás a felhasználó testalkatán és életkorában",
-  "stylingAdvice": "Karakteres, kényelmes és praktikus darab.",
-  "personalMatchScore": 95,
-  "imageUrl": "Ha a Google Keresési találatokban találsz közvetlen termékfotó URL-t, add meg, különben hagyd üresen",
+  "garmentBox": { "ymin": 0.05, "xmin": 0.10, "ymax": 0.92, "xmax": 0.90 },
   "tags": ["alapdarab", "pamut", "kényelmes"]
 }`;
+
 
       const parts = [{ text: prompt }];
 

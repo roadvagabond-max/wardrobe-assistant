@@ -1,129 +1,211 @@
 /**
- * 🎩 Sartorial Wardrobe Assistant — Image Processing & BiRefNet Neural Packshot Service
+ * 🎩 Sartorial Wardrobe Assistant — Image Processing & RMBG-1.4 SOTA Neural Packshot Service
  * 
- * 1. SOTA Neural Segmentation with BiRefNet (ZhengPeng7/BiRefNet) on Hugging Face Inference API
- * 2. Alpha Thresholding & Hardening: Solidifies fabric folds/shadows, preventing dark background burn-through
- * 3. Sharp Autocrop (trim empty borders) & High-Resolution WebP Generation (1000x1000 @ 90 quality)
+ * 1. SOTA Neural Segmentation with briaai/RMBG-1.4 running locally via Transformers.js (ONNX)
+ * 2. Shared Promise Singleton: Eliminates concurrent download race conditions between warm-up & uploads
+ * 3. Alpha Thresholding & Hardening: Solidifies fabric folds/shadows, preventing dark background burn-through
+ * 4. Sharp Autocrop (trim empty borders) & High-Resolution WebP Generation (1000x1000 @ 90 quality)
  */
 
 import sharp from "sharp";
 
-const BIREFNET_MODEL = "ZhengPeng7/BiRefNet";
-const HF_ROUTER_URL = `https://router.huggingface.co/hf-inference/models/${BIREFNET_MODEL}`;
-const HF_FALLBACK_URL = `https://api-inference.huggingface.co/models/${BIREFNET_MODEL}`;
+let pipelinePromise = null;
 
 /**
- * Executes neural background removal via BiRefNet on Hugging Face Inference API
+ * Singleton pipeline loader with a shared promise to prevent race conditions or duplicate memory usage.
+ */
+export async function getSegmenterPipeline() {
+  if (!pipelinePromise) {
+    pipelinePromise = (async () => {
+      console.log("🚀 [RMBG-1.4] Inicializálás megkezdése a Cloud Functions környezetben...");
+      const { pipeline, env } = await import("@huggingface/transformers");
+
+      // Ensure writeable cache dir on Linux Cloud Functions container
+      env.cacheDir = process.env.TRANSFORMERS_CACHE || "/tmp/.transformers_cache";
+      env.allowLocalModels = true;
+
+      const segmenter = await pipeline("image-segmentation", "briaai/RMBG-1.4");
+      console.log("✅ [RMBG-1.4] Modell sikeresen betöltve a memóriába.");
+      return segmenter;
+    })().catch((err) => {
+      console.error("❌ [RMBG-1.4] Pipeline betöltési hiba:", err.message);
+      pipelinePromise = null; // Reset so subsequent requests can retry
+      throw err;
+    });
+  }
+  return pipelinePromise;
+}
+
+/**
+ * Pre-downloads and warms up the RMBG-1.4 model into container memory.
+ */
+export async function warmUpRMBGModel() {
+  console.log("🔥 [RMBG-1.4] Előmelegítés (warm-up) hívás érkezett...");
+  await getSegmenterPipeline();
+  return { ready: true, model: "briaai/RMBG-1.4" };
+}
+
+/**
+ * Executes neural background removal via briaai/RMBG-1.4 on local Node.js ONNX
  * 
  * @param {Buffer} inputBuffer - Raw binary image buffer (JPEG/PNG/WebP, 1024px)
- * @param {string} hfToken - Hugging Face API Token from Google Cloud Secret Manager
  * @returns {Promise<Buffer>} - PNG buffer with transparent background (RGBA)
  */
-export async function removeBackgroundWithBiRefNet(inputBuffer, hfToken) {
+export async function removeBackgroundWithRMBG(inputBuffer) {
   if (!inputBuffer || !Buffer.isBuffer(inputBuffer)) {
     throw new Error("Érvénytelen képpuffer az AI szegmentáláshoz.");
   }
 
-  const endpoints = [HF_ROUTER_URL, HF_FALLBACK_URL];
-  let lastError = null;
+  const segmenter = await getSegmenterPipeline();
+  const { RawImage } = await import("@huggingface/transformers");
 
-  for (const endpoint of endpoints) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const inputBlob = new Blob([inputBuffer], { type: "image/jpeg" });
+  const rawInput = await RawImage.fromBlob(inputBlob);
 
-    try {
-      const headers = {
-        "Content-Type": "image/jpeg",
-        "x-wait-for-model": "true"
-      };
+  const output = await segmenter(rawInput);
 
-      if (hfToken && typeof hfToken === "string" && hfToken.trim().length > 0) {
-        headers["Authorization"] = `Bearer ${hfToken.trim()}`;
-      }
+  let maskData = null;
+  let maskWidth = 0;
+  let maskHeight = 0;
+  let rgbaBuffer = null;
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers,
-        body: inputBuffer,
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer();
-        const pngBuffer = Buffer.from(arrayBuffer);
-        
-        if (pngBuffer.length < 100) {
-          throw new Error("A BiRefNet modell által visszaadott képadat túl rövid vagy üres.");
-        }
-
-        return pngBuffer;
-      }
-
-      const errorText = await response.text();
-      lastError = `HTTP ${response.status}: ${errorText.slice(0, 300)}`;
-
-      // If unauthorized or bad request on first endpoint, don't retry same failure
-      if (response.status === 401 || response.status === 403) {
-        throw new Error(`Hugging Face jogosultsági hiba (${response.status}). Kérlek ellenőrizd a HF_TOKEN kulcsot a Secret Managerben!`);
-      }
-    } catch (err) {
-      clearTimeout(timeoutId);
-      if (err.name === "AbortError") {
-        lastError = "A BiRefNet modell időtúllépést adott (45s).";
+  // Case 1: output is already a single RawImage
+  if (output && output.data && output.width && output.height) {
+    if (output.channels === 4) {
+      rgbaBuffer = await sharp(Buffer.from(output.data), {
+        raw: { width: output.width, height: output.height, channels: 4 }
+      }).png().toBuffer();
+    } else {
+      maskData = Buffer.from(output.data);
+      maskWidth = output.width;
+      maskHeight = output.height;
+    }
+  } 
+  // Case 2: output is an array of segments or masks (e.g. [{ mask: RawImage }])
+  else if (Array.isArray(output) && output.length > 0) {
+    const first = output[0];
+    const target = first.mask || first;
+    if (target && target.data && target.width && target.height) {
+      if (target.channels === 4) {
+        rgbaBuffer = await sharp(Buffer.from(target.data), {
+          raw: { width: target.width, height: target.height, channels: 4 }
+        }).png().toBuffer();
       } else {
-        lastError = err.message || String(err);
+        maskData = Buffer.from(target.data);
+        maskWidth = target.width;
+        maskHeight = target.height;
       }
     }
   }
 
-  throw new Error(`Nem sikerült a BiRefNet háttéreltávolítás: ${lastError || "Ismeretlen hiba"}`);
+  // If we extracted a grayscale mask (1 channel), combine it with the original RGB image
+  if (!rgbaBuffer && maskData && maskWidth > 0 && maskHeight > 0) {
+    const baseRgb = await sharp(inputBuffer)
+      .resize(maskWidth, maskHeight, { fit: "fill" })
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+
+    const combined = Buffer.alloc(maskWidth * maskHeight * 4);
+    for (let i = 0, j = 0; i < maskData.length; i++, j += 3) {
+      const p = i * 4;
+      combined[p] = baseRgb[j];         // R
+      combined[p + 1] = baseRgb[j + 1]; // G
+      combined[p + 2] = baseRgb[j + 2]; // B
+      combined[p + 3] = maskData[i];    // A
+    }
+
+    rgbaBuffer = await sharp(combined, {
+      raw: { width: maskWidth, height: maskHeight, channels: 4 }
+    }).png().toBuffer();
+  }
+
+  if (!rgbaBuffer) {
+    throw new Error("A szegmentáló modell nem adott vissza értelmezhető maszkot vagy képadatot.");
+  }
+
+  return rgbaBuffer;
 }
 
 /**
  * Cleans up the alpha channel to prevent crease/shadow transparency,
- * autocrops transparent margins, and exports high-quality 1000px WebP.
- * 
- * @param {Buffer} pngWithAlphaBuffer - PNG buffer from BiRefNet
- * @returns {Promise<Buffer>} - High-res trimmed WebP buffer
+ * preserves sharp garment edges (e.g. tie tip, lapels), autocrops empty margins,
+ * and exports high-quality 1000×1000 px square packshot with center gravity.
+ *
+ * @param {Buffer} pngWithAlphaBuffer - PNG buffer from RMBG-1.4
+ * @param {Object|null} garmentBox - Optional relative bounding box {ymin, xmin, ymax, xmax} (0–1 scale)
+ *   If provided, pixels outside this box will be zeroed (alpha=0) to remove non-garment body parts
+ *   (e.g. socks below trousers, hands beside top, trouser leg below shoe).
+ * @returns {Promise<Buffer>} - 1000×1000 px centered WebP packshot buffer
  */
-export async function cleanUpMaskAndCrop(pngWithAlphaBuffer) {
+export async function cleanUpMaskAndCrop(pngWithAlphaBuffer, garmentBox = null) {
   if (!pngWithAlphaBuffer || !Buffer.isBuffer(pngWithAlphaBuffer)) {
     throw new Error("Érvénytelen PNG puffer a maszk-tisztításhoz.");
   }
 
-  // 1. Alfa-csatorna meglétének biztosítása
+  // 1. Ensure alpha channel exists
   const image = sharp(pngWithAlphaBuffer).ensureAlpha();
   const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
+  const W = info.width;
+  const H = info.height;
 
-  // 2. Alfa-küszöbölés & keményítés (Alpha Thresholding)
-  // Meggátolja, hogy a zakó redői és árnyékai félig átlátszóvá (0.2–0.5) váljanak,
-  // ami a sötét hátteren fekete beégésként / foltként látszódna.
+  // 2. Optional Garment Bounding Box Alpha Zeroing
+  // Removes non-garment body parts outside the garment's detected bounding box.
+  // Works universally: socks below trousers, hands beside a top, trouser leg below a shoe, etc.
+  if (garmentBox && typeof garmentBox === "object") {
+    const { ymin = 0, xmin = 0, ymax = 1, xmax = 1 } = garmentBox;
+    // Convert relative 0–1 coords to pixel coords with a small 2% tolerance buffer
+    const BUFFER = 0.02;
+    const pxYmin = Math.max(0, Math.floor((ymin - BUFFER) * H));
+    const pxXmin = Math.max(0, Math.floor((xmin - BUFFER) * W));
+    const pxYmax = Math.min(H, Math.ceil((ymax + BUFFER) * H));
+    const pxXmax = Math.min(W, Math.ceil((xmax + BUFFER) * W));
+
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (y < pxYmin || y > pxYmax || x < pxXmin || x > pxXmax) {
+          const idx = (y * W + x) * 4 + 3;
+          data[idx] = 0; // Zero out alpha for pixels outside garment box
+        }
+      }
+    }
+    console.log(`[cleanUpMaskAndCrop] garmentBox applied: rows ${pxYmin}–${pxYmax}, cols ${pxXmin}–${pxXmax} of ${W}×${H}`);
+  }
+
+  // 3. Alpha Thresholding & Hardening
+  // Prevents dark background burn-through on garment folds while keeping sharp edges
   for (let i = 3; i < data.length; i += 4) {
     const a = data[i];
     if (a <= 25) {
-      data[i] = 0; // Teljesen átlátszó háttér (zajszűrés)
+      data[i] = 0; // Clean transparent background (noise cutoff)
     } else if (a >= 60) {
-      data[i] = 255; // 100% tömör ruhafelület (megszünteti a fekete átütéseket)
+      data[i] = 255; // 100% solid fabric (eliminates dark bleed)
     } else {
-      // Finom élátmenet a szegélyeken (antialiasing)
+      // Smooth edge antialiasing
       data[i] = Math.round(((a - 25) / 35) * 255);
     }
   }
 
-  // 3. Rekonstruálás, Autocrop (trim threshold: 25), átméretezés és WebP kódolás
+  // 4. Autocrop empty borders, then place the garment centered on a 1000×1000 transparent canvas.
+  // fit:'contain' with transparent background + gravity:'center' guarantees:
+  //   - The longest dimension fills at most 880px (leaving ~60px breathing room per side)
+  //   - Perfectly square, symmetrically padded, professional studio-packshot output
   return await sharp(data, {
-    raw: {
-      width: info.width,
-      height: info.height,
-      channels: 4
-    }
+    raw: { width: W, height: H, channels: 4 }
   })
     .trim({ threshold: 25 })
-    .resize(1000, 1000, {
+    .resize(880, 880, {
       fit: "inside",
       withoutEnlargement: true
+    })
+    .extend({
+      top: 60, bottom: 60, left: 60, right: 60,
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
+    })
+    .resize(1000, 1000, {
+      fit: "contain",
+      position: "centre",
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
     })
     .webp({ quality: 90 })
     .toBuffer();

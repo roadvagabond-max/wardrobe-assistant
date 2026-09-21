@@ -280,7 +280,7 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
             
             {/* Photo Replace */}
             <div className="space-y-2">
-              <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
+              <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden border border-white/10 p-2 flex items-center justify-center" style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}>
                 <img 
                   src={editData.imageUrl || item.imageUrl} 
                   alt="Preview" 
@@ -503,7 +503,7 @@ export default function ItemDetailModal({ item, onClose, onPlanWithItem }) {
           /* NORMAL VIEW DISPLAY */
           <>
             {/* Large Image (Uncropped, Proportional) */}
-            <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-[#07090e] border border-white/10 p-2 flex items-center justify-center">
+            <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden border border-white/10 p-2 flex items-center justify-center" style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}>
               {item.imageUrl ? (
                 <img 
                   src={item.imageUrl} 

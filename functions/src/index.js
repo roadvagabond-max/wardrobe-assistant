@@ -9,7 +9,7 @@ import { initializeApp, getApps } from "firebase-admin/app";
 import { getStorage } from "firebase-admin/storage";
 import sharp from "sharp";
 import crypto from "crypto";
-import { removeBackgroundWithBiRefNet, cleanUpMaskAndCrop } from "./services/imageProcessingService.js";
+import { removeBackgroundWithRMBG, cleanUpMaskAndCrop, warmUpRMBGModel } from "./services/imageProcessingService.js";
 
 // Initialize Firebase Admin SDK
 if (getApps().length === 0) {
@@ -291,27 +291,30 @@ async function getBgRemovalPipeline() {
 
 /**
  * Server-Side Neural Background Removal & Packshot Engine (v2)
- * Primary: SOTA BiRefNet (ZhengPeng7/BiRefNet) on Hugging Face Inference API (1024px)
- * Secondary: Local Transformers.js background-removal pipeline
+ * Model: briaai/RMBG-1.4 running locally via Transformers.js (ONNX)
  * Post-Processing: cleanUpMaskAndCrop (Alpha hardening/thresholding + Sharp autocrop @ 1000px WebP 90)
  */
 export const removeGarmentBackground = onCall(
   {
-    secrets: [hfTokenSecret],
     cors: true,
     maxInstances: 5,
-    timeoutSeconds: 120,
-    memory: "2GiB"
+    timeoutSeconds: 180,
+    memory: "4GiB"
   },
   async (request) => {
     // 1. Auth check
     const uid = request.auth?.uid || "guest_user";
 
     // 2. Validate input
-    const { imageBase64 } = request.data || {};
+    const { imageBase64, garmentBox = null } = request.data || {};
     if (!imageBase64 || typeof imageBase64 !== "string") {
       throw new HttpsError("invalid-argument", "A képadat (imageBase64) hiányzik.");
     }
+    // Validate garmentBox if provided (must be {ymin, xmin, ymax, xmax} all 0–1)
+    const validatedGarmentBox = garmentBox && typeof garmentBox === "object"
+      && typeof garmentBox.ymin === "number" && typeof garmentBox.xmin === "number"
+      && typeof garmentBox.ymax === "number" && typeof garmentBox.xmax === "number"
+      ? garmentBox : null;
 
     // Clean data URL prefix if present
     const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
@@ -321,48 +324,17 @@ export const removeGarmentBackground = onCall(
       throw new HttpsError("invalid-argument", "A feltöltött kép mérete meghaladja az 5MB-ot.");
     }
 
-    // 3. Neural Background Removal via BiRefNet (Hugging Face Inference API)
+    // 3. Neural Background Removal via briaai/RMBG-1.4
     let processedBuffer = null;
     let isPackshot = false;
     let failureReason = null;
 
-    const hfToken = (typeof hfTokenSecret !== "undefined" && hfTokenSecret?.value ? hfTokenSecret.value() : null) || process.env.HF_TOKEN;
-
     try {
-      // Primary SOTA Neural Packshot Model: ZhengPeng7/BiRefNet
-      processedBuffer = await removeBackgroundWithBiRefNet(inputBuffer, hfToken);
+      processedBuffer = await removeBackgroundWithRMBG(inputBuffer);
       isPackshot = true;
-    } catch (biRefErr) {
-      console.warn("BiRefNet API figyelmeztetés, kísérlet helyi pipeline-nal:", biRefErr.message);
-      failureReason = biRefErr.message;
-
-      // Fallback: Local Transformers.js pipeline
-      try {
-        const segmenter = await getBgRemovalPipeline();
-        if (segmenter) {
-          const { RawImage } = await import("@huggingface/transformers");
-          const inputBlob = new Blob([inputBuffer], { type: "image/jpeg" });
-          const rawInput = await RawImage.fromBlob(inputBlob);
-          const output = await segmenter(rawInput);
-          const rawImage = Array.isArray(output) ? output[0] : output;
-
-          if (rawImage && rawImage.data && rawImage.width && rawImage.height) {
-            processedBuffer = await sharp(Buffer.from(rawImage.data), {
-              raw: {
-                width: rawImage.width,
-                height: rawImage.height,
-                channels: rawImage.channels || 4
-              }
-            })
-              .png()
-              .toBuffer();
-            isPackshot = true;
-            failureReason = null;
-          }
-        }
-      } catch (localErr) {
-        console.error("Helyi Transformers.js szegmentációs hiba:", localErr.message);
-      }
+    } catch (rmbgErr) {
+      console.error("RMBG-1.4 szegmentációs hiba:", rmbgErr.message);
+      failureReason = rmbgErr.message;
     }
 
     // If neural removal failed, return honest failure (Rule 2: Zero Mock Guarantee)
@@ -377,15 +349,18 @@ export const removeGarmentBackground = onCall(
     }
 
     // 4. Alpha Thresholding & Hardening + Sharp Autocrop (cleanUpMaskAndCrop)
+    // Passes optional garmentBox to zero out non-garment body parts (socks, hands, etc.)
     let trimmedWebp;
     try {
-      trimmedWebp = await cleanUpMaskAndCrop(processedBuffer);
+      trimmedWebp = await cleanUpMaskAndCrop(processedBuffer, validatedGarmentBox);
     } catch (cropErr) {
-      console.warn("cleanUpMaskAndCrop hiba, fallback normál WebP trimre:", cropErr.message);
+      console.warn("cleanUpMaskAndCrop hiba, fallback 1000×1000 contain-re:", cropErr.message);
       trimmedWebp = await sharp(processedBuffer)
         .ensureAlpha()
         .trim({ threshold: 25 })
-        .resize(1000, 1000, { fit: "inside", withoutEnlargement: true })
+        .resize(880, 880, { fit: "inside", withoutEnlargement: true })
+        .extend({ top: 60, bottom: 60, left: 60, right: 60, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .resize(1000, 1000, { fit: "contain", position: "centre", background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .webp({ quality: 90 })
         .toBuffer();
     }
@@ -418,6 +393,28 @@ export const removeGarmentBackground = onCall(
       dataUrl,
       storagePath: filePath
     };
+  }
+);
+
+/**
+ * Pre-downloads and warms up the RMBG-1.4 neural model into container memory.
+ * Triggered automatically on user login in AuthContext.
+ */
+export const warmUpPackshotEngine = onCall(
+  {
+    cors: true,
+    maxInstances: 5,
+    timeoutSeconds: 180,
+    memory: "4GiB"
+  },
+  async (request) => {
+    try {
+      const result = await warmUpRMBGModel();
+      return { success: true, ...result };
+    } catch (err) {
+      console.warn("warmUpPackshotEngine hiba:", err.message);
+      return { success: false, error: err.message };
+    }
   }
 );
 

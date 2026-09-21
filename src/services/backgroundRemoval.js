@@ -14,29 +14,37 @@ import { ensureBase64Image } from './imageOptimizer';
 /**
  * Top-Level Packshot Pipeline
  * Calls the Firebase Cloud Function 'removeGarmentBackground' which performs
- * neural segmentation, Sharp autocrop, and Firebase Storage persistence.
+ * neural segmentation, optional garmentBox isolation, Sharp autocrop, and Firebase Storage persistence.
  * 
  * @param {Blob|File|string} fileOrDataUrl 
  * @param {Object} options 
  * @param {Function} options.onProgress (statusObj) => void
+ * @param {Object|null} options.garmentBox Relative bounding box {ymin, xmin, ymax, xmax} (0–1 scale)
+ *   from Gemini Vision to isolate only the target garment, zeroing out non-garment body parts.
  * @returns {Promise<{ success: boolean, dataUrl?: string, imageUrl?: string, storagePath?: string, error?: string }>}
  */
 export async function processGarmentPackshot(fileOrDataUrl, options = {}) {
-  const { onProgress } = options;
+  const { onProgress, garmentBox = null } = options;
   try {
     onProgress?.({ stage: 'normalizing', label: 'Fotó előkészítése...', percent: 20 });
     
-    // High-resolution 1024x1024 JPEG normalization for BiRefNet neural segmentation
+    // High-resolution 1024x1024 JPEG normalization for RMBG-1.4 neural segmentation
     const base64Image = await ensureBase64Image(fileOrDataUrl, 1024, 1024, 0.85);
     if (!base64Image) {
       throw new Error('Nem sikerült a kép előkészítése.');
     }
 
-    onProgress?.({ stage: 'uploading_cloud', label: '✨ Packshot készítése a felhőben...', percent: 50 });
+    onProgress?.({ stage: 'uploading_cloud', label: '✨ AI ruha-szegmentálás és packshot készítése...', percent: 50 });
 
-    const result = await callCloudFunction('removeGarmentBackground', {
-      imageBase64: base64Image
-    });
+    const payload = { imageBase64: base64Image };
+    // Pass garmentBox only if it's a valid object with all four numeric coords
+    if (garmentBox && typeof garmentBox === 'object'
+      && typeof garmentBox.ymin === 'number' && typeof garmentBox.xmin === 'number'
+      && typeof garmentBox.ymax === 'number' && typeof garmentBox.xmax === 'number') {
+      payload.garmentBox = garmentBox;
+    }
+
+    const result = await callCloudFunction('removeGarmentBackground', payload);
 
     if (result && result.success && (result.dataUrl || result.imageUrl)) {
       onProgress?.({ stage: 'done', label: '✨ Kész packshot előállítva!', percent: 100 });

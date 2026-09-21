@@ -10,6 +10,7 @@ import {
   reauthenticateWithGoogle,
   deleteFirebaseUser,
   logoutUser, 
+  callCloudFunction,
   isFirebaseConfigured, 
   getAuthErrorMessage 
 } from '../services/firebase';
@@ -317,6 +318,13 @@ export function AuthProvider({ children }) {
         } catch (e) {
           console.warn('Wardrobe listener setup hiba:', e);
         }
+
+        // 3. Auto-warmup RMBG-1.4 Packshot neural model in Cloud Functions memory (non-blocking)
+        setTimeout(() => {
+          callCloudFunction('warmUpPackshotEngine', {}).catch(err => {
+            console.debug('Packshot model warmup status:', err?.message || err);
+          });
+        }, 2000);
 
       } else {
         setCurrentUser(null);

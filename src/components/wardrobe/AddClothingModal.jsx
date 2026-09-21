@@ -100,6 +100,8 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
   const attachPhotoInputRef = useRef(null);
   const stylingTipRef = useRef(null);
   const whenToWearRef = useRef(null);
+  // Stores Gemini's detected garmentBox for packshot isolation (set async from triggerAIAnalysis)
+  const garmentBoxRef = useRef(null);
 
   // Auto-resize dynamic textareas
   useEffect(() => {
@@ -188,13 +190,16 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
   };
 
   // Parallel Thread 2: Salient Object Segmentation + Autocrop Packshot
-  const startBackgroundRemoval = async (source) => {
+  // Reads garmentBoxRef (set asynchronously by triggerAIAnalysis) to isolate the garment
+  // and remove non-garment body parts (socks below trousers, hands, etc.) on the server.
+  const startBackgroundRemoval = async (source, garmentBox = null) => {
     if (!source) return;
     setIsRemovingBg(true);
     setBgRemovalProgress({ label: 'Háttéreltávolító motor indítása...', percent: 10 });
     try {
       const result = await processGarmentPackshot(source, {
-        onProgress: (p) => setBgRemovalProgress(p)
+        onProgress: (p) => setBgRemovalProgress(p),
+        garmentBox: garmentBox || garmentBoxRef.current || null
       });
       if (result && result.success && (result.dataUrl || result.imageUrl)) {
         setCleanPackshot({ 
@@ -431,6 +436,13 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     try {
       const aiResult = await analyzeClothingImage(imgSource, webshopContext, profile);
       if (aiResult) {
+        // Store garmentBox from Gemini for packshot isolation
+        if (aiResult.garmentBox && typeof aiResult.garmentBox === 'object') {
+          garmentBoxRef.current = aiResult.garmentBox;
+        } else {
+          garmentBoxRef.current = null;
+        }
+
         // Intelligent image assignment: Grounded Google Search image -> Smart category packshot
         if (aiResult.imageUrl && typeof aiResult.imageUrl === 'string' && aiResult.imageUrl.startsWith('http')) {
           setImagePreview(aiResult.imageUrl);
@@ -841,7 +853,7 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
             
             {/* 1. Proportional Image Preview with Packshot Toggle */}
             <div className="space-y-2">
-              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-[#07090e] border border-white/10 p-4 flex flex-col items-center justify-center">
+              <div className="relative aspect-[4/3] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/10 p-4 flex flex-col items-center justify-center" style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}>
                 {imagePreview ? (
                   <>
                     {/* View Mode Toggle: Packshot vs Eredeti fotó */}

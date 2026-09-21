@@ -440,9 +440,9 @@ export default function WardrobeView({ onAddNewItem, onSelectItem, onNavigateTab
             >
               <div>
                 {/* Image Container (Uncropped, Proportional object-contain) */}
-                <div className={`relative aspect-[4/3] w-full bg-[#07090e] flex items-center justify-center overflow-hidden ${
+                <div className={`relative aspect-[4/3] w-full flex items-center justify-center overflow-hidden ${
                   profile?.displayCompactCards ? 'p-1.5' : 'p-2'
-                }`}>
+                }`} style={{ background: 'radial-gradient(circle at center, #2e3544 0%, #171b24 60%, #0a0c10 100%)' }}>
                   <img
                     src={item.imageUrl}
                     alt={item.name}
