@@ -771,7 +771,7 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
   }
 
   // 6. Strictly ensure AT MOST ONE item of each core type (Immunity: candidateItem is always preserved):
-  // - Exactly 1 Belt
+  // - Exactly AT MOST 1 Belt
   const beltIndices = [];
   items.forEach((item, idx) => {
     if (isBelt(item)) beltIndices.push(idx);
@@ -782,18 +782,22 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     items = items.filter((_, idx) => !beltIndices.includes(idx) || idx === keepIdx);
   }
 
-  // - Exactly 1 Bottom
-  const bottomIndices = [];
-  items.forEach((item, idx) => {
-    if (isBottom(item)) bottomIndices.push(idx);
-  });
-  if (bottomIndices.length > 1) {
-    const candIdx = bottomIndices.find(idx => isCand(items[idx]));
-    const keepIdx = candIdx !== undefined ? candIdx : bottomIndices[0];
-    items = items.filter((_, idx) => !bottomIndices.includes(idx) || idx === keepIdx);
+  // - Exactly AT MOST 1 Bottom (or 0 if dress is present)
+  if (hasDress) {
+    items = items.filter(i => isCand(i) || !isBottom(i));
+  } else {
+    const bottomIndices = [];
+    items.forEach((item, idx) => {
+      if (isBottom(item)) bottomIndices.push(idx);
+    });
+    if (bottomIndices.length > 1) {
+      const candIdx = bottomIndices.find(idx => isCand(items[idx]));
+      const keepIdx = candIdx !== undefined ? candIdx : bottomIndices[0];
+      items = items.filter((_, idx) => !bottomIndices.includes(idx) || idx === keepIdx);
+    }
   }
 
-  // - Exactly 1 Shoe
+  // - Exactly AT MOST 1 Shoe
   const shoeIndices = [];
   items.forEach((item, idx) => {
     if (isShoe(item)) shoeIndices.push(idx);
@@ -804,15 +808,77 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     items = items.filter((_, idx) => !shoeIndices.includes(idx) || idx === keepIdx);
   }
 
-  // - Exactly 1 Base Top
-  const topIndices = [];
+  // - Exactly AT MOST 1 Base Top (or 0 if dress is present)
+  if (hasDress) {
+    items = items.filter(i => isCand(i) || (!isBaseTop(i) && !isTurtleneck(i)));
+  } else {
+    const topIndices = [];
+    items.forEach((item, idx) => {
+      if (isBaseTop(item) || isTurtleneck(item)) topIndices.push(idx);
+    });
+    if (topIndices.length > 1) {
+      const candIdx = topIndices.find(idx => isCand(items[idx]));
+      const keepIdx = candIdx !== undefined ? candIdx : topIndices[0];
+      items = items.filter((_, idx) => !topIndices.includes(idx) || idx === keepIdx);
+    }
+  }
+
+  // - Exactly AT MOST 1 Knitwear (Pulóver / Kardigán)
+  const isKnit = (item) => {
+    if (!item) return false;
+    const cat = (item.category || '').toLowerCase();
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    return cat === 'knitwear' || sub === 'knitwear' || sub === 'sweater' || sub === 'cardigan' || name.includes('pulóver') || name.includes('kardigán');
+  };
+  const knitIndices = [];
   items.forEach((item, idx) => {
-    if (isBaseTop(item)) topIndices.push(idx);
+    if (isKnit(item)) knitIndices.push(idx);
   });
-  if (topIndices.length > 1) {
-    const candIdx = topIndices.find(idx => isCand(items[idx]));
-    const keepIdx = candIdx !== undefined ? candIdx : topIndices[0];
-    items = items.filter((_, idx) => !topIndices.includes(idx) || idx === keepIdx);
+  if (knitIndices.length > 1) {
+    const candIdx = knitIndices.find(idx => isCand(items[idx]));
+    const keepIdx = candIdx !== undefined ? candIdx : knitIndices[0];
+    items = items.filter((_, idx) => !knitIndices.includes(idx) || idx === keepIdx);
+  }
+
+  // - Exactly AT MOST 1 Blazer / Jacket (Zakó / Dzseki)
+  const isBlazerOrJacket = (item) => {
+    if (!item) return false;
+    const cat = (item.category || '').toLowerCase();
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    const isCoat = sub === 'coat' || sub === 'overcoat' || name.includes('télikabát') || name.includes('nagykabát') || name.includes('téli kabát') || name.includes('szövetkabát');
+    return !isCoat && (cat === 'outerwear' || isClassicBlazer(item) || isShacket(item) || sub === 'blazer' || sub === 'jacket' || name.includes('zakó') || name.includes('blézer') || name.includes('dzseki'));
+  };
+  const blazerIndices = [];
+  items.forEach((item, idx) => {
+    if (isBlazerOrJacket(item)) blazerIndices.push(idx);
+  });
+  if (blazerIndices.length > 1) {
+    const candIdx = blazerIndices.find(idx => isCand(items[idx]));
+    const keepIdx = candIdx !== undefined ? candIdx : blazerIndices[0];
+    items = items.filter((_, idx) => !blazerIndices.includes(idx) || idx === keepIdx);
+  }
+
+  // - Exactly AT MOST 1 Heavy Coat (Téli szövetkabát / Nagykabát) - in warm weather (>=19°C) strictly 0!
+  const isHeavyCoat = (item) => {
+    if (!item) return false;
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    return sub === 'coat' || sub === 'overcoat' || name.includes('télikabát') || name.includes('nagykabát') || name.includes('téli kabát') || name.includes('szövetkabát');
+  };
+  if (isWarmWeather) {
+    items = items.filter(i => isCand(i) || !isHeavyCoat(i));
+  } else {
+    const coatIndices = [];
+    items.forEach((item, idx) => {
+      if (isHeavyCoat(item)) coatIndices.push(idx);
+    });
+    if (coatIndices.length > 1) {
+      const candIdx = coatIndices.find(idx => isCand(items[idx]));
+      const keepIdx = candIdx !== undefined ? candIdx : coatIndices[0];
+      items = items.filter((_, idx) => !coatIndices.includes(idx) || idx === keepIdx);
+    }
   }
 
   // Absolute Final Guarantee: candidateItem must NEVER be dropped
@@ -820,7 +886,23 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     items.unshift(candidateItem);
   }
 
-  // 7. Sort in natural anatomical layering order:
+  // 7. Deduplicate strictly by physical item ID:
+  const seenIds = new Set();
+  items = items.filter(item => {
+    if (!item || !item.id) return false;
+    if (seenIds.has(item.id)) return false;
+    seenIds.add(item.id);
+    return true;
+  });
+
+  // Final belt safeguard: strictly at most 1 belt under any circumstance
+  const finalBelts = items.filter(i => isBelt(i));
+  if (finalBelts.length > 1) {
+    const keepBelt = finalBelts.find(b => isCand(b)) || finalBelts[0];
+    items = items.filter(i => !isBelt(i) || i.id === keepBelt.id);
+  }
+
+  // 8. Sort in natural anatomical layering order:
   const getItemLayerRank = (item) => {
     const cat = item.category || '';
     const sub = (item.subCategory || '').toLowerCase();
@@ -829,7 +911,7 @@ export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], cand
     if (sub === 'coat' || sub === 'overcoat' || name.includes('kabát') || name.includes('trench')) return 4;
     if (cat === 'outerwear' || sub === 'blazer' || sub === 'jacket' || name.includes('zakó') || name.includes('dzseki') || name.includes('blézer')) return 3;
     if (cat === 'knitwear' || sub === 'knitwear' || sub === 'sweater' || sub === 'cardigan' || name.includes('pulóver') || name.includes('kardigán')) return 2;
-    if (isBaseTop(item) || isTurtleneck(item)) return 1;
+    if (isBaseTop(item) || isTurtleneck(item) || isDress(item)) return 1;
     if (isBottom(item)) return 5;
     if (isShoe(item)) return 6;
     if (isBelt(item)) return 7;
@@ -1296,7 +1378,7 @@ ${dynamicSartorialRules}
 
 ESEMÉNY / ALKALOM: "${eventName}"
 HELYSZÍN ÉS IDŐJÁRÁS: ${weather?.city || 'Budapest'}, ${temperature}°C, ${weather?.condition || 'Kellemes'}
-${anchorItems.length > 0 ? `KÖTELEZŐ KULCSDARABOK (Anchor Items): ${JSON.stringify(anchorItems.map(a => ({ id: a.id, name: a.name, category: a.category, color: a.color })))}` : ''}
+${anchorItems.length > 0 ? `\n🔒 KÖTELEZŐ KULCSDARABOK (Anchor Items):\nA felhasználó KIFEJEZETTEN RÖGZÍTETTE a következő darab(oka)t. KIVÉTEL NÉLKÜL MIND A 3 GENERÁLT SZETTBEN KÖTELEZŐEN SZEREPELNIÜK KELL AZ itemIds TÖMBBEN:\n${JSON.stringify(anchorItems.map(a => ({ id: a.id, name: a.name, category: a.category, color: a.color })))}` : ''}
 
 Ruhatár (${shuffledWardrobe.length} elérhető darab [CATALOG] TSV formátumban):
 ${formatWardrobeToCompactCatalog(shuffledWardrobe)}
@@ -1392,11 +1474,33 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON TÖMBKÉNT:
       });
 
       if (Array.isArray(parsed)) {
+        const primaryAnchor = anchorItems.length > 0 ? anchorItems[0] : null;
+
         return parsed.map((p, idx) => {
-          const rawItems = (p.itemIds || [])
+          let rawItems = (p.itemIds || [])
             .map(id => wardrobe.find(w => w.id === id))
             .filter(Boolean);
-          const fullEnforcedItems = enforceAnatomicalOutfitLayers(rawItems, availableWardrobe, null, weather);
+
+          // Absolute guarantee 1: candidate / anchor items MUST be included in rawItems
+          for (const anchor of anchorItems) {
+            if (!rawItems.some(it => it.id === anchor.id)) {
+              rawItems.unshift(anchor);
+            }
+          }
+
+          let fullEnforcedItems = enforceAnatomicalOutfitLayers(rawItems, availableWardrobe, primaryAnchor, weather);
+
+          // Absolute guarantee 2: verify every anchor item is retained in fullEnforcedItems
+          for (const anchor of anchorItems) {
+            if (!fullEnforcedItems.some(it => it.id === anchor.id)) {
+              const clashIdx = fullEnforcedItems.findIndex(it => it.category === anchor.category);
+              if (clashIdx !== -1) {
+                fullEnforcedItems[clashIdx] = anchor;
+              } else {
+                fullEnforcedItems.unshift(anchor);
+              }
+            }
+          }
 
           return {
             id: p.id || `outfit-${Date.now()}-${idx}`,
