@@ -469,6 +469,56 @@ export function isCoatGarment(item) {
 export function enforceAnatomicalOutfitLayers(rawItems = [], wardrobe = [], candidateItem = null, weather = null) {
   let items = [...rawItems];
 
+  const isBaseTop = (item) => {
+    if (!item) return false;
+    const cat = (item.category || '').toLowerCase();
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    if (cat === 'knitwear' || sub === 'knitwear' || sub === 'sweater' || sub === 'cardigan' || name.includes('pulóver') || name.includes('kardigán')) return false;
+    if (cat === 'outerwear' || sub === 'blazer' || sub === 'coat' || sub === 'overcoat' || name.includes('zakó') || name.includes('kabát')) return false;
+    if (cat === 'bottoms' || cat === 'shoes' || cat === 'accessories' || cat === 'skirts' || cat === 'dresses') return false;
+    return cat === 'tops' || sub === 'shirt' || sub === 't-shirt' || sub === 'polo' || name.includes('ing') || name.includes('póló') || name.includes('felső');
+  };
+
+  const isTurtleneck = (item) => {
+    if (!item) return false;
+    const name = (item.name || '').toLowerCase();
+    const sub = (item.subCategory || '').toLowerCase();
+    return name.includes('garbó') || name.includes('turtleneck') || name.includes('rollneck') || sub === 'turtleneck';
+  };
+
+  const isBottom = (item) => {
+    if (!item) return false;
+    const cat = (item.category || '').toLowerCase();
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    return cat === 'bottoms' || cat === 'skirts' || sub === 'trousers' || sub === 'jeans' || sub === 'pants' || sub === 'skirt' || name.includes('nadrág') || name.includes('chino') || name.includes('farmer') || name.includes('szoknya');
+  };
+
+  const isShoe = (item) => {
+    if (!item) return false;
+    const cat = (item.category || '').toLowerCase();
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    return cat === 'shoes' || sub === 'loafers' || sub === 'boots' || sub === 'sneakers' || sub === 'oxfords' || sub === 'derbies' || name.includes('cipő') || name.includes('csizma') || name.includes('loafer') || name.includes('bakancs') || name.includes('sneaker');
+  };
+
+  const isHeavyBoot = (item) => {
+    if (!item) return false;
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    return sub === 'boots' || name.includes('csizma') || name.includes('chelsea') || name.includes('chukka') || name.includes('bakancs') || name.includes('boot');
+  };
+
+  const isBelt = (item) => {
+    if (!item) return false;
+    const cat = (item.category || '').toLowerCase();
+    const sub = (item.subCategory || '').toLowerCase();
+    const name = (item.name || '').toLowerCase();
+    if (cat === 'tops' || cat === 'knitwear' || cat === 'outerwear' || cat === 'bottoms' || cat === 'shoes' || cat === 'dresses' || cat === 'skirts') return false;
+    return sub === 'belt' || /\böv\b|\bbőröv\b|\bderéköv\b/i.test(name);
+  };
+
   // Ensure candidate/anchor item is present
   if (candidateItem && !items.some(i => i.id === candidateItem.id)) {
     items.unshift(candidateItem);

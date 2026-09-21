@@ -1,9 +1,9 @@
 /**
  * AI Wardrobe Assistant - Application Version & Build Information
  */
-export const APP_VERSION = '1.7.42';
-export const APP_BUILD = '1.7.42';
-export const APP_BUILD_NAME = 'v1.7.42 Gemini-Native Outfit Intelligence & Speed Optimization';
+export const APP_VERSION = '1.7.43';
+export const APP_BUILD = '1.7.43';
+export const APP_BUILD_NAME = 'v1.7.43 Gemini-Native Outfit Intelligence & Fix Helper References';
 export const APP_RELEASE_STAGE = 'Production';
 export const APP_NAME = 'AI Wardrobe Assistant';
 export const BUILD_DATE = '2026-09-21';
