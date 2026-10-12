@@ -33,7 +33,7 @@ A **Sartorial Wardrobe Assistant** egy modern, mesterséges intelligenciával t�
 
 ### 🛠️ Technológiai Stack:
 - **Frontend Keretrendszer:** React (Vite, TailwindCSS + Luxury Gold Glassmorphism Design System)
-- **AI Modell Motor:** Google Gemini 3.x (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.7-flash`, `gemini-3.6-flash`)
+- **AI Modell Motor:** Google Gemini 3.x (`gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`)
 - **Adatperzisztencia & Szinkronizáció:** Firebase Authentication & Cloud Firestore (Valós idejű kétirányú `onSnapshot` szinkronizáció Mobile ➔ Webapp)
 - **Képfeldolgozó Pipeline:** Kliens oldali Canvas & Blob motor (640×640 @ 0.75 JPEG, ~35–50 KB)
 - **Webshop & SKU Motor:** Multi-CDN képkinyerő és mikroadat parser (Next Direct, Zara, Reserved, Massimo Dutti, H&M, Mango, ASOS)
@@ -67,7 +67,7 @@ sequenceDiagram
     participant App as AddClothingModal
     participant Opt as ImageOptimizer
     participant WS as WebshopEngine
-    participant AI as Gemini 3.7 Flash
+    participant AI as Gemini 3.8 Flash
     participant DB as Firestore Cloud
 
     alt Fotó / Képfeltöltés
@@ -273,7 +273,7 @@ sequenceDiagram
 ---
 
 ## ⚡ Minőségi & Sebesség-szabályok
-1. **Modellek:** Kizárólag a hivatalos 2026-os Gemini 3.x modelleket használjuk (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.7-flash`, `gemini-3.6-flash`).
+1. **Modellek:** Kizárólag a hivatalos 2026-os Gemini 3.x modelleket használjuk (`gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`).
 2. **Késleltetés:** Maximum 5.0–7.0 mp-es abort timeout per kérés, adaptív modellválasztás (Fast-Lite modellek webshop linkekhez és képazonosításhoz, Deep Reasoning modellek stylist szettekhez), aktív gyors modell megjegyzése (`activeFastModel`).
 3. **Képméret:** Minden feltöltött kép 640×640-re tömörítve fut át, megőrizve a 100%-os vizuális élességet és az AI pontosságot.
 4. **Biztonság & Hibatűrés:** Minden méret, márka és webshop adat null-safe, üres adatok esetén nem akadhat el a kód.

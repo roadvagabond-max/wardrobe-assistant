@@ -32,15 +32,13 @@ export async function testGeminiApiKey() {
 // Google Gemini official 2026 models in order of stability & speed
 export const FAST_MODELS = [
   'gemini-3.5-flash-lite',
+  'gemini-3.8-flash',
   'gemini-3.1-flash-lite',
-  'gemini-3.7-flash',
-  'gemini-3.6-flash'
 ];
 
 export const REASONING_MODELS = [
-  'gemini-3.7-flash',
+  'gemini-3.8-flash',
   'gemini-3.5-flash-lite',
-  'gemini-3.6-flash',
   'gemini-3.1-flash-lite'
 ];
 
@@ -201,10 +199,18 @@ SZABÁLYOK:
      * GYERMEK ÉS BABA RUHÁKNÁL: Pulóver vagy kötöttáru alá KIZÁRÓLAG puha pamut bodyt, pamut pólót vagy hosszú ujjú pamut alsót javasolj! SOHA NE javasolj merev galléros inget a gyerekpulóver alá!
      * FELNŐTT NŐI RUHÁKNÁL: Nőies szabások, finom rétegek, dekoltázs és lágy esésű anyagok harmóniája.
      * FELNŐTT FÉRFI RUHÁKNÁL: Férfi szabások és a választott stílusirányzatnak megfelelő rétegek.
-   - "whenToWear": Mikor és milyen a    - "stylingAdvice": Szakértői stílusjellemzés a darabról.
+   - "whenToWear": Mikor és milyen alkalomra ajánlott a viselése.
+   - "stylingAdvice": Szakértői stílusjellemzés a darabról.
 
 SZIGORÚ ZERO-MÉRET HALLUCINÁCIÓS SZABÁLY:
 SOHA NE TIPPELJ ÉS NE TALÁLJ KI MÉRETET! KIZÁRÓLAG akkor adj meg méretet (pl. 'M', 'L', '40', '32/32'), ha a fotón szereplő címkén OLVASHATÓAN látszik a méretjelölés, VAGY ha a webshop bemenet ezt konkrétan megadja! Ha a fotón csak maga a ruha látható címke nélkül, a "size" KÖTELEZŐEN üres string: ""!
+
+SZIGORÚ SZÍNFELISMERÉSI & FEHÉREGYENSÚLY-KALIBRÁCIÓS SZABÁLY (FEKETE VS. SÖTÉTKÉK):
+1. Beltéri lámpafényben vagy sötét felületen fotózott ruháknál az okostelefon kamerák érzékelője hajlamos hideg/kékes kromatikus zajt hagyni a sötét szöveten.
+2. MINDIG keresd a képen látható fehér/világos referenciapontokat (pl. belső nyak- vagy derékcímke fehérje, gombok, cipzár, zsebbélés, felirat) a valós fehéregyensúly kalibrálásához!
+3. Ha egy nadrág, felső vagy zakó mélyfekete, szénfekete vagy enyhén kimosott fekete, SZIGORÚAN TILOS sötétkéknek (Navy) minősíteni pusztán azért, mert pamut chino vagy sötét alapdarab! Csak és kizárólag akkor jelölj sötétkéket (Navy), ha a szöveten egyértelmű, vitathatatlan és domináns kék pigmentáció látható!
+4. Ha a ruha fekete: a "color" mező értéke KÖTELEZŐEN "Fekete", a "colorHex" #111111 (vagy valós sötétfekete hex), a névben ("name") KÖTELEZŐEN a "Fekete" szó szerepeljen (pl. 'Fekete Pamut Chino Nadrág'), és a stílustippek ("stylingTip", "stylingAdvice") is 100%-ban a fekete színhez illő kombinációkat adjanak!
+5. Ugyanez érvényes az antracit / sötétszürke és sötétbarna darabokra is: ne téveszd össze őket sötétkékkel!
 
 UNIVERZÁLIS RUHADARAB BOUNDING BOX SZABÁLY (garmentBox mező):
 HA A FOTÓN AZ ADOTT RUHADARAB EGY EMBEREN VAN VISELVE (pl. farmer nadrág emberen, ing emberen, zakó emberen, cipő lábon):
@@ -281,6 +287,63 @@ HA A FOTÓN AZ ADOTT RUHADARAB EGY EMBEREN VAN VISELVE (pl. farmer nadrág ember
   }
 
   throw new Error('Nincs beállítva Gemini API kulcs! Kérlek add meg a Beállítások menüben.');
+}
+
+/**
+ * Regenerate garment styling advice, tips, and color harmony dynamically when user changes color in modal.
+ * Uses real Google Gemini 3.x neural model (FAST_MODELS, ~500-800ms) - Zero Mock Guarantee.
+ */
+export async function regenerateItemStylingForColor({ item, newColor, userProfile = {} }) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey || !item || !newColor) return null;
+
+  try {
+    const demographics = getProfileDemographics(userProfile);
+    const demographicRules = getDemographicSartorialInstructions(demographics, userProfile);
+
+    const prompt = `Te egy világklasszis professzionális személyi stylist vagy.
+A felhasználó módosította a ruhatárába felvitt ruhadarab színét erre az új színre: "${newColor}".
+A darab korábbi adatai:
+- Megnevezés: "${item.name || ''}"
+- Kategória: "${item.category || 'tops'}"
+- Alkategória: "${item.subCategory || ''}"
+- Anyag: "${item.material || ''}"
+- Korábbi szín: "${item.color || ''}"
+- Formalitás: "${item.formality || 'Smart Casual'}"
+- Stílusirányzat: "${item.styleArchetype || 'Klasszikus & Időtlen'}"
+
+${demographicRules}
+
+FELADATOD:
+Generálj frissített stílustanácsokat, amelyek KIFEJEZETTEN az új színhez ("${newColor}") és a felhasználó stílusprofiljához illeszkednek!
+SZIGORÚ SZABÁLYOK:
+1. "name": Frissítsd a ruha nevét úgy, hogy a régi szín helyett az új szín ("${newColor}") szerepeljen elegánsan (pl. "Fekete Pamut Chino Nadrág").
+2. "stylingTip": Konkrét kombinációs javaslatok KIZÁRÓLAG az új színhez ("${newColor}") illeszkedve! (Pl. ha Fekete: fehér póló/ing, szürke merinó pulóver, fekete bőrcipő/fehér sneaker - NE ajánlj kékhez való barna lábbeliket vagy kék kombinációkat, hacsak nem illik az új színhez).
+3. "stylingAdvice": Szakértői stílusjellemzés az új szín kontextusában.
+4. "whenToWear": Mikor és milyen alkalmakra a legelőnyösebb ebben az új színben.
+5. "colorHarmony": Az új szín harmóniája és kontrasztja a felhasználó stílusprofiljával.
+
+VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
+{
+  "name": "Új név az új színnel",
+  "stylingTip": "Mivel hordd az új színnel...",
+  "stylingAdvice": "Stílusjellemzés az új színnel...",
+  "whenToWear": "Mikor hordd az új színnel...",
+  "colorHarmony": "Színharmónia az új színnel..."
+}`;
+
+    const result = await callGeminiApi({
+      apiKey,
+      contents: [{ parts: [{ text: prompt }] }],
+      preferredModels: FAST_MODELS,
+      timeoutMs: 8000
+    });
+
+    return result;
+  } catch (err) {
+    console.error('Hiba a szín-specifikus stílustanács újragenerálásakor:', err);
+    return null;
+  }
 }
 
 /**
@@ -746,12 +809,15 @@ MIND a 3 szett KÖTELEZŐEN e köré a kiszemelt kulcsdarab ("candidate-item") k
    - Tilos fehér inget írni a leírásba, ha fekete póló vagy kék ing van a szettben kiválasztva! A 'stylingTip' 100%-ban a kiválasztott darabok valós nevét használja!
    - A lábbeli formalitása és stílusa 100%-ban passzoljon az összeállítás jellegéhez!
 
-4. SZIGORÚ DUPLIKÁCIÓ- ÉS REDUNDANCIA-BÜNTETÉS:
-   - Ha a kiszemelt darabhoz már létezik funkcionálisan vagy megjelenésében szinte azonos alapdarab a ruhatárban (pl. azonos színű és fazonú zakó, hasonló alap póló, loafer):
-     * "aestheticOverlap": { "isRedundant": true, "existingItemName": "Meglévő darab pontos neve", "reason": "Miért duplikáció", "alternativeRecommendation": "Mit érdemes inkább beszerezni helyette" }
-     * "compatibilityScore": SZIGORÚAN MAXIMUM 40–55 PONT! Tilos 60+ vagy "Erősen Ajánlott" minősítést adni!
-     * "verdict": KÖTELEZŐEN "Gondold Át" vagy "Kerülendő"!
-     * "duplicationWarning": "⚠️ Ez a darab funkcionálisan és megjelenésében szinte azonos a már ruhatáradban lévő [Meglévő darab neve] daraboddal! Felesleges pénzkidobás és duplikáció."
+4. SZIGORÚ DUPLIKÁCIÓ- ÉS REDUNDANCIA-SZABÁLYOK:
+   - SOHA NE tekints egy elegáns vagy hétköznapi inget (shirt) duplikációnak egy pamut pólóval (t-shirt/polo) szemben, még ha mindkettő kék vagy azonos színű is! Póló és ing teljesen eltérő funkció, réteg és élethelyzet!
+   - TILOS duplikációként büntetni, ha a meglévő ruhatári darab állapota 'Játszós / Kopott', 'Javításra vár' vagy 'Lecserélendő' – ilyenkor egy új minőségi darab értéknövelő frissítés/csere, nem redundancia!
+   - Csak és kizárólag akkor jelezz duplikációt ("aestheticOverlap.isRedundant: true"), ha a ruhatárban már van azonos alkategóriájú (pl. mindkettő sötétkék zakó, mindkettő fehér oxford ing, mindkettő fekete loafer), hasonló formalitású és kiváló állapotú darab!
+   - Ha valós duplikáció áll fenn:
+      * "aestheticOverlap": { "isRedundant": true, "existingItemName": "Meglévő darab pontos neve", "reason": "Miért duplikáció", "alternativeRecommendation": "Mit érdemes inkább beszerezni helyette" }
+      * "compatibilityScore": SZIGORÚAN MAXIMUM 40–55 PONT! Tilos 60+ vagy "Erősen Ajánlott" minősítést adni!
+      * "verdict": KÖTELEZŐEN "Gondold Át" vagy "Kerülendő"!
+      * "duplicationWarning": "⚠️ Ez a darab funkcionálisan és megjelenésében szinte azonos a már ruhatáradban lévő [Meglévő darab neve] daraboddal! Felesleges pénzkidobás és duplikáció."
 
 5. FORMALITÁSI HARMÓNIA ÉS SARTORIAL KÓDEX:
    - Tartsd be az aktív Sartorial Szabályzatot! Kétsoros zakóhoz (double-breasted) és elegáns blézerekhez szigorúan tilos casual, koptatott farmert párosítani; helyette finom pamut/len chino nadrágot vagy gyapjú szövetnadrágot válassz a katalógusból!
@@ -927,24 +993,50 @@ VÁLASZOLJ KIZÁRÓLAG ÉRVÉNYES JSON FORMÁTUMBAN:
           parsed.personalFitVerdict = `Harmonizál a(z) ${styleProfile.bodyType || 'Atlétikus'} testalkatoddal és a meglévő ruhatárad színeivel.`;
         }
 
-        // Strict Duplication & Redundancy Guardrail (No 90%+ for existing duplicates)
+        // Strict Duplication & Redundancy Guardrail (Only genuine same subcategory + good condition)
         const candName = (extractedItem.name || '').toLowerCase();
         const candColor = (extractedItem.color || '').toLowerCase();
         const candCat = (extractedItem.category || '').toLowerCase();
         const candSub = (extractedItem.subCategory || '').toLowerCase();
+        const candFormality = (extractedItem.formality || '').toLowerCase();
+
+        const isShirt = (sub, name) => sub === 'shirt' || name.includes('ing');
+        const isTShirt = (sub, name) => sub === 't-shirt' || sub === 'polo' || name.includes('póló') || name.includes('polo');
+        const isKnit = (sub, name) => sub === 'knitwear' || name.includes('pulóver') || name.includes('kötött') || name.includes('garbó');
+        const isPants = (sub, name) => sub === 'trousers' || sub === 'jeans' || name.includes('nadrág') || name.includes('chino') || name.includes('farmer');
+        const isShoe = (sub, name) => sub === 'loafers' || sub === 'sneakers' || sub === 'boots' || sub === 'oxfords' || sub === 'derbies' || name.includes('cipő') || name.includes('loafer');
+        const isBlazer = (sub, name) => sub === 'blazer' || name.includes('zakó') || name.includes('blézer');
 
         const existingDuplicate = wardrobe.find(w => {
-          if (!w || w.id === 'candidate-item' || w.condition === 'Lecserélendő' || w.condition === 'Javításra vár') return false;
+          // Never penalize or match items that are worn out, need repair, or need replacement
+          if (!w || w.id === 'candidate-item' || w.condition === 'Lecserélendő' || w.condition === 'Javításra vár' || w.condition === 'Játszós / Kopott') return false;
           const wCat = (w.category || '').toLowerCase();
           const wSub = (w.subCategory || '').toLowerCase();
           const wColor = (w.color || '').toLowerCase();
           const wName = (w.name || '').toLowerCase();
+          const wFormality = (w.formality || '').toLowerCase();
 
-          const sameCategory = (wCat && wCat === candCat) || (wSub && wSub === candSub);
+          // Subcategory must genuinely match (e.g. shirt vs shirt, t-shirt vs t-shirt). A shirt is NEVER a duplicate of a t-shirt!
+          const sameSubCategory = (wSub && candSub && wSub === candSub)
+            || (isShirt(wSub, wName) && isShirt(candSub, candName))
+            || (isTShirt(wSub, wName) && isTShirt(candSub, candName))
+            || (isKnit(wSub, wName) && isKnit(candSub, candName))
+            || (isBlazer(wSub, wName) && isBlazer(candSub, candName))
+            || (isPants(wSub, wName) && isPants(candSub, candName))
+            || (isShoe(wSub, wName) && isShoe(candSub, candName));
+
+          if (!sameSubCategory) return false;
+
+          // Cross-formality check: a pure casual item cannot duplicate a business formal/casual item
+          const isCandFormal = candFormality.includes('business') || candFormality.includes('formal') || candFormality.includes('smart casual');
+          const isWFormal = wFormality.includes('business') || wFormality.includes('formal') || wFormality.includes('smart casual');
+          if (candFormality.includes('casual (laza)') && isWFormal) return false;
+          if (wFormality.includes('casual (laza)') && isCandFormal) return false;
+
           const sameColor = candColor && wColor && (wColor.includes(candColor) || candColor.includes(wColor));
           const verySimilarName = candName && wName && (candName.includes(wName) || wName.includes(candName));
 
-          return sameCategory && (sameColor || verySimilarName);
+          return sameColor || verySimilarName;
         });
 
         if (parsed.aestheticOverlap?.isRedundant || existingDuplicate) {

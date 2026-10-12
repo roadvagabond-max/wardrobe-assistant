@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Link as LinkIcon, Camera, Sparkles, Check, Image as ImageIcon, Loader2, AlertCircle, Plus, Heart, HelpCircle, Clipboard, Info } from 'lucide-react';
-import { analyzeClothingImage } from '../../services/gemini';
+import { analyzeClothingImage, regenerateItemStylingForColor } from '../../services/gemini';
 import { extractWebshopData } from '../../services/webshop';
 import { ensureBase64Image, getSmartGarmentImage } from '../../services/imageOptimizer';
 import { processGarmentPackshot } from '../../services/backgroundRemoval';
@@ -73,6 +73,8 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
   const [analysisError, setAnalysisError] = useState(null);
   const [customTagInput, setCustomTagInput] = useState('');
   const [showGuide, setShowGuide] = useState(false);
+  const [isUpdatingStyling, setIsUpdatingStyling] = useState(false);
+  const colorStylingRequestIdRef = useRef(0);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -491,6 +493,73 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
     } finally {
       setIsAnalyzing(false);
       setIsFormReady(true);
+    }
+  };
+
+  const handleSelectColor = async (colName, hex) => {
+    const prevColor = formData.color;
+
+    // 1. Smart name sync: if name contains previous color name or known color word, replace it
+    let updatedName = formData.name;
+    if (updatedName) {
+      const cleanNewColor = colName.split(' ')[0].replace(/[()]/g, '');
+      const cleanPrevColor = (prevColor || '').split(' ')[0].replace(/[()]/g, '');
+      const commonColors = ['Sötétkék', 'Navy', 'Kék', 'Fekete', 'Fehér', 'Bézs', 'Homokbézs', 'Szürke', 'Barna', 'Zöld', 'Olívazöld', 'Piros', 'Bordó'];
+
+      let replaced = false;
+      if (cleanPrevColor && updatedName.toLowerCase().includes(cleanPrevColor.toLowerCase())) {
+        const regex = new RegExp(cleanPrevColor, 'gi');
+        updatedName = updatedName.replace(regex, cleanNewColor);
+        replaced = true;
+      }
+
+      if (!replaced) {
+        for (const c of commonColors) {
+          if (updatedName.toLowerCase().includes(c.toLowerCase())) {
+            const regex = new RegExp(c, 'gi');
+            updatedName = updatedName.replace(regex, cleanNewColor);
+            replaced = true;
+            break;
+          }
+        }
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      color: colName,
+      colorHex: hex,
+      name: updatedName || prev.name
+    }));
+
+    // 2. Trigger dynamic AI styling regeneration for the newly selected color (Zero Mock Guarantee)
+    const requestId = ++colorStylingRequestIdRef.current;
+    setIsUpdatingStyling(true);
+
+    try {
+      const regenerated = await regenerateItemStylingForColor({
+        item: { ...formData, name: updatedName, color: colName },
+        newColor: colName,
+        userProfile: profile
+      });
+
+      // Guard against race conditions if user rapidly clicks multiple colors
+      if (requestId === colorStylingRequestIdRef.current && regenerated) {
+        setFormData(prev => ({
+          ...prev,
+          name: regenerated.name || prev.name,
+          stylingTip: regenerated.stylingTip || prev.stylingTip,
+          stylingAdvice: regenerated.stylingAdvice || prev.stylingAdvice,
+          whenToWear: regenerated.whenToWear || prev.whenToWear,
+          colorHarmony: regenerated.colorHarmony || prev.colorHarmony
+        }));
+      }
+    } catch (err) {
+      console.warn('Szín-specifikus stílustanács frissítési hiba:', err);
+    } finally {
+      if (requestId === colorStylingRequestIdRef.current) {
+        setIsUpdatingStyling(false);
+      }
     }
   };
 
@@ -1164,17 +1233,23 @@ export default function AddClothingModal({ isOpen, onClose, onAddClothing }) {
               <ColorPalettePicker
                 selectedColor={formData.color}
                 selectedHex={formData.colorHex}
-                onSelectColor={(colName, hex) => {
-                  setFormData(prev => ({ ...prev, color: colName, colorHex: hex }));
-                }}
+                onSelectColor={handleSelectColor}
               />
             </div>
 
             {/* 5. AI Recommendations: Mivel hordd & Mikor hordd */}
-            <div className="space-y-3 p-4 rounded-2xl bg-black/40 border border-[var(--border-gold)]/40 shadow-inner">
-              <div className="flex items-center gap-2 pb-2 border-b border-white/5">
-                <Sparkles className="w-4 h-4 text-[var(--accent-gold)]" />
-                <span className="text-xs font-serif font-bold text-white">AI Stylist Elemzés & Ajánlások</span>
+            <div className="space-y-3 p-4 rounded-2xl bg-black/40 border border-[var(--border-gold)]/40 shadow-inner relative">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[var(--accent-gold)]" />
+                  <span className="text-xs font-serif font-bold text-white">AI Stylist Elemzés & Ajánlások</span>
+                </div>
+                {isUpdatingStyling && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-amber-300 animate-pulse font-medium">
+                    <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-gold)] shrink-0" />
+                    <span>Ajánlások frissítése {formData.color} színhez...</span>
+                  </div>
+                )}
               </div>
 
               <div>

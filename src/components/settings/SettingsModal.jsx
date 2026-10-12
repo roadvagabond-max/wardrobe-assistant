@@ -513,14 +513,14 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => setPreferredModel('gemini-3.7-flash')}
+                    onClick={() => setPreferredModel('gemini-3.8-flash')}
                     className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      preferredModel === 'gemini-3.7-flash'
+                      preferredModel === 'gemini-3.8-flash'
                         ? 'bg-amber-500/20 border-amber-500/40 text-amber-200 font-bold'
                         : 'bg-[#070a12] border-slate-800 text-slate-400 hover:text-white'
                     }`}
                   >
-                    <span className="text-xs block">Gemini 3.7 Flash</span>
+                    <span className="text-xs block">Gemini 3.8 Flash</span>
                     <span className="text-[10px] opacity-75 font-normal">Deep Reasoning & Stílus</span>
                   </button>
 

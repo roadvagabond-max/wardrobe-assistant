@@ -90,6 +90,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
   const [addedToWardrobe, setAddedToWardrobe] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [isVerdictExpanded, setIsVerdictExpanded] = useState(false);
 
   // Lightbox Modal State
   const [lightboxData, setLightboxData] = useState({
@@ -351,6 +352,7 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
     setAnalysisError(null);
     setAddedToWardrobe(false);
     setShowDiagnostics(false);
+    setIsVerdictExpanded(false);
     if (onClearPrefill) onClearPrefill();
   };
 
@@ -799,9 +801,29 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                 <h3 className="text-sm sm:text-base font-serif font-bold text-slate-100 truncate mt-0.5" title={evaluationResult.item?.name || itemName}>
                   {evaluationResult.item?.name || itemName || 'Ruhatár-Kompatibilitási Eredmény'}
                 </h3>
-                <p className="text-[11px] text-slate-300 truncate">
-                  {cleanSartorialText(evaluationResult.verdictSummary)}
-                </p>
+                
+                {/* Expandable Verdict Summary on Mobile & Desktop */}
+                {evaluationResult.verdictSummary && (
+                  <div 
+                    onClick={() => setIsVerdictExpanded(prev => !prev)}
+                    className="cursor-pointer group mt-1"
+                    title="Kattints az értékelés kibontásához / összecsukásához"
+                  >
+                    <p className={`text-[11px] text-slate-300 leading-relaxed transition-all ${
+                      isVerdictExpanded ? '' : 'line-clamp-2 sm:line-clamp-1'
+                    }`}>
+                      {cleanSartorialText(evaluationResult.verdictSummary)}
+                    </p>
+                    <div className="flex items-center gap-1 text-[10px] text-amber-400 group-hover:text-amber-300 font-semibold mt-0.5">
+                      <span>{isVerdictExpanded ? 'Összecsukás' : 'Teljes értékelés olvasása'}</span>
+                      {isVerdictExpanded ? (
+                        <ChevronUp className="w-3 h-3 transition-transform" />
+                      ) : (
+                        <ChevronDown className="w-3 h-3 transition-transform" />
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -875,6 +897,19 @@ export default function PurchaseAdvisorView({ weather, prefillData, onClearPrefi
                   {evaluationResult.item?.fit ? evaluationResult.item.fit : ''}
                 </span>
               </div>
+
+              {/* Executive Summary Card in Diagnostics */}
+              {evaluationResult.verdictSummary && (
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-black/50 border border-[var(--border-gold)]/30 text-xs space-y-1.5 shadow-inner">
+                  <div className="flex items-center gap-1.5 font-serif font-bold text-amber-300">
+                    <Sparkles className="w-4 h-4 text-[var(--accent-gold)] shrink-0" />
+                    <span>Összegző Szakértői Értékelés:</span>
+                  </div>
+                  <p className="text-slate-200 leading-relaxed text-[12px] sm:text-xs">
+                    {cleanSartorialText(evaluationResult.verdictSummary)}
+                  </p>
+                </div>
+              )}
 
               {/* 3 Pillars Overview Tiles */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">

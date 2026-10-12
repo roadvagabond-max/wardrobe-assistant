@@ -84,7 +84,7 @@ A szabászati rétegezési szabályok kőbe vésett logikája:
 | **UI Keretrendszer** | React 18, Vite | Komponens alapú reaktív felület, gyors HMR és build |
 | **Design System** | TailwindCSS + Egyedi CSS Változók | Obszidián-arany üveghatás (`glass-card`, `glass-panel`, `gold-gradient-text`) |
 | **Ikonkészlet** | `lucide-react` | Konzisztenst, elegáns vektoros ikonok |
-| **AI LLM & Vision** | Google Gemini 3.x API | `gemini-3.5-flash-lite`, `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.1-flash-lite` |
+| **AI LLM & Vision** | Google Gemini 3.x API | `gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite` |
 | **Autonóm Szabálykutató** | Gemini Search Grounding | Webes szabászati kódexek keresése és szinkronizálása |
 | **Adatbázis & Auth** | Firebase 11 (Auth + Firestore) | Kétirányú valós idejű szinkron mobil és asztali böngésző között |
 | **Képfeldolgozás** | HTML5 Canvas API | Vágólap, kamera és feltöltött képek 640x640-re tömörítése Base64-ben |
@@ -345,7 +345,7 @@ Ha a projektet a nulláról kell újra felépíteni, kövesd az alábbi 8 fázis
 
 ### 3. Fázis: Gemini AI Motor & JSON Hibatűrés
 - Hozd létre a robusztus Gemini API hívót (`src/services/gemini.js`):
-  - Fast timeout (8 mp) és automatikus fallback modellek (`gemini-3.5-flash-lite`, `gemini-3.7-flash`).
+  - Fast timeout (8 mp) és automatikus fallback modellek (`gemini-3.8-flash`, `gemini-3.5-flash-lite`).
   - Active fast model in-memory gyorstárazás a 0 ms késleltetéshez.
   - Öngyógyító JSON parser (`safeParseJson`).
 

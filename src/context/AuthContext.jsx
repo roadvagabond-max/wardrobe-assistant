@@ -148,7 +148,7 @@ export function AuthProvider({ children }) {
     return localStorage.getItem('user_role') || 'user';
   });
   const [preferredModel, setPreferredModelState] = useState(() => {
-    return localStorage.getItem('preferred_gemini_model') || 'gemini-3.7-flash';
+    return localStorage.getItem('preferred_gemini_model') || 'gemini-3.8-flash';
   });
 
   // Zero Client-Side Secret Guarantee: clean up any legacy keys on startup
@@ -282,7 +282,7 @@ export function AuthProvider({ children }) {
                 name: user.displayName || user.email?.split('@')[0] || 'Felhasználó'
               };
               const initialRole = isWhitelisted ? 'admin' : 'user';
-              const localModel = 'gemini-3.7-flash';
+              const localModel = 'gemini-3.8-flash';
               setRoleState(initialRole);
               localStorage.setItem('user_role', initialRole);
               await setDoc(userDocRef, {
